@@ -53,12 +53,12 @@
             "ceisa_completed_numbers"
         ]);
 
-        const value = Array.isArray(data[`ceisa_completed_numbers_${activeDate}`])
-            ? data[`ceisa_completed_numbers_${activeDate}`]
-            : (Array.isArray(data.ceisa_completed_numbers) ? data.ceisa_completed_numbers : []);
+        const listDate = Array.isArray(data[`ceisa_completed_numbers_${activeDate}`]) ? data[`ceisa_completed_numbers_${activeDate}`] : [];
+        const listGlobal = Array.isArray(data.ceisa_completed_numbers) ? data.ceisa_completed_numbers : [];
+        const combined = [...new Set([...listDate, ...listGlobal])];
 
         completedNumbers = new Set(
-            value
+            combined
                 .map(x => String(x).trim())
                 .filter(x => /^\d{6}$/.test(x))
         );
@@ -71,12 +71,12 @@
             "ceisa_pibpeb_numbers"
         ]);
 
-        const value = Array.isArray(data[`ceisa_pibpeb_numbers_${activeDate}`])
-            ? data[`ceisa_pibpeb_numbers_${activeDate}`]
-            : (Array.isArray(data.ceisa_pibpeb_numbers) ? data.ceisa_pibpeb_numbers : []);
+        const listDate = Array.isArray(data[`ceisa_pibpeb_numbers_${activeDate}`]) ? data[`ceisa_pibpeb_numbers_${activeDate}`] : [];
+        const listGlobal = Array.isArray(data.ceisa_pibpeb_numbers) ? data.ceisa_pibpeb_numbers : [];
+        const combined = [...new Set([...listDate, ...listGlobal])];
 
         pibPebNumbers = new Set(
-            value
+            combined
                 .map(x => String(x).trim())
                 .filter(x => /^\d{6}$/.test(x))
         );
@@ -1023,8 +1023,7 @@
         });
 
         const dateValues = [];
-        const sourceInputs = dateInputs.length > 0 ? dateInputs : Array.from(document.querySelectorAll("input"));
-        for (const input of sourceInputs) {
+        for (const input of dateInputs) {
             const val = parseDateString(input.value);
             if (val) dateValues.push(val);
         }
@@ -2553,20 +2552,9 @@
 
             recolorTimer =
                 setTimeout(() => {
-
                     recolorTimer = null;
-
-
-                    if (
-                        completedNumbers.size > 0
-                    ) {
-
-                        recolorExistingRows();
-
-                    }
-
-                }, 250);
-
+                    recolorExistingRows();
+                }, 200);
         });
 
 
@@ -2606,9 +2594,9 @@
     });
 
 
-    // Periodic Wi-Fi Sync for peer client PCs on the network
+    // Fast 1-second background recolor loop & periodic Wi-Fi sync
     setInterval(async () => {
-        autoSyncDateFromCeisaPortal();
+        recolorExistingRows();
         if (typeof syncWithWifiServer === "function") {
             const synced = await syncWithWifiServer();
             if (synced) {
@@ -2620,21 +2608,32 @@
                 recolorExistingRows();
             }
         }
-    }, 3000);
+    }, 1000);
 
     // ========================================================
     // INITIAL
     // ========================================================
 
-    Promise.all([
-        loadCompletedNumbers(),
-        loadPibPebNumbers(),
-        loadScanCache()
-    ])
-        .then(
-            () =>
-                recolorExistingRows()
-        );
+    async function initContentScript() {
+        await Promise.all([
+            loadCompletedNumbers(),
+            loadPibPebNumbers(),
+            loadScanCache()
+        ]);
+        recolorExistingRows();
+    }
+
+    initContentScript();
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", () => {
+            initContentScript();
+        });
+    }
+
+    window.addEventListener("load", () => {
+        initContentScript();
+    });
 
 
 })();

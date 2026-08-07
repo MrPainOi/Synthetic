@@ -50,6 +50,18 @@ function loadDB() {
                 if (parsed.cache) parsed.cache = pruneScanCache3Days(parsed.cache);
                 if (!parsed.completedByDate) parsed.completedByDate = {};
                 if (!parsed.pibpebByDate) parsed.pibpebByDate = {};
+
+                const todayKey = new Date().toISOString().split('T')[0];
+                if (Array.isArray(parsed.completed) && parsed.completed.length > 0) {
+                    if (!parsed.completedByDate[todayKey]) {
+                        parsed.completedByDate[todayKey] = parsed.completed;
+                    }
+                }
+                if (Array.isArray(parsed.pibpeb) && parsed.pibpeb.length > 0) {
+                    if (!parsed.pibpebByDate[todayKey]) {
+                        parsed.pibpebByDate[todayKey] = parsed.pibpeb;
+                    }
+                }
                 return parsed;
             }
         }
