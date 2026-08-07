@@ -143,25 +143,45 @@ const server = http.createServer((req, res) => {
 
                 if (incoming.isSave) {
                     const dateKey = incoming.date || new Date().toISOString().split('T')[0];
+                    if (!db.completedByDate) db.completedByDate = {};
+                    if (!db.pibpebByDate) db.pibpebByDate = {};
+
                     if (Array.isArray(incoming.completed)) {
-                        db.completed = incoming.completed;
-                        if (!db.completedByDate) db.completedByDate = {};
-                        db.completedByDate[dateKey] = incoming.completed;
+                        const existing = Array.isArray(db.completedByDate[dateKey]) ? db.completedByDate[dateKey] : [];
+                        const merged = [...new Set([...existing, ...incoming.completed])];
+                        db.completedByDate[dateKey] = merged;
+                        db.completed = [...new Set([...(db.completed || []), ...incoming.completed])];
                     }
+
                     if (Array.isArray(incoming.pibpeb)) {
-                        db.pibpeb = incoming.pibpeb;
-                        if (!db.pibpebByDate) db.pibpebByDate = {};
-                        db.pibpebByDate[dateKey] = incoming.pibpeb;
+                        const existing = Array.isArray(db.pibpebByDate[dateKey]) ? db.pibpebByDate[dateKey] : [];
+                        const merged = [...new Set([...existing, ...incoming.pibpeb])];
+                        db.pibpebByDate[dateKey] = merged;
+                        db.pibpeb = [...new Set([...(db.pibpeb || []), ...incoming.pibpeb])];
                     }
+
                     if (incoming.completedByDate && typeof incoming.completedByDate === "object") {
-                        db.completedByDate = { ...db.completedByDate, ...incoming.completedByDate };
+                        for (const [d, list] of Object.entries(incoming.completedByDate)) {
+                            if (Array.isArray(list)) {
+                                const exist = Array.isArray(db.completedByDate[d]) ? db.completedByDate[d] : [];
+                                db.completedByDate[d] = [...new Set([...exist, ...list])];
+                            }
+                        }
                     }
+
                     if (incoming.pibpebByDate && typeof incoming.pibpebByDate === "object") {
-                        db.pibpebByDate = { ...db.pibpebByDate, ...incoming.pibpebByDate };
+                        for (const [d, list] of Object.entries(incoming.pibpebByDate)) {
+                            if (Array.isArray(list)) {
+                                const exist = Array.isArray(db.pibpebByDate[d]) ? db.pibpebByDate[d] : [];
+                                db.pibpebByDate[d] = [...new Set([...exist, ...list])];
+                            }
+                        }
                     }
+
                     if (incoming.cache && typeof incoming.cache === "object") {
                         db.cache = { ...db.cache, ...incoming.cache };
                     }
+
                     db.updatedAt = Date.now();
                     saveDB(db);
                     res.writeHead(200, { "Content-Type": "application/json" });

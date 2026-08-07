@@ -243,6 +243,21 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (statsData.ceisa_scan_status) {
         setStatus(String(statsData.ceisa_scan_status).toUpperCase());
     }
+
+    chrome.storage.onChanged.addListener((changes, area) => {
+        if (area === "local") {
+            const date = dateInput ? dateInput.value || todayISO() : todayISO();
+            if (changes[`ceisa_completed_numbers_${date}`] || changes.ceisa_completed_numbers) {
+                loadCompleted(date);
+            }
+            if (changes[`ceisa_pibpeb_numbers_${date}`] || changes.ceisa_pibpeb_numbers) {
+                loadPibPeb(date);
+            }
+            if (changes.ceisa_scan_stats) {
+                updateStats(changes.ceisa_scan_stats.newValue);
+            }
+        }
+    });
 });
 
 if (saveWifiIpBtn && wifiServerIpInput) {
