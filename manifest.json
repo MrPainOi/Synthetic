@@ -1,0 +1,54 @@
+{
+    "manifest_version": 3,
+
+    "name": "CEISA Auto Coloring",
+    "version": "2.0.0",
+
+    "description": "Auto coloring dokumen CEISA berdasarkan lokasi/pelabuhan dan nomor pendaftaran.",
+
+    "minimum_chrome_version": "109",
+
+    "permissions": [
+        "storage",
+        "offscreen",
+        "activeTab"
+    ],
+
+    "host_permissions": [
+        "https://portal.beacukai.go.id/*",
+        "https://*.firebasedatabase.app/*"
+    ],
+
+    "background": {
+        "service_worker": "background.js"
+    },
+
+    "action": {
+        "default_title": "CEISA Auto Coloring",
+        "default_popup": "popup.html"
+    },
+
+    "content_scripts": [
+        {
+            "matches": [
+                "https://portal.beacukai.go.id/*"
+            ],
+            "js": [
+                "content.js"
+            ],
+            "run_at": "document_start",
+            "all_frames": false
+        }
+    ],
+
+    "web_accessible_resources": [
+        {
+            "resources": [
+                "inject.js"
+            ],
+            "matches": [
+                "https://portal.beacukai.go.id/*"
+            ]
+        }
+    ]
+}

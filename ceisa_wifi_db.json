@@ -1,0 +1,550 @@
+{
+  "completed": [
+    "140825",
+    "084418",
+    "084431",
+    "084481",
+    "084563",
+    "084667",
+    "141029",
+    "141024",
+    "141020",
+    "141031",
+    "141022",
+    "141114",
+    "141100",
+    "141129",
+    "141128",
+    "141108"
+  ],
+  "pibpeb": [
+    "084081",
+    "084079",
+    "084054",
+    "083930",
+    "083912",
+    "083914",
+    "140109",
+    "084563",
+    "084481",
+    "084431",
+    "084418"
+  ],
+  "cache": {
+    "140034": {
+      "companyName": "",
+      "documentNumber": "139921/KPU.2/2026",
+      "documentType": "SPPB",
+      "location": "",
+      "registrationNumber": "140034",
+      "rowDate": "2026-08-05",
+      "status": "",
+      "timestamp": 1785922859660
+    },
+    "140109": {
+      "companyName": "",
+      "documentNumber": "140002/KPU.2/2026",
+      "documentType": "SPPB",
+      "location": "",
+      "registrationNumber": "140109",
+      "rowDate": "2026-08-05",
+      "status": "green",
+      "timestamp": 1785922859660
+    },
+    "140284": {
+      "companyName": "",
+      "documentNumber": "140159/KPU.2/2026",
+      "documentType": "SPPB",
+      "location": "",
+      "registrationNumber": "140284",
+      "rowDate": "2026-08-05",
+      "status": "",
+      "timestamp": 1785985142509
+    },
+    "140286": {
+      "companyName": "",
+      "documentNumber": "140161/KPU.2/2026",
+      "documentType": "SPPB",
+      "location": "",
+      "registrationNumber": "140286",
+      "rowDate": "2026-08-05",
+      "status": "",
+      "timestamp": 1785985142509
+    },
+    "140288": {
+      "companyName": "",
+      "documentNumber": "140163/KPU.2/2026",
+      "documentType": "SPPB",
+      "location": "",
+      "registrationNumber": "140288",
+      "rowDate": "2026-08-05",
+      "status": "",
+      "timestamp": 1785985142509
+    },
+    "140377": {
+      "companyName": "",
+      "documentNumber": "140251/KPU.2/2026",
+      "documentType": "SPPB",
+      "location": "",
+      "registrationNumber": "140377",
+      "rowDate": "2026-08-05",
+      "status": "",
+      "timestamp": 1785985142509
+    },
+    "140424": {
+      "companyName": "",
+      "documentNumber": "140296/KPU.2/2026",
+      "documentType": "SPPB",
+      "location": "",
+      "registrationNumber": "140424",
+      "rowDate": "2026-08-06",
+      "status": "",
+      "timestamp": 1785985129787
+    },
+    "140825": {
+      "companyName": "",
+      "documentNumber": "140701/KPU.2/2026",
+      "documentType": "SPPB",
+      "location": "",
+      "registrationNumber": "140825",
+      "rowDate": "2026-08-06",
+      "status": "",
+      "timestamp": 1785998729132
+    },
+    "140838": {
+      "companyName": "",
+      "documentNumber": "140714/KPU.2/2026",
+      "documentType": "SPPB",
+      "location": "",
+      "registrationNumber": "140838",
+      "rowDate": "2026-08-06",
+      "status": "",
+      "timestamp": 1786010084793
+    },
+    "141020": {
+      "companyName": "",
+      "documentNumber": "140907/KPU.2/2026",
+      "documentType": "SPPB",
+      "location": "",
+      "registrationNumber": "141020",
+      "rowDate": "2026-08-06",
+      "status": "",
+      "timestamp": 1786071306301
+    },
+    "141022": {
+      "companyName": "",
+      "documentNumber": "140909/KPU.2/2026",
+      "documentType": "SPPB",
+      "location": "",
+      "registrationNumber": "141022",
+      "rowDate": "2026-08-06",
+      "status": "",
+      "timestamp": 1786071306300
+    },
+    "141024": {
+      "companyName": "",
+      "documentNumber": "140911/KPU.2/2026",
+      "documentType": "SPPB",
+      "location": "",
+      "registrationNumber": "141024",
+      "rowDate": "2026-08-06",
+      "status": "",
+      "timestamp": 1786071299516
+    },
+    "141029": {
+      "companyName": "",
+      "documentNumber": "140916/KPU.2/2026",
+      "documentType": "SPPB",
+      "location": "",
+      "registrationNumber": "141029",
+      "rowDate": "2026-08-06",
+      "status": "",
+      "timestamp": 1786071299516
+    },
+    "141031": {
+      "companyName": "",
+      "documentNumber": "140918/KPU.2/2026",
+      "documentType": "SPPB",
+      "location": "",
+      "registrationNumber": "141031",
+      "rowDate": "2026-08-06",
+      "status": "",
+      "timestamp": 1786071299515
+    },
+    "141100": {
+      "companyName": "",
+      "documentNumber": "140986/KPU.2/2026",
+      "documentType": "SPPB",
+      "location": "",
+      "registrationNumber": "141100",
+      "rowDate": "2026-08-06",
+      "status": "",
+      "timestamp": 1786071306302
+    },
+    "141108": {
+      "companyName": "",
+      "documentNumber": "140994/KPU.2/2026",
+      "documentType": "SPPB",
+      "location": "",
+      "registrationNumber": "141108",
+      "rowDate": "2026-08-06",
+      "status": "",
+      "timestamp": 1786071342141
+    },
+    "141114": {
+      "companyName": "",
+      "documentNumber": "141000/KPU.2/2026",
+      "documentType": "SPPB",
+      "location": "",
+      "registrationNumber": "141114",
+      "rowDate": "2026-08-06",
+      "status": "",
+      "timestamp": 1786071306301
+    },
+    "141128": {
+      "companyName": "",
+      "documentNumber": "141014/KPU.2/2026",
+      "documentType": "SPPB",
+      "location": "",
+      "registrationNumber": "141128",
+      "rowDate": "2026-08-06",
+      "status": "",
+      "timestamp": 1786071309081
+    },
+    "141129": {
+      "companyName": "",
+      "documentNumber": "141015/KPU.2/2026",
+      "documentType": "SPPB",
+      "location": "",
+      "registrationNumber": "141129",
+      "rowDate": "2026-08-06",
+      "status": "",
+      "timestamp": 1786071309080
+    },
+    "141199": {
+      "companyName": "",
+      "documentNumber": "141081/KPU.2/2026",
+      "documentType": "SPPB",
+      "location": "",
+      "registrationNumber": "141199",
+      "rowDate": "2026-08-07",
+      "status": "",
+      "timestamp": 1786071309080
+    },
+    "083930": {
+      "companyName": "",
+      "documentNumber": "083883/KPU.2/2026",
+      "documentType": "NPPB",
+      "location": "",
+      "registrationNumber": "083930",
+      "rowDate": "2026-08-05",
+      "status": "green",
+      "timestamp": 1785922859659
+    },
+    "083912": {
+      "companyName": "",
+      "documentNumber": "083865/KPU.2/2026",
+      "documentType": "NPPB",
+      "location": "",
+      "registrationNumber": "083912",
+      "rowDate": "2026-08-05",
+      "status": "green",
+      "timestamp": 1785922859659
+    },
+    "083914": {
+      "companyName": "",
+      "documentNumber": "083867/KPU.2/2026",
+      "documentType": "NPPB",
+      "location": "",
+      "registrationNumber": "083914",
+      "rowDate": "2026-08-05",
+      "status": "green",
+      "timestamp": 1785922859659
+    },
+    "084054": {
+      "companyName": "",
+      "documentNumber": "083984/KPU.2/2026",
+      "documentType": "NPPB",
+      "location": "",
+      "registrationNumber": "084054",
+      "rowDate": "2026-08-05",
+      "status": "green",
+      "timestamp": 1785922859658
+    },
+    "084079": {
+      "companyName": "",
+      "documentNumber": "084009/KPU.2/2026",
+      "documentType": "NPPB",
+      "location": "",
+      "registrationNumber": "084079",
+      "rowDate": "2026-08-05",
+      "status": "green",
+      "timestamp": 1785922859658
+    },
+    "084081": {
+      "companyName": "",
+      "documentNumber": "084011/KPU.2/2026",
+      "documentType": "NPPB",
+      "location": "",
+      "registrationNumber": "084081",
+      "rowDate": "2026-08-05",
+      "status": "green",
+      "timestamp": 1785922859657
+    },
+    "084369": {
+      "companyName": "",
+      "documentNumber": "084273/KPU.2/2026",
+      "documentType": "NPPB",
+      "location": "",
+      "registrationNumber": "084369",
+      "rowDate": "2026-08-06",
+      "status": "",
+      "timestamp": 1786010087541
+    },
+    "084395": {
+      "companyName": "PT. VALEO AC INDONESIA",
+      "documentNumber": "084302/KPU.2/2026",
+      "documentType": "NPPB",
+      "location": "IDBTU - BATU AMPAR",
+      "registrationNumber": "084395",
+      "rowDate": "2026-08-06",
+      "status": "red",
+      "timestamp": 1785993590488
+    },
+    "084401": {
+      "companyName": "",
+      "documentNumber": "084310/KPU.2/2026",
+      "documentType": "NPPB",
+      "location": "",
+      "registrationNumber": "084401",
+      "rowDate": "2026-08-06",
+      "status": "",
+      "timestamp": 1786010087541
+    },
+    "084413": {
+      "companyName": "",
+      "documentNumber": "084322/KPU.2/2026",
+      "documentType": "NPPB",
+      "location": "",
+      "registrationNumber": "084413",
+      "rowDate": "2026-08-06",
+      "status": "",
+      "timestamp": 1786004405979
+    },
+    "084418": {
+      "companyName": "",
+      "documentNumber": "084327/KPU.2/2026",
+      "documentType": "NPPB",
+      "location": "",
+      "registrationNumber": "084418",
+      "rowDate": "2026-08-06",
+      "status": "",
+      "timestamp": 1786004405979
+    },
+    "084431": {
+      "companyName": "",
+      "documentNumber": "084340/KPU.2/2026",
+      "documentType": "NPPB",
+      "location": "",
+      "registrationNumber": "084431",
+      "rowDate": "2026-08-06",
+      "status": "",
+      "timestamp": 1786004405979
+    },
+    "084440": {
+      "companyName": "",
+      "documentNumber": "084349/KPU.2/2026",
+      "documentType": "NPPB",
+      "location": "",
+      "registrationNumber": "084440",
+      "rowDate": "2026-08-06",
+      "status": "",
+      "timestamp": 1786004401849
+    },
+    "084448": {
+      "companyName": "",
+      "documentNumber": "084357/KPU.2/2026",
+      "documentType": "NPPB",
+      "location": "",
+      "registrationNumber": "084448",
+      "rowDate": "2026-08-06",
+      "status": "",
+      "timestamp": 1786004401849
+    },
+    "084481": {
+      "companyName": "",
+      "documentNumber": "084390/KPU.2/2026",
+      "documentType": "NPPB",
+      "location": "",
+      "registrationNumber": "084481",
+      "rowDate": "2026-08-06",
+      "status": "",
+      "timestamp": 1786004401849
+    },
+    "084563": {
+      "companyName": "",
+      "documentNumber": "084472/KPU.2/2026",
+      "documentType": "NPPB",
+      "location": "",
+      "registrationNumber": "084563",
+      "rowDate": "2026-08-06",
+      "status": "",
+      "timestamp": 1786010074861
+    },
+    "084617": {
+      "companyName": "",
+      "documentNumber": "084525/KPU.2/2026",
+      "documentType": "NPPB",
+      "location": "",
+      "registrationNumber": "084617",
+      "rowDate": "2026-08-06",
+      "status": "",
+      "timestamp": 1786010087540
+    },
+    "084643": {
+      "companyName": "",
+      "documentNumber": "084553/KPU.2/2026",
+      "documentType": "NPPB",
+      "location": "",
+      "registrationNumber": "084643",
+      "rowDate": "2026-08-06",
+      "status": "",
+      "timestamp": 1786010084794
+    },
+    "084667": {
+      "companyName": "PT. JEJARING MITRA PERSADA",
+      "documentNumber": "084577/KPU.2/2026",
+      "documentType": "NPPB",
+      "location": "IDKSP - SEKUPANG",
+      "registrationNumber": "084667",
+      "rowDate": "2026-08-06",
+      "status": "orange",
+      "timestamp": 1786009549335
+    },
+    "055585": {
+      "companyName": "",
+      "documentNumber": "055590/KPU.2/2026",
+      "documentType": "SPPB",
+      "location": "",
+      "registrationNumber": "055585",
+      "rowDate": "2026-08-06",
+      "status": "",
+      "timestamp": 1786071299514
+    },
+    "055623": {
+      "companyName": "",
+      "documentNumber": "055628/KPU.2/2026",
+      "documentType": "SPPB",
+      "location": "",
+      "registrationNumber": "055623",
+      "rowDate": "2026-08-07",
+      "status": "",
+      "timestamp": 1786071299514
+    },
+    "084921": {
+      "companyName": "",
+      "documentNumber": "084824/KPU.2/2026",
+      "documentType": "NPPB",
+      "location": "",
+      "registrationNumber": "084921",
+      "rowDate": "2026-08-07",
+      "status": "",
+      "timestamp": 1786071342140
+    },
+    "084927": {
+      "companyName": "",
+      "documentNumber": "084832/KPU.2/2026",
+      "documentType": "NPPB",
+      "location": "",
+      "registrationNumber": "084927",
+      "rowDate": "2026-08-07",
+      "status": "",
+      "timestamp": 1786071664199
+    }
+  },
+  "updatedAt": 1786073662653,
+  "completedByDate": {
+    "2026-08-05": [
+      "083930",
+      "083914",
+      "083912",
+      "140109",
+      "084054",
+      "084079",
+      "084081",
+      "140288",
+      "140284",
+      "140286",
+      "140377"
+    ],
+    "2026-08-04": [
+      "083413",
+      "083419",
+      "083520",
+      "083426",
+      "139116",
+      "138982",
+      "083539",
+      "139306",
+      "139475",
+      "139440",
+      "139442",
+      "139448",
+      "139451",
+      "139452",
+      "139453",
+      "139465",
+      "139470",
+      "139487",
+      "139482",
+      "139478",
+      "083609",
+      "083615"
+    ],
+    "2026-08-06": [
+      "140825",
+      "084418",
+      "084431",
+      "084481",
+      "084563",
+      "084667",
+      "141029",
+      "141024",
+      "141020",
+      "141031",
+      "141022",
+      "141114",
+      "141100",
+      "141129",
+      "141128",
+      "141108"
+    ],
+    "2026-08-07": []
+  },
+  "pibpebByDate": {
+    "2026-08-05": [
+      "084081",
+      "084079",
+      "084054",
+      "083930",
+      "083912",
+      "083914",
+      "140109"
+    ],
+    "2026-08-04": [],
+    "2026-08-06": [
+      "084081",
+      "084079",
+      "084054",
+      "083930",
+      "083912",
+      "083914",
+      "140109",
+      "084563",
+      "084481",
+      "084431",
+      "084418"
+    ],
+    "2026-08-07": []
+  }
+}

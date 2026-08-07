@@ -1,0 +1,465 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    margin: 0;
+    padding: 12px;
+    width: 360px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: #f8fafc;
+    color: #0f172a;
+}
+
+.app {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* =========================
+   HEADER
+========================= */
+
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #ffffff;
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+}
+
+.title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #0284c7;
+    letter-spacing: 0.3px;
+}
+
+.status {
+    font-size: 10px;
+    font-weight: 800;
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: #f1f5f9;
+    color: #0369a1;
+    border: 1px solid #cbd5e1;
+    letter-spacing: 0.5px;
+}
+
+/* =========================
+   CONTROL
+========================= */
+
+.control {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+#scanDate {
+    flex: 1;
+    height: 32px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    background: #ffffff;
+    color: #0f172a;
+    padding: 0 10px;
+    font-size: 12px;
+    font-weight: 600;
+    outline: none;
+}
+
+#scanDate:focus {
+    border-color: #0284c7;
+}
+
+.icon-btn {
+    width: 36px;
+    height: 32px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    background: #ffffff;
+    color: #0f172a;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.icon-btn:hover {
+    background: #f1f5f9;
+}
+
+#start {
+    color: #15803d;
+    border-color: #86efac;
+    background: #f0fdf4;
+}
+
+#start:hover {
+    background: #22c55e;
+    color: #ffffff;
+    border-color: #22c55e;
+}
+
+#stop {
+    color: #b91c1c;
+    border-color: #fca5a5;
+    background: #fef2f2;
+}
+
+#stop:hover {
+    background: #ef4444;
+    color: #ffffff;
+    border-color: #ef4444;
+}
+
+.action-bar-row {
+    display: flex;
+    gap: 6px;
+}
+
+.btn-save-main {
+    flex: 1;
+    height: 32px;
+    background: #0284c7;
+    color: #ffffff;
+    border: 1px solid #0284c7;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-save-main:hover {
+    background: #0369a1;
+    border-color: #0369a1;
+}
+
+.btn-dash {
+    flex: 1.2;
+    height: 32px;
+    background: #ffffff;
+    color: #0284c7;
+    border: 1px solid #0284c7;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-dash:hover {
+    background: #0284c7;
+    color: #ffffff;
+}
+
+/* =========================
+   SUMMARY
+========================= */
+
+.summary {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 8px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #ffffff;
+    font-size: 10px;
+    line-height: 16px;
+    color: #64748b;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.summary b {
+    color: #0f172a;
+    font-weight: 700;
+}
+
+/* =========================
+   WI-FI SERVER CONFIG CARD
+========================= */
+
+.wifi-config-card {
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.wifi-config-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: #334155;
+}
+
+.wifi-status-off {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: #fee2e2;
+    color: #991b1b;
+    font-weight: 700;
+}
+
+.wifi-status-on {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: #dcfce7;
+    color: #166534;
+    font-weight: 700;
+}
+
+.wifi-config-input-row {
+    display: flex;
+    gap: 6px;
+}
+
+#wifiServerIp {
+    flex: 1;
+    height: 28px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 0 8px;
+    font-size: 11px;
+    outline: none;
+    font-family: monospace;
+}
+
+#wifiServerIp:focus {
+    border-color: #0284c7;
+}
+
+.wifi-connect-btn {
+    height: 28px;
+    padding: 0 10px;
+    background: #0284c7;
+    color: #ffffff;
+    border: none;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.wifi-connect-btn:hover {
+    background: #0369a1;
+}
+
+/* =========================
+   COMPLETED & INPUT SECTIONS
+========================= */
+
+.completed {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+}
+
+.section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.section-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.blue-title {
+    color: #2563eb !important;
+}
+
+.clear-btn {
+    font-size: 10px;
+    padding: 3px 8px;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    background: #f8fafc;
+    color: #475569;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.clear-btn:hover {
+    background: #ef4444;
+    border-color: #ef4444;
+    color: #ffffff;
+}
+
+#completedNumbers {
+    display: block;
+    width: 100%;
+    height: 65px;
+    resize: vertical;
+    padding: 8px;
+    border: 1px solid #86efac;
+    border-radius: 6px;
+    background: #f0fdf4;
+    color: #14532d;
+    font-family: Consolas, monospace;
+    font-size: 12px;
+    line-height: 16px;
+    outline: none;
+    box-sizing: border-box;
+}
+
+#completedNumbers:focus {
+    border-color: #22c55e;
+}
+
+#pibPebNumbers {
+    display: block;
+    width: 100%;
+    height: 65px;
+    resize: vertical;
+    padding: 8px;
+    border: 1px solid #93c5fd;
+    border-radius: 6px;
+    background: #eff6ff;
+    color: #1e3a8a;
+    font-family: Consolas, monospace;
+    font-size: 12px;
+    line-height: 16px;
+    outline: none;
+    box-sizing: border-box;
+}
+
+#pibPebNumbers:focus {
+    border-color: #3b82f6;
+}
+
+.save-btn {
+    width: 100%;
+    height: 30px;
+    border-radius: 6px;
+    border: none;
+    background: #22c55e;
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.save-btn:hover {
+    background: #16a34a;
+}
+
+.pibpeb-btn {
+    background: #2563eb !important;
+}
+
+.pibpeb-btn:hover {
+    background: #1d4ed8 !important;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* =========================
+   COLOR INFO LEGEND CARD
+========================= */
+
+.color-info-card {
+    background: #ffffff;
+    color: #0f172a;
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 11px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+}
+
+.info-toggle-btn {
+    width: 100%;
+    background: transparent;
+    border: none;
+    padding: 0;
+    font-size: 11px;
+    font-weight: 700;
+    color: #0284c7;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.info-toggle-btn:hover {
+    color: #0369a1;
+}
+
+.arrow-icon {
+    font-size: 10px;
+}
+
+.info-content {
+    margin-top: 8px;
+    border-top: 1px solid #e2e8f0;
+    padding-top: 8px;
+}
+
+.color-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.color-list li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: #334155;
+}
+
+.color-badge {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-weight: 700;
+    font-size: 10px;
+    min-width: 50px;
+    text-align: center;
+}
+
+.bg-green { background: #22c55e; color: #fff; }
+.bg-yellow { background: #ffd600; color: #000; }
+.bg-purple { background: #9333ea; color: #fff; }
+.bg-cream, .bg-pink { background: #ec4899; color: #fff; }
+.bg-blue { background: #2563eb; color: #fff; }
+.bg-aqua { background: #06b6d4; color: #fff; }
+.bg-orange { background: #ff9800; color: #000; }
+.bg-red { background: #ef4444; color: #fff; }

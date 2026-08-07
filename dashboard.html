@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CEISA Inspector - Web Data Dashboard</title>
+    <link rel="stylesheet" href="dashboard.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- HEADER -->
+        <header class="app-header">
+            <div class="brand">
+                <span class="brand-icon">📊</span>
+                <div>
+                    <h1>CEISA Inspector Dashboard</h1>
+                    <p class="subtitle">Monitoring & Format Data Dokumen Pabean (SPPB & NPPB)</p>
+                </div>
+            </div>
+            <div class="header-actions">
+                <span id="wifiSyncStatus" class="wifi-badge">📶 Wi-Fi Sync Aktiv</span>
+                <input type="date" id="scanDate" class="date-picker-dash">
+                <button id="saveAllBtn" class="btn btn-primary">💾 Simpan Data</button>
+                <button id="refreshDataBtn" class="btn btn-secondary">🔄 Refresh</button>
+                <button id="clearCacheBtn" class="btn btn-danger">🗑️ Clear Cache</button>
+            </div>
+        </header>
+
+        <!-- STATS CARDS -->
+        <section class="stats-grid">
+            <div class="stat-card card-total">
+                <span class="stat-icon">📄</span>
+                <div>
+                    <span class="stat-value" id="statTotal">0</span>
+                    <span class="stat-label">Total Cached</span>
+                </div>
+            </div>
+            <div class="stat-card card-orange">
+                <span class="stat-icon">🟧</span>
+                <div>
+                    <span class="stat-value" id="statOrange">0</span>
+                    <span class="stat-label">Daftar Oren</span>
+                </div>
+            </div>
+            <div class="stat-card card-green">
+                <span class="stat-icon">🟩</span>
+                <div>
+                    <span class="stat-value" id="statGreen">0</span>
+                    <span class="stat-label">Selesai Hijau</span>
+                </div>
+            </div>
+            <div class="stat-card card-yellow">
+                <span class="stat-icon">🟨</span>
+                <div>
+                    <span class="stat-value" id="statYellow">0</span>
+                    <span class="stat-label">Batu Ampar (Kuning)</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- COLOR INFO LEGEND CARD DROPDOWN -->
+        <section class="panel-card info-panel">
+            <div class="panel-header" id="dashInfoToggleBtn" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
+                <h2 style="margin: 0; font-size: 14px;">ℹ️ Legenda & Info Warna Highlight Web</h2>
+                <span id="dashInfoArrow" style="font-size: 12px; color: #0284c7;">▼</span>
+            </div>
+            <div id="dashInfoContent" class="legend-grid hidden" style="margin-top: 10px; border-top: 1px solid #e2e8f0; padding-top: 10px;">
+                <div class="legend-item"><span class="badge bg-green">Hijau</span> <span>SPPB/NPPB Udah Di Print (SEWU)</span></div>
+                <div class="legend-item"><span class="badge bg-yellow">Kuning</span> <span>SPPB/NPPB Udah Di Print (BATU AMPAR)</span></div>
+                <div class="legend-item"><span class="badge bg-purple">Ungu</span> <span>PIB/PEB Udah Di Print (SEWU)</span></div>
+                <div class="legend-item"><span class="badge bg-pink">Pink</span> <span>PIB/PEB Udah Di Print (BATU AMPAR)</span></div>
+                <div class="legend-item"><span class="badge bg-blue">Biru</span> <span>PIB/PEB + SPPB/NPPB Udah Di Print (SEWU)</span></div>
+                <div class="legend-item"><span class="badge bg-aqua">Aqua</span> <span>PIB/PEB + SPPB/NPPB Udah Di Print (BATU AMPAR)</span></div>
+                <div class="legend-item"><span class="badge bg-orange">Oren</span> <span>BELUM DI PRINT SPPB/NPPB (SEWU)</span></div>
+                <div class="legend-item"><span class="badge bg-red">Merah</span> <span>BELUM DI PRINT SPPB/NPPB (BATU AMPAR)</span></div>
+            </div>
+        </section>
+
+        <!-- MAIN CONTENT COLUMNS -->
+        <main class="dashboard-grid">
+            <!-- COLUMN 1: OREN & MERAH -->
+            <section class="panel-card">
+                <div class="panel-header">
+                    <h2>🟧 Daftar Oren & Merah (Belum Selesai)</h2>
+                    <button id="copyOrangeBtn" class="btn btn-sm btn-primary">📋 Salin Teks</button>
+                </div>
+                <p class="panel-desc">Hasil format terkelompokkan SPPB & NPPB dengan nomor urut & lokasi.</p>
+                <div class="textarea-wrapper">
+                    <textarea id="orangeTextarea" readonly placeholder="Belum ada data Oren/Merah..."></textarea>
+                </div>
+            </section>
+
+            <!-- COLUMN 2: HIJAU -->
+            <section class="panel-card">
+                <div class="panel-header">
+                    <h2>🟩 Hasil Format Hijau (Nomor Selesai)</h2>
+                    <button id="copyGreenBtn" class="btn btn-sm btn-success">📋 Salin Teks</button>
+                </div>
+                <p class="panel-desc">Hasil format lengkap dokumen yang telah dimasukkan ke daftar selesai.</p>
+                <div class="textarea-wrapper">
+                    <textarea id="greenTextarea" readonly placeholder="Belum ada data Hijau..."></textarea>
+                </div>
+            </section>
+
+            <!-- COLUMN 3: INPUT KODE HIJAU & PIB/PEB -->
+            <section class="panel-card full-width">
+                <div class="panel-header">
+                    <h2>✏️ Input Kode Selesai (Hijau & PIB/PEB)</h2>
+                    <div class="actions-group">
+                        <button id="saveCompletedBtn" class="btn btn-success">💾 Simpan Nomor Hijau</button>
+                        <button id="savePibPebBtn" class="btn btn-blue">💾 Simpan Nomor PIB/PEB</button>
+                    </div>
+                </div>
+                <div class="inputs-grid">
+                    <div>
+                        <label class="input-label font-green">🟩 Nomor Selesai SPPB/NPPB (Kode Hijau):</label>
+                        <textarea id="completedInput" rows="4" placeholder="Contoh:&#10;082202&#10;082073&#10;082267"></textarea>
+                    </div>
+                    <div>
+                        <label class="input-label font-blue">🔵 Nomor Selesai PIB / PEB:</label>
+                        <textarea id="pibPebInput" rows="4" placeholder="Contoh:&#10;082202&#10;082073"></textarea>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- TOAST NOTIFICATION -->
+        <div id="toast" class="toast hidden">Pesan Toast</div>
+    </div>
+
+    <script src="sync.js"></script>
+    <script src="dashboard.js"></script>
+</body>
+</html>

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CEISA Inspector</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+
+<div class="app">
+    <div class="header">
+        <div class="title">CEISA Inspector</div>
+        <div id="status" class="status">IDLE</div>
+    </div>
+
+    <div class="control">
+        <input type="date" id="scanDate">
+        <button id="start" class="icon-btn" title="Mulai Scan">▶</button>
+        <button id="stop" class="icon-btn" title="Stop Scan">■</button>
+    </div>
+
+    <div class="action-bar-row">
+        <button id="saveAllData" class="btn-save-main">💾 Simpan Data</button>
+        <button id="openDashboard" class="btn-dash">🌐 Web Dashboard</button>
+    </div>
+
+    <!-- SERVER WI-FI SYNC CONFIG -->
+    <div class="wifi-config-card">
+        <div class="wifi-config-header">
+            <span>📶 Server Wi-Fi Sync IP:</span>
+            <span id="wifiStatusBadge" class="wifi-status-off">Offline</span>
+        </div>
+        <div class="wifi-config-input-row">
+            <input type="text" id="wifiServerIp" placeholder="192.168.100.15:8080" spellcheck="false" />
+            <button id="saveWifiIpBtn" class="wifi-connect-btn">Connect</button>
+        </div>
+    </div>
+
+    <div class="summary">
+        <span>STATUS: <b id="statusText">SIAP</b></span>
+        <span>|</span>
+        <span>🟢 <b id="green">0</b></span>
+        <span>|</span>
+        <span>🔴 <b id="red">0</b></span>
+        <span>|</span>
+        <span>⚠ <b id="error">0</b></span>
+        <span>|</span>
+        <span>TOTAL: <b id="total">0</b></span>
+    </div>
+
+    <!-- NOMOR SELESAI HIJAU -->
+    <div class="completed">
+        <div class="section-header">
+            <div class="section-title">Nomor Selesai (Input Kode Hijau)</div>
+            <button id="clearCache" class="clear-btn" title="Hapus Cache Scan">Reset Cache</button>
+        </div>
+        <textarea id="completedNumbers" placeholder="Contoh:&#10;081049&#10;081052" spellcheck="false"></textarea>
+        <button id="saveCompleted" class="save-btn">Simpan Kode Hijau</button>
+    </div>
+
+    <!-- NOMOR SELESAI PIB/PEB -->
+    <div class="completed pibpeb-section">
+        <div class="section-header">
+            <div class="section-title blue-title">Nomor Selesai PIB / PEB</div>
+        </div>
+        <textarea id="pibPebNumbers" placeholder="Contoh nomor PIB/PEB:&#10;082202&#10;082073" spellcheck="false"></textarea>
+        <button id="savePibPeb" class="save-btn pibpeb-btn">Simpan Kode PIB/PEB</button>
+    </div>
+
+    <!-- LEGENDA WARNA (COLOR INFO DROPDOWN ACCORDION) -->
+    <div class="color-info-card">
+        <button id="toggleInfoBtn" class="info-toggle-btn">
+            <span>ℹ️ Info & Panduan Warna Highlight</span>
+            <span id="infoArrow" class="arrow-icon">▼</span>
+        </button>
+        <div id="infoContent" class="info-content hidden">
+            <ul class="color-list">
+                <li><span class="color-badge bg-green">Hijau</span> <span>SPPB/NPPB Udah Di Print (SEWU)</span></li>
+                <li><span class="color-badge bg-yellow">Kuning</span> <span>SPPB/NPPB Udah Di Print (BATU AMPAR)</span></li>
+                <li><span class="color-badge bg-purple">Ungu</span> <span>PIB/PEB Udah Di Print (SEWU)</span></li>
+                <li><span class="color-badge bg-pink">Pink</span> <span>PIB/PEB Udah Di Print (BATU AMPAR)</span></li>
+                <li><span class="color-badge bg-blue">Biru</span> <span>PIB/PEB + SPPB/NPPB Udah Di Print (SEWU)</span></li>
+                <li><span class="color-badge bg-aqua">Aqua</span> <span>PIB/PEB + SPPB/NPPB Udah Di Print (BATU AMPAR)</span></li>
+                <li><span class="color-badge bg-orange">Oren</span> <span>BELUM DI PRINT SPPB/NPPB (SEWU)</span></li>
+                <li><span class="color-badge bg-red">Merah</span> <span>BELUM DI PRINT SPPB/NPPB (BATU AMPAR)</span></li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<script src="sync.js"></script>
+<script src="popup.js"></script>
+</body>
+</html>
