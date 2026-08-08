@@ -53,12 +53,12 @@
             "ceisa_completed_numbers"
         ]);
 
-        const listDate = Array.isArray(data[`ceisa_completed_numbers_${activeDate}`]) ? data[`ceisa_completed_numbers_${activeDate}`] : [];
-        const listGlobal = Array.isArray(data.ceisa_completed_numbers) ? data.ceisa_completed_numbers : [];
-        const combined = [...new Set([...listDate, ...listGlobal])];
+        const list = Array.isArray(data[`ceisa_completed_numbers_${activeDate}`])
+            ? data[`ceisa_completed_numbers_${activeDate}`]
+            : (Array.isArray(data.ceisa_completed_numbers) ? data.ceisa_completed_numbers : []);
 
         completedNumbers = new Set(
-            combined
+            list
                 .map(x => String(x).trim())
                 .filter(x => /^\d{6}$/.test(x))
         );
@@ -71,12 +71,12 @@
             "ceisa_pibpeb_numbers"
         ]);
 
-        const listDate = Array.isArray(data[`ceisa_pibpeb_numbers_${activeDate}`]) ? data[`ceisa_pibpeb_numbers_${activeDate}`] : [];
-        const listGlobal = Array.isArray(data.ceisa_pibpeb_numbers) ? data.ceisa_pibpeb_numbers : [];
-        const combined = [...new Set([...listDate, ...listGlobal])];
+        const list = Array.isArray(data[`ceisa_pibpeb_numbers_${activeDate}`])
+            ? data[`ceisa_pibpeb_numbers_${activeDate}`]
+            : (Array.isArray(data.ceisa_pibpeb_numbers) ? data.ceisa_pibpeb_numbers : []);
 
         pibPebNumbers = new Set(
-            combined
+            list
                 .map(x => String(x).trim())
                 .filter(x => /^\d{6}$/.test(x))
         );

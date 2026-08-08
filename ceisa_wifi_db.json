@@ -3,203 +3,155 @@
     "141199",
     "141691",
     "085036",
-    "085141"
+    "085141",
+    "085226",
+    "084921",
+    "084927",
+    "084968",
+    "085020",
+    "085054",
+    "085082",
+    "085127",
+    "085212",
+    "141887"
   ],
   "pibpeb": [
     "141199",
+    "085036",
     "141691",
-    "085036"
+    "085141",
+    "085226"
   ],
   "cache": {
-    "140034": {
-      "companyName": "",
-      "documentNumber": "139921/KPU.2/2026",
-      "documentType": "SPPB",
-      "location": "",
-      "registrationNumber": "140034",
-      "rowDate": "2026-08-05",
-      "status": "",
-      "timestamp": 1785922859660
-    },
-    "140109": {
-      "companyName": "",
-      "documentNumber": "140002/KPU.2/2026",
-      "documentType": "SPPB",
-      "location": "",
-      "registrationNumber": "140109",
-      "rowDate": "2026-08-05",
-      "status": "green",
-      "timestamp": 1785922859660
-    },
-    "140284": {
-      "companyName": "",
-      "documentNumber": "140159/KPU.2/2026",
-      "documentType": "SPPB",
-      "location": "",
-      "registrationNumber": "140284",
-      "rowDate": "2026-08-05",
-      "status": "",
-      "timestamp": 1785985142509
-    },
-    "140286": {
-      "companyName": "",
-      "documentNumber": "140161/KPU.2/2026",
-      "documentType": "SPPB",
-      "location": "",
-      "registrationNumber": "140286",
-      "rowDate": "2026-08-05",
-      "status": "",
-      "timestamp": 1785985142509
-    },
-    "140288": {
-      "companyName": "",
-      "documentNumber": "140163/KPU.2/2026",
-      "documentType": "SPPB",
-      "location": "",
-      "registrationNumber": "140288",
-      "rowDate": "2026-08-05",
-      "status": "",
-      "timestamp": 1785985142509
-    },
-    "140377": {
-      "companyName": "",
-      "documentNumber": "140251/KPU.2/2026",
-      "documentType": "SPPB",
-      "location": "",
-      "registrationNumber": "140377",
-      "rowDate": "2026-08-05",
-      "status": "",
-      "timestamp": 1785985142509
-    },
     "140424": {
-      "companyName": "",
+      "companyName": "PT. VALEO AC INDONESIA",
       "documentNumber": "140296/KPU.2/2026",
       "documentType": "SPPB",
-      "location": "",
+      "location": "SEWU",
       "registrationNumber": "140424",
       "rowDate": "2026-08-06",
-      "status": "",
-      "timestamp": 1785985129787
+      "status": "red",
+      "timestamp": 1785993581412
     },
     "140825": {
-      "companyName": "",
+      "companyName": "PT. WOHLRAB INDONESIA",
       "documentNumber": "140701/KPU.2/2026",
       "documentType": "SPPB",
-      "location": "",
+      "location": "SEWU",
       "registrationNumber": "140825",
       "rowDate": "2026-08-06",
-      "status": "",
-      "timestamp": 1785998729132
+      "status": "green",
+      "timestamp": 1785999287092
     },
     "140838": {
-      "companyName": "",
+      "companyName": "PT. JMS BATAM",
       "documentNumber": "140714/KPU.2/2026",
       "documentType": "SPPB",
-      "location": "",
+      "location": "SEWU",
       "registrationNumber": "140838",
       "rowDate": "2026-08-06",
-      "status": "",
-      "timestamp": 1786010084793
+      "status": "red",
+      "timestamp": 1785999297305
     },
     "141020": {
-      "companyName": "",
+      "companyName": "PT. TDK ELECTRONICS INDONESIA",
       "documentNumber": "140907/KPU.2/2026",
       "documentType": "SPPB",
-      "location": "",
+      "location": "SEWU",
       "registrationNumber": "141020",
       "rowDate": "2026-08-06",
-      "status": "",
-      "timestamp": 1786071306301
+      "status": "orange",
+      "timestamp": 1786071573356
     },
     "141022": {
-      "companyName": "",
+      "companyName": "PT. TDK ELECTRONICS INDONESIA",
       "documentNumber": "140909/KPU.2/2026",
       "documentType": "SPPB",
-      "location": "",
+      "location": "SEWU",
       "registrationNumber": "141022",
       "rowDate": "2026-08-06",
-      "status": "",
-      "timestamp": 1786071306300
+      "status": "orange",
+      "timestamp": 1786071567748
     },
     "141024": {
-      "companyName": "",
+      "companyName": "PT. TDK ELECTRONICS INDONESIA",
       "documentNumber": "140911/KPU.2/2026",
       "documentType": "SPPB",
-      "location": "",
+      "location": "SEWU",
       "registrationNumber": "141024",
       "rowDate": "2026-08-06",
-      "status": "",
-      "timestamp": 1786071299516
+      "status": "orange",
+      "timestamp": 1786071565728
     },
     "141029": {
-      "companyName": "",
+      "companyName": "PT. TDK ELECTRONICS INDONESIA",
       "documentNumber": "140916/KPU.2/2026",
       "documentType": "SPPB",
-      "location": "",
+      "location": "SEWU",
       "registrationNumber": "141029",
       "rowDate": "2026-08-06",
-      "status": "",
-      "timestamp": 1786071299516
+      "status": "orange",
+      "timestamp": 1786071563589
     },
     "141031": {
-      "companyName": "",
+      "companyName": "PT. SANJAYA ABADI SUKSES",
       "documentNumber": "140918/KPU.2/2026",
       "documentType": "SPPB",
-      "location": "",
+      "location": "SEWU",
       "registrationNumber": "141031",
       "rowDate": "2026-08-06",
-      "status": "",
-      "timestamp": 1786071299515
+      "status": "orange",
+      "timestamp": 1786071561286
     },
     "141100": {
-      "companyName": "",
+      "companyName": "PT. CITRA SHIPYARD",
       "documentNumber": "140986/KPU.2/2026",
       "documentType": "SPPB",
-      "location": "",
+      "location": "SEWU",
       "registrationNumber": "141100",
       "rowDate": "2026-08-06",
-      "status": "",
-      "timestamp": 1786071306302
+      "status": "orange",
+      "timestamp": 1786071575287
     },
     "141108": {
-      "companyName": "",
+      "companyName": "PT. VOLEX INDONESIA",
       "documentNumber": "140994/KPU.2/2026",
       "documentType": "SPPB",
-      "location": "",
+      "location": "SEWU",
       "registrationNumber": "141108",
       "rowDate": "2026-08-06",
-      "status": "",
-      "timestamp": 1786071342141
+      "status": "orange",
+      "timestamp": 1786071583276
     },
     "141114": {
-      "companyName": "",
+      "companyName": "PT. CITRA SHIPYARD",
       "documentNumber": "141000/KPU.2/2026",
       "documentType": "SPPB",
-      "location": "",
+      "location": "SEWU",
       "registrationNumber": "141114",
       "rowDate": "2026-08-06",
-      "status": "",
-      "timestamp": 1786071306301
+      "status": "orange",
+      "timestamp": 1786071571281
     },
     "141128": {
-      "companyName": "",
+      "companyName": "PT. TDK ELECTRONICS INDONESIA",
       "documentNumber": "141014/KPU.2/2026",
       "documentType": "SPPB",
-      "location": "",
+      "location": "SEWU",
       "registrationNumber": "141128",
       "rowDate": "2026-08-06",
-      "status": "",
-      "timestamp": 1786071309081
+      "status": "orange",
+      "timestamp": 1786071579665
     },
     "141129": {
-      "companyName": "",
+      "companyName": "PT. TDK ELECTRONICS INDONESIA",
       "documentNumber": "141015/KPU.2/2026",
       "documentType": "SPPB",
-      "location": "",
+      "location": "SEWU",
       "registrationNumber": "141129",
       "rowDate": "2026-08-06",
-      "status": "",
-      "timestamp": 1786071309080
+      "status": "orange",
+      "timestamp": 1786071577736
     },
     "141199": {
       "companyName": "PT. JMS BATAM",
@@ -208,8 +160,8 @@
       "location": "SEWU",
       "registrationNumber": "141199",
       "rowDate": "2026-08-07",
-      "status": "green",
-      "timestamp": 1786091624745
+      "status": "blue",
+      "timestamp": 1786075610585
     },
     "141691": {
       "companyName": "PT. HENG GUAN BATAM INDUSTRIES",
@@ -218,78 +170,88 @@
       "location": "SEWU",
       "registrationNumber": "141691",
       "rowDate": "2026-08-07",
-      "status": "orange",
+      "status": "blue",
       "timestamp": 1786088614495
     },
-    "083930": {
-      "companyName": "",
-      "documentNumber": "083883/KPU.2/2026",
-      "documentType": "NPPB",
-      "location": "",
-      "registrationNumber": "083930",
-      "rowDate": "2026-08-05",
-      "status": "green",
-      "timestamp": 1785922859659
+    "141883": {
+      "companyName": "PT. TDK ELECTRONICS INDONESIA",
+      "documentNumber": "141778/KPU.2/2026",
+      "documentType": "SPPB",
+      "location": "SEWU",
+      "registrationNumber": "141883",
+      "rowDate": "2026-08-07",
+      "status": "orange",
+      "timestamp": 1786157056363
     },
-    "083912": {
-      "companyName": "",
-      "documentNumber": "083865/KPU.2/2026",
-      "documentType": "NPPB",
-      "location": "",
-      "registrationNumber": "083912",
-      "rowDate": "2026-08-05",
-      "status": "green",
-      "timestamp": 1785922859659
+    "141885": {
+      "companyName": "PT. TDK ELECTRONICS INDONESIA",
+      "documentNumber": "141780/KPU.2/2026",
+      "documentType": "SPPB",
+      "location": "SEWU",
+      "registrationNumber": "141885",
+      "rowDate": "2026-08-07",
+      "status": "orange",
+      "timestamp": 1786157052380
     },
-    "083914": {
-      "companyName": "",
-      "documentNumber": "083867/KPU.2/2026",
-      "documentType": "NPPB",
-      "location": "",
-      "registrationNumber": "083914",
-      "rowDate": "2026-08-05",
-      "status": "green",
-      "timestamp": 1785922859659
+    "141887": {
+      "companyName": "PT. SINAR ASIA PACK",
+      "documentNumber": "141782/KPU.2/2026",
+      "documentType": "SPPB",
+      "location": "SEWU",
+      "registrationNumber": "141887",
+      "rowDate": "2026-08-07",
+      "status": "orange",
+      "timestamp": 1786157042530
     },
-    "084054": {
-      "companyName": "",
-      "documentNumber": "083984/KPU.2/2026",
-      "documentType": "NPPB",
-      "location": "",
-      "registrationNumber": "084054",
-      "rowDate": "2026-08-05",
-      "status": "green",
-      "timestamp": 1785922859658
+    "141888": {
+      "companyName": "PT. VALEO AC INDONESIA",
+      "documentNumber": "141783/KPU.2/2026",
+      "documentType": "SPPB",
+      "location": "SEWU",
+      "registrationNumber": "141888",
+      "rowDate": "2026-08-07",
+      "status": "orange",
+      "timestamp": 1786157045639
     },
-    "084079": {
-      "companyName": "",
-      "documentNumber": "084009/KPU.2/2026",
-      "documentType": "NPPB",
-      "location": "",
-      "registrationNumber": "084079",
-      "rowDate": "2026-08-05",
-      "status": "green",
-      "timestamp": 1785922859658
+    "141975": {
+      "companyName": "PT. VALEO AC INDONESIA",
+      "documentNumber": "141868/KPU.2/2026",
+      "documentType": "SPPB",
+      "location": "SEWU",
+      "registrationNumber": "141975",
+      "rowDate": "2026-08-07",
+      "status": "red",
+      "timestamp": 1786157040562
     },
-    "084081": {
-      "companyName": "",
-      "documentNumber": "084011/KPU.2/2026",
-      "documentType": "NPPB",
-      "location": "",
-      "registrationNumber": "084081",
-      "rowDate": "2026-08-05",
-      "status": "green",
-      "timestamp": 1785922859657
+    "141979": {
+      "companyName": "PT. TDK ELECTRONICS INDONESIA",
+      "documentNumber": "141872/KPU.2/2026",
+      "documentType": "SPPB",
+      "location": "SEWU",
+      "registrationNumber": "141979",
+      "rowDate": "2026-08-07",
+      "status": "red",
+      "timestamp": 1786157072509
+    },
+    "142006": {
+      "companyName": "PT. VOLEX INDONESIA",
+      "documentNumber": "141899/KPU.2/2026",
+      "documentType": "SPPB",
+      "location": "SEWU",
+      "registrationNumber": "142006",
+      "rowDate": "2026-08-07",
+      "status": "orange",
+      "timestamp": 1786157048377
     },
     "084369": {
-      "companyName": "",
+      "companyName": "PT. VALEO AC INDONESIA",
       "documentNumber": "084273/KPU.2/2026",
       "documentType": "NPPB",
-      "location": "",
+      "location": "IDBTU - BATU AMPAR",
       "registrationNumber": "084369",
       "rowDate": "2026-08-06",
-      "status": "",
-      "timestamp": 1786010087541
+      "status": "red",
+      "timestamp": 1785993588288
     },
     "084395": {
       "companyName": "PT. VALEO AC INDONESIA",
@@ -302,104 +264,104 @@
       "timestamp": 1785993590488
     },
     "084401": {
-      "companyName": "",
+      "companyName": "PT. VALEO AC INDONESIA",
       "documentNumber": "084310/KPU.2/2026",
       "documentType": "NPPB",
-      "location": "",
+      "location": "IDBTU - BATU AMPAR",
       "registrationNumber": "084401",
       "rowDate": "2026-08-06",
-      "status": "",
-      "timestamp": 1786010087541
+      "status": "red",
+      "timestamp": 1785993585281
     },
     "084413": {
-      "companyName": "",
+      "companyName": "PT. TDK ELECTRONICS INDONESIA",
       "documentNumber": "084322/KPU.2/2026",
       "documentType": "NPPB",
-      "location": "",
+      "location": "IDBTU - BATU AMPAR",
       "registrationNumber": "084413",
       "rowDate": "2026-08-06",
-      "status": "",
-      "timestamp": 1786004405979
+      "status": "red",
+      "timestamp": 1785999294194
     },
     "084418": {
-      "companyName": "",
+      "companyName": "PT. HENG GUAN BATAM INDUSTRIES",
       "documentNumber": "084327/KPU.2/2026",
       "documentType": "NPPB",
-      "location": "",
+      "location": "IDKSP - SEKUPANG",
       "registrationNumber": "084418",
       "rowDate": "2026-08-06",
-      "status": "",
-      "timestamp": 1786004405979
+      "status": "green",
+      "timestamp": 1785999289712
     },
     "084431": {
-      "companyName": "",
+      "companyName": "PT. SCANJET PRODUCTION INDAH",
       "documentNumber": "084340/KPU.2/2026",
       "documentType": "NPPB",
-      "location": "",
+      "location": "IDKSP - SEKUPANG",
       "registrationNumber": "084431",
       "rowDate": "2026-08-06",
-      "status": "",
-      "timestamp": 1786004405979
+      "status": "green",
+      "timestamp": 1786000885064
     },
     "084440": {
-      "companyName": "",
+      "companyName": "PT. JMS BATAM",
       "documentNumber": "084349/KPU.2/2026",
       "documentType": "NPPB",
-      "location": "",
+      "location": "IDBTU - BATU AMPAR",
       "registrationNumber": "084440",
       "rowDate": "2026-08-06",
-      "status": "",
-      "timestamp": 1786004401849
+      "status": "red",
+      "timestamp": 1786000882516
     },
     "084448": {
-      "companyName": "",
+      "companyName": "PT. TDK ELECTRONICS INDONESIA",
       "documentNumber": "084357/KPU.2/2026",
       "documentType": "NPPB",
-      "location": "",
+      "location": "IDBTU - BATU AMPAR",
       "registrationNumber": "084448",
       "rowDate": "2026-08-06",
-      "status": "",
-      "timestamp": 1786004401849
+      "status": "red",
+      "timestamp": 1786002835011
     },
     "084481": {
-      "companyName": "",
+      "companyName": "PT. SANJAYA ABADI SUKSES",
       "documentNumber": "084390/KPU.2/2026",
       "documentType": "NPPB",
-      "location": "",
+      "location": "IDKSP - SEKUPANG",
       "registrationNumber": "084481",
       "rowDate": "2026-08-06",
-      "status": "",
-      "timestamp": 1786004401849
+      "status": "green",
+      "timestamp": 1786007956097
     },
     "084563": {
-      "companyName": "",
+      "companyName": "PT. JMS BATAM",
       "documentNumber": "084472/KPU.2/2026",
       "documentType": "NPPB",
-      "location": "",
+      "location": "IDKSP - SEKUPANG",
       "registrationNumber": "084563",
       "rowDate": "2026-08-06",
-      "status": "",
-      "timestamp": 1786010074861
+      "status": "green",
+      "timestamp": 1786007953526
     },
     "084617": {
-      "companyName": "",
+      "companyName": "PT. VALEO AC INDONESIA",
       "documentNumber": "084525/KPU.2/2026",
       "documentType": "NPPB",
-      "location": "",
+      "location": "IDBTU - BATU AMPAR",
       "registrationNumber": "084617",
       "rowDate": "2026-08-06",
-      "status": "",
-      "timestamp": 1786010087540
+      "status": "red",
+      "timestamp": 1786007960813
     },
     "084643": {
-      "companyName": "",
+      "companyName": "PT. VALEO AC INDONESIA",
       "documentNumber": "084553/KPU.2/2026",
       "documentType": "NPPB",
-      "location": "",
+      "location": "IDBTU - BATU AMPAR",
       "registrationNumber": "084643",
       "rowDate": "2026-08-06",
-      "status": "",
-      "timestamp": 1786010084794
+      "status": "red",
+      "timestamp": 1786009545411
     },
     "084667": {
       "companyName": "PT. JEJARING MITRA PERSADA",
@@ -408,18 +370,18 @@
       "location": "IDKSP - SEKUPANG",
       "registrationNumber": "084667",
       "rowDate": "2026-08-06",
-      "status": "orange",
+      "status": "green",
       "timestamp": 1786009549335
     },
     "055585": {
       "companyName": "",
       "documentNumber": "055590/KPU.2/2026",
       "documentType": "SPPB",
-      "location": "",
+      "location": "SEWU",
       "registrationNumber": "055585",
       "rowDate": "2026-08-06",
-      "status": "",
-      "timestamp": 1786071299514
+      "status": "red",
+      "timestamp": 1786091153312
     },
     "055623": {
       "companyName": "",
@@ -429,7 +391,7 @@
       "registrationNumber": "055623",
       "rowDate": "2026-08-07",
       "status": "red",
-      "timestamp": 1786091649391
+      "timestamp": 1786157064352
     },
     "084921": {
       "companyName": "PT. VALEO AC INDONESIA",
@@ -439,7 +401,7 @@
       "registrationNumber": "084921",
       "rowDate": "2026-08-07",
       "status": "red",
-      "timestamp": 1786091627193
+      "timestamp": 1786075613368
     },
     "084927": {
       "companyName": "PT. VALEO AC INDONESIA",
@@ -449,7 +411,7 @@
       "registrationNumber": "084927",
       "rowDate": "2026-08-07",
       "status": "red",
-      "timestamp": 1786091652575
+      "timestamp": 1786075608184
     },
     "084968": {
       "companyName": "PT. VALEO AC INDONESIA",
@@ -469,7 +431,7 @@
       "registrationNumber": "085020",
       "rowDate": "2026-08-07",
       "status": "red",
-      "timestamp": 1786091616508
+      "timestamp": 1786088599479
     },
     "085054": {
       "companyName": "PT. VALEO AC INDONESIA",
@@ -479,7 +441,7 @@
       "registrationNumber": "085054",
       "rowDate": "2026-08-07",
       "status": "red",
-      "timestamp": 1786091613051
+      "timestamp": 1786088597249
     },
     "085036": {
       "companyName": "PT. BLACKMAGIC DESIGN MANUFACTURING",
@@ -488,7 +450,7 @@
       "location": "IDKSP - SEKUPANG",
       "registrationNumber": "085036",
       "rowDate": "2026-08-07",
-      "status": "orange",
+      "status": "blue",
       "timestamp": 1786088605516
     },
     "085082": {
@@ -499,30 +461,50 @@
       "registrationNumber": "085082",
       "rowDate": "2026-08-07",
       "status": "red",
-      "timestamp": 1786091610415
+      "timestamp": 1786091123988
     },
     "085127": {
-      "companyName": "",
+      "companyName": "PT. VALEO AC INDONESIA",
       "documentNumber": "085038/KPU.2/2026",
       "documentType": "NPPB",
-      "location": "",
+      "location": "IDBTU - BATU AMPAR",
       "registrationNumber": "085127",
       "rowDate": "2026-08-07",
-      "status": "",
-      "timestamp": 1786091705107
+      "status": "red",
+      "timestamp": 1786091722179
     },
     "085141": {
-      "companyName": "",
+      "companyName": "PT. JMS BATAM",
       "documentNumber": "085052/KPU.2/2026",
       "documentType": "NPPB",
-      "location": "",
+      "location": "IDKSP - SEKUPANG",
       "registrationNumber": "085141",
       "rowDate": "2026-08-07",
-      "status": "",
-      "timestamp": 1786092698488
+      "status": "blue",
+      "timestamp": 1786095904644
+    },
+    "085212": {
+      "companyName": "PT. VALEO AC INDONESIA",
+      "documentNumber": "085129/KPU.2/2026",
+      "documentType": "NPPB",
+      "location": "IDBTU - BATU AMPAR",
+      "registrationNumber": "085212",
+      "rowDate": "2026-08-07",
+      "status": "red",
+      "timestamp": 1786095907751
+    },
+    "085226": {
+      "companyName": "PT. TDK ELECTRONICS INDONESIA",
+      "documentNumber": "085143/KPU.2/2026",
+      "documentType": "NPPB",
+      "location": "IDKSP - SEKUPANG",
+      "registrationNumber": "085226",
+      "rowDate": "2026-08-07",
+      "status": "blue",
+      "timestamp": 1786157037938
     }
   },
-  "updatedAt": 1786093329732,
+  "updatedAt": 1786157429059,
   "completedByDate": {
     "2026-08-05": [
       "083930",
@@ -583,7 +565,32 @@
       "141199",
       "141691",
       "085036",
-      "085141"
+      "085141",
+      "085226",
+      "084921",
+      "084927",
+      "084968",
+      "085020",
+      "085054",
+      "085082",
+      "085127",
+      "085212",
+      "141887"
+    ],
+    "2026-08-08": [
+      "141199",
+      "141691",
+      "085036",
+      "085141",
+      "085226",
+      "084921",
+      "084927",
+      "084968",
+      "085020",
+      "085054",
+      "085082",
+      "085127",
+      "085212"
     ]
   },
   "pibpebByDate": {
@@ -612,8 +619,17 @@
     ],
     "2026-08-07": [
       "141199",
+      "085036",
       "141691",
-      "085036"
+      "085141",
+      "085226"
+    ],
+    "2026-08-08": [
+      "141199",
+      "085036",
+      "141691",
+      "085141",
+      "085226"
     ]
   }
 }
