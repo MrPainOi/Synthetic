@@ -615,7 +615,9 @@
             (itemOrCache?.companyName || "") + " " +
             rowText
         ).toUpperCase();
-        return str.includes("BATU AMPAR") || str.includes("BATUAMPAR") || str.includes("IDBTU");
+        return str.includes("BATU AMPAR") || str.includes("BATUAMPAR") || str.includes("IDBTU") ||
+               str.includes("B.AMPAR") || str.includes("B AMPAR") || str.includes("BT AMPAR") ||
+               str.includes("BATU-AMPAR") || str.includes("BT.AMPAR") || str.includes("BTAMPAR");
     }
 
     function isSekupang(itemOrCache, rowText = "") {
@@ -655,15 +657,15 @@
             return batuAmpar ? "yellow" : "green";
         }
 
-        // 4. Belum Di Print SPPB/NPPB (Hanya jika ada di scanCache)
-        if (cached && cached.status) {
-            if (cached.status === "orange" || cached.status === "red") {
-                return batuAmpar ? "red" : "orange";
-            }
-            return cached.status;
+        // 4. Belum Di Print SPPB/NPPB (Batu Ampar -> Red, Sekupang -> Orange if cached)
+        if (batuAmpar) {
+            return "red";
         }
 
-        // Jika cache kosong & tidak di daftar selesai -> Tanpa Warna ("")
+        if (cached && cached.status) {
+            return cached.status === "red" ? "red" : (cached.status || "orange");
+        }
+
         return "";
     }
 
@@ -785,23 +787,23 @@
 
 
         if (existing) {
-
             existing.style.setProperty(
                 "background",
                 colors.background,
                 "important"
             );
-
-
+            existing.style.setProperty(
+                "background-color",
+                colors.background,
+                "important"
+            );
             existing.style.setProperty(
                 "color",
                 colors.color,
                 "important"
             );
 
-
             return true;
-
         }
 
 
@@ -864,8 +866,11 @@
                 colors.background,
                 "important"
             );
-
-
+            number.style.setProperty(
+                "background-color",
+                colors.background,
+                "important"
+            );
             number.style.setProperty(
                 "color",
                 colors.color,
