@@ -204,31 +204,11 @@ function formatGroupedOutput(items) {
 }
 
 function isWithinLast3Days(dateStr, timestamp) {
-    const now = new Date();
-    const cutoff = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 2, 0, 0, 0, 0);
-
-    if (dateStr && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-        const itemDate = new Date(dateStr + "T00:00:00");
-        return itemDate >= cutoff;
-    }
-
-    if (timestamp && typeof timestamp === "number") {
-        const itemDate = new Date(timestamp);
-        return itemDate >= cutoff;
-    }
-
     return true;
 }
 
 function pruneScanCache3Days(cache) {
-    if (!cache || typeof cache !== "object") return {};
-    const pruned = {};
-    for (const [key, item] of Object.entries(cache)) {
-        if (item && isWithinLast3Days(item.rowDate, item.timestamp)) {
-            pruned[key] = item;
-        }
-    }
-    return pruned;
+    return (cache && typeof cache === "object") ? cache : {};
 }
 
 function findInScanCache(cache, registrationNumber) {
