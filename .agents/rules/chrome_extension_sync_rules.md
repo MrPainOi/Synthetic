@@ -1,3 +1,7 @@
+---
+trigger: model_decision
+---
+
 # Chrome Extension State Management & Local Sync Rules
 
 ## 1. Local Server & Peer-to-Peer State Synchronization

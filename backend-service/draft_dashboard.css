@@ -1,0 +1,819 @@
+/* ==========================================================================
+   CEISA 4.0 - Customs Clearance Portal Style
+   Official Indonesian Customs & Excise (DJBC) PEB Layout
+   Formal, Clean, High-Legibility, Familiar Customs Form Architecture
+   ========================================================================== */
+
+:root {
+    /* DJBC Official Customs Theme Palette */
+    --ceisa-blue:        #1e40af;
+    --ceisa-blue-dark:   #1e3a8a;
+    --ceisa-blue-hover:  #1d4ed8;
+    --ceisa-blue-light:  #eff6ff;
+    --ceisa-header-bg:   #0f294a;
+
+    --surface-bg:        #f1f5f9;
+    --surface-card:      #ffffff;
+    --surface-subtle:    #f8fafc;
+    --surface-hover:     #f1f5f9;
+
+    --text-primary:      #0f172a;
+    --text-secondary:    #334155;
+    --text-muted:        #64748b;
+    --text-inverse:      #ffffff;
+
+    --border-color:      #cbd5e1;
+    --border-strong:     #94a3b8;
+    --border-focus:      #2563eb;
+
+    --badge-green-bg:    #ecfdf5;
+    --badge-green-text:  #065f46;
+    --badge-green-border:#a7f3d0;
+
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", Helvetica, Arial, sans-serif;
+    --font-mono: "JetBrains Mono", Consolas, "Courier New", monospace;
+
+    --radius-sm: 3px;
+    --radius-md: 5px;
+    --radius-lg: 6px;
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+    --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    font-size: 14px;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+}
+
+body {
+    font-family: var(--font-sans);
+    background-color: var(--surface-bg);
+    color: var(--text-primary);
+    line-height: 1.5;
+    padding-bottom: 48px;
+    overflow-x: hidden;
+    max-width: 100%;
+}
+
+/* ==========================================================================
+   1. PORTAL HEADER BAR (RESMI CEISA 4.0)
+   ========================================================================== */
+.portal-header {
+    background-color: var(--ceisa-header-bg);
+    color: var(--text-inverse);
+    border-bottom: 2px solid #2563eb;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.portal-header-inner {
+    max-width: 1360px;
+    margin: 0 auto;
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.portal-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.portal-logo-emblem {
+    width: 32px;
+    height: 32px;
+    background: #1e40af;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 13px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.portal-brand-text {
+    display: flex;
+    flex-direction: column;
+}
+
+.portal-system-title {
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    color: #ffffff;
+}
+
+.portal-system-sub {
+    font-size: 12px;
+    color: #93c5fd;
+}
+
+.portal-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Base Buttons */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-sans);
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 6px 14px;
+    border-radius: var(--radius-sm);
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+}
+
+.btn-header-primary {
+    background: #2563eb;
+    color: #ffffff;
+    border: 1px solid #3b82f6;
+}
+
+.btn-header-primary:hover {
+    background: #1d4ed8;
+}
+
+.btn-header-subtle {
+    background: rgba(255, 255, 255, 0.1);
+    color: #e2e8f0;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.btn-header-subtle:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+}
+
+/* ==========================================================================
+   2. DOCUMENT TITLE STRIP (SUB-HEADER PABEAN)
+   ========================================================================== */
+.doc-title-strip {
+    background: #ffffff;
+    border-bottom: 1px solid var(--border-color);
+    padding: 12px 0;
+    margin-bottom: 18px;
+}
+
+.doc-title-container {
+    max-width: 1360px;
+    margin: 0 auto;
+    padding: 0 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.doc-title-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.doc-title-left h1 {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.badge-draft-status {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
+    background: #dcfce7;
+    color: #166534;
+    border: 1px solid #86efac;
+}
+
+.doc-title-meta {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.doc-title-meta strong {
+    color: var(--text-primary);
+}
+
+/* ==========================================================================
+   3. CEISA 4.0 STANDARD TABS
+   ========================================================================== */
+.main-workspace {
+    max-width: 1360px;
+    margin: 0 auto;
+    padding: 0 20px;
+    width: 100%;
+    box-sizing: border-box;
+    overflow-x: hidden;
+}
+
+.ceisa-tabs {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    border-bottom: 2px solid #cbd5e1;
+    margin-bottom: 16px;
+    overflow-x: auto;
+    white-space: nowrap;
+}
+
+.ceisa-tab-btn {
+    background: #e2e8f0;
+    border: 1px solid #cbd5e1;
+    border-bottom: none;
+    border-radius: 4px 4px 0 0;
+    font-family: var(--font-sans);
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    padding: 9px 16px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.12s ease;
+    margin-bottom: -2px;
+}
+
+.ceisa-tab-btn:hover {
+    background: #f1f5f9;
+    color: var(--text-primary);
+}
+
+.ceisa-tab-btn.active {
+    background: #ffffff;
+    color: var(--ceisa-blue-dark);
+    font-weight: 700;
+    border-color: #cbd5e1;
+    border-top: 3px solid var(--ceisa-blue);
+    border-bottom: 2px solid #ffffff;
+}
+
+.tab-badge {
+    font-size: 11.5px;
+    background: #cbd5e1;
+    color: #0f172a;
+    padding: 1px 6px;
+    border-radius: 10px;
+    font-weight: 700;
+}
+
+.ceisa-tab-btn.active .tab-badge {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+/* Tab Panels */
+.tab-content-panel {
+    display: none;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow-x: hidden;
+}
+
+.tab-content-panel.active {
+    display: block;
+}
+
+/* ==========================================================================
+   4. FORM SECTIONS & FIELD GROUPS (STANDAR CEISA)
+   ========================================================================== */
+.ceisa-form-card {
+    background: #ffffff;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 16px;
+    overflow: hidden;
+}
+
+.ceisa-card-header {
+    background: #f8fafc;
+    border-bottom: 1px solid var(--border-color);
+    padding: 9px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.ceisa-card-title {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: 0.2px;
+}
+
+.ceisa-card-body {
+    padding: 16px;
+}
+
+/* Form Layout Grid */
+.form-grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px 24px;
+}
+
+.form-grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px 20px;
+}
+
+@media (max-width: 768px) {
+    .form-grid-2, .form-grid-3 {
+        grid-template-columns: 1fr;
+    }
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+}
+
+.form-label {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.form-label span.req {
+    color: #dc2626;
+    margin-left: 2px;
+}
+
+.form-control {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    font-family: var(--font-sans);
+    font-size: 13px;
+    color: var(--text-primary);
+    background: #ffffff;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    padding: 7px 10px;
+    outline: none;
+    transition: border-color 0.15s ease;
+}
+
+.form-control:focus {
+    border-color: var(--border-focus);
+    box-shadow: 0 0 0 1px var(--border-focus);
+}
+
+.form-control[readonly] {
+    background: #f8fafc;
+    color: #334155;
+    cursor: default;
+}
+
+.form-control-mono {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+}
+
+textarea.form-control {
+    line-height: 1.5;
+    resize: vertical;
+}
+
+/* ==========================================================================
+   5. CEISA DATA TABLES (TABEL RESMI PABEAN)
+   ========================================================================== */
+.table-container-responsive {
+    width: 100%;
+    overflow: hidden;
+}
+
+.ceisa-table {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+    font-size: 12.5px;
+}
+
+.ceisa-table th {
+    background: #f1f5f9;
+    color: #1e293b;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.1px;
+    padding: 9px 10px;
+    border-top: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-strong);
+    border-right: 1px solid #e2e8f0;
+    text-align: left;
+}
+
+.ceisa-table th:last-child {
+    border-right: none;
+}
+
+.ceisa-table td {
+    padding: 7px 8px;
+    border-bottom: 1px solid #e2e8f0;
+    border-right: 1px solid #f1f5f9;
+    vertical-align: top;
+    background: #ffffff;
+}
+
+.ceisa-table td:last-child {
+    border-right: none;
+}
+
+.ceisa-table tr:hover td {
+    background-color: #f8fafc;
+}
+
+/* Table Input Controls */
+.table-input-text {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    font-family: var(--font-sans);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-primary);
+    background: #ffffff;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: 6px 8px;
+    outline: none;
+    line-height: 1.45;
+    resize: vertical;
+    min-height: 48px;
+    word-break: break-word;
+}
+
+.table-input-text:focus {
+    border-color: var(--border-focus);
+    box-shadow: 0 0 0 1px var(--border-focus);
+}
+
+.table-input-mono {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--text-primary);
+    background: #ffffff;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: 6px 8px;
+    outline: none;
+}
+
+.table-input-mono:focus {
+    border-color: var(--border-focus);
+    box-shadow: 0 0 0 1px var(--border-focus);
+}
+
+.btn-table-del {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    width: 26px;
+    height: 26px;
+    border-radius: var(--radius-sm);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+}
+
+.btn-table-del:hover {
+    color: #dc2626;
+    background: #fee2e2;
+}
+
+/* Table Summary Bar */
+.ceisa-table-summary {
+    background: #f8fafc;
+    border-top: 1px solid var(--border-strong);
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    font-size: 12px;
+}
+
+.summary-metrics {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    flex-wrap: wrap;
+}
+
+.summary-item {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+}
+
+.summary-item-label {
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.summary-item-val {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.summary-item-val.highlight {
+    color: var(--ceisa-blue);
+    font-size: 13.5px;
+}
+
+/* ==========================================================================
+   6. BOTTOM SUBMISSION DOCK (FORM ACTIONS BIASA DI BAWAH)
+   ========================================================================== */
+.ceisa-bottom-dock {
+    margin-top: 20px;
+    background: #ffffff;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-sm);
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.dock-status-message {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12.5px;
+    color: #334155;
+    font-weight: 500;
+}
+
+.status-dot-green {
+    width: 8px;
+    height: 8px;
+    background: #16a34a;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.dock-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.btn-primary-ceisa {
+    background: #1e40af;
+    color: #ffffff;
+    border: 1px solid #1e3a8a;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 9px 18px;
+    border-radius: var(--radius-sm);
+}
+
+.btn-primary-ceisa:hover {
+    background: #1d4ed8;
+}
+
+.btn-secondary-ceisa {
+    background: #ffffff;
+    color: var(--text-primary);
+    border: 1px solid var(--border-strong);
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 8px 14px;
+    border-radius: var(--radius-sm);
+}
+
+.btn-secondary-ceisa:hover {
+    background: var(--surface-subtle);
+    border-color: #64748b;
+}
+
+/* Toast Messages */
+.toast-shelf {
+    position: fixed;
+    top: 60px;
+    right: 20px;
+    z-index: 999;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    pointer-events: none;
+}
+
+.toast {
+    background: #0f172a;
+    color: #ffffff;
+    padding: 9px 16px;
+    border-radius: var(--radius-sm);
+    font-size: 12.5px;
+    font-weight: 500;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    transform: translateX(120%);
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    pointer-events: auto;
+}
+
+.toast.visible {
+    transform: translateX(0);
+}
+
+.toast.toast-success { border-color: #10b981; }
+.toast.toast-error { border-color: #ef4444; }
+.toast.toast-info { border-color: #3b82f6; }
+
+/* ==========================================================================
+   7. SAFETY CHECK (AUDIT KESESUAIAN DOKUMEN PABEAN)
+   ========================================================================== */
+.badge-safe-valid {
+    font-size: 12px;
+    font-weight: 700;
+    color: #166534;
+    background: #dcfce7;
+    border: 1px solid #86efac;
+    padding: 3px 10px;
+    border-radius: var(--radius-sm);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.badge-safe-warning {
+    font-size: 12px;
+    font-weight: 700;
+    color: #991b1b;
+    background: #fee2e2;
+    border: 1px solid #fca5a5;
+    padding: 3px 10px;
+    border-radius: var(--radius-sm);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.safecheck-banner {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 14px 16px;
+    border-radius: var(--radius-sm);
+    border: 1px solid #bbf7d0;
+    background: #f0fdf4;
+    color: #14532d;
+    box-sizing: border-box;
+    width: 100%;
+}
+
+.safecheck-banner.safecheck-banner-warning {
+    border-color: #fecaca;
+    background: #fef2f2;
+    color: #7f1d1d;
+}
+
+.safecheck-banner-icon {
+    flex-shrink: 0;
+    margin-top: 2px;
+    color: #16a34a;
+}
+
+.safecheck-banner-warning .safecheck-banner-icon {
+    color: #dc2626;
+}
+
+.safecheck-banner-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.safecheck-banner-title {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 4px;
+}
+
+.safecheck-banner-desc {
+    font-size: 12.5px;
+    color: #334155;
+    line-height: 1.5;
+}
+
+.safecheck-score-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: var(--radius-sm);
+    padding: 8px 14px;
+    min-width: 90px;
+    flex-shrink: 0;
+}
+
+.safecheck-score-val {
+    font-family: var(--font-mono);
+    font-size: 18px;
+    font-weight: 700;
+    color: #15803d;
+    line-height: 1.2;
+}
+
+.safecheck-banner-warning .safecheck-score-val {
+    color: #dc2626;
+}
+
+.safecheck-score-label {
+    font-size: 11.5px;
+    color: #64748b;
+    font-weight: 600;
+    margin-top: 2px;
+}
+
+.safecheck-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.safecheck-list li {
+    font-size: 12.5px;
+    color: #1e293b;
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    padding: 8px 12px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    line-height: 1.45;
+}
+
+.safecheck-warnings-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.safecheck-warnings-list li {
+    font-size: 12.5px;
+    color: #7f1d1d;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    padding: 8px 12px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    line-height: 1.45;
+}
