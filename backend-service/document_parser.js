@@ -81,13 +81,14 @@ Kembalikan HANYA format JSON murni tanpa markdown/backticks (\`\`\`json):
   "consigneeAddress": "Alamat Lengkap Penerima persis di dokumen",
   "loadingPort": "Pelabuhan Muat",
   "dischargePort": "Pelabuhan Bongkar",
-  "totalKemasan": "Total jenis & jumlah kemasan, misal: 48 PACKAGES = 48 PALLETS",
+  "totalKemasan": "Total jenis & jumlah kemasan dari dokumen (KHUSUS dokumen VALEO: baca Grand Total kemasan dari Packing List, utamakan jumlah box/kemasan barang, misal: '816 BOXES' atau '7 PALLETS = 816 BOXES')",
   "totalGrossWeightKGM": "Total berat kotor (tulis persis)",
   "totalNetWeightKGM": "Total berat bersih (tulis persis)",
   "items": [
     {
       "uraianJenisBarang": "Nama atau deskripsi komoditas barang SAJA (WAJIB HAPUS dan JANGAN sertakan part number maupun customer part no seperti (575000 / W000103691). Contoh: VS TMEAO FBP AIO with Logo 350mm 14\")",
       "jumlahDanSatuanBarang": "Misal: 3,975 PC",
+      "kemasan": "Jumlah dan jenis kemasan barang ini. KHUSUS dokumen VALEO: nilainya SAMA SEMUA untuk seluruh baris barang, yaitu diambil dari Grand Total Packing List (misal: '816 BOX')",
       "beratBersih": "Net weight baris barang",
       "beratKotor": "Gross weight baris barang",
       "amount": "Total harga untuk baris barang ini"
@@ -97,6 +98,11 @@ Kembalikan HANYA format JSON murni tanpa markdown/backticks (\`\`\`json):
 
 PENTING:
 - Pada 'uraianJenisBarang': HANYA tuliskan nama atau uraian komoditas barangnya saja. JANGAN sertakan nomor part (part no) maupun customer part no (misal jangan sertakan angka dalam kurung seperti (575000 / W000103691)).
+- ATURAN KEMASAN BARANG (KHUSUS & HANYA UNTUK DOKUMEN PT. VALEO AC INDONESIA):
+  PERHATIAN: Aturan ini HANYA BERLAKU EKSKLUSIF untuk dokumen dari eksportir/shipper VALEO (PT. VALEO AC INDONESIA). JANGAN terapkan pada eksportir lain!
+  Khusus dokumen Valeo, nilai kemasan untuk SETIAP baris barang di dalam list ('items') nilainya SAMA SEMUA per Packing List, BUKAN per baris atau dibagi-bagi!
+  Cara melihatnya: baca baris Grand Total kemasan pada Packing List (misal jika di baris Grand Total PL tertulis '816 BOXES', maka SEMUA baris barang kemasannya diisi '816 BOX').
+  Dan pada 'totalKemasan', WAJIB cantumkan total kemasan dari Packing List tersebut (misal: '816 BOXES' atau '7 PALLETS = 816 BOXES').
 - ATURAN BERAT BARANG (KHUSUS & HANYA UNTUK DOKUMEN PT. SINAR ASIA PACK):
   PERHATIAN: Aturan ini HANYA BERLAKU EKSKLUSIF untuk dokumen dari eksportir/shipper SINAR ASIA (PT. SINAR ASIA PACK). JANGAN terapkan pada dokumen dari perusahaan lain!
   Khusus dokumen Sinar Asia, Packing List tidak merinci berat kotor dan bersih per barang, melainkan hanya mencantumkan Total Weight.
@@ -202,6 +208,79 @@ PENTING:
                             parsedData.totalGrossWeightKGM = parsedData.totalNetWeightKGM;
                         }
                     }
+                }
+            }
+        }
+
+        // ATURAN KHUSUS VALEO (PT. VALEO AC INDONESIA):
+        // Kemasan semua baris barang nilainya SAMA per Packing List, diambil dari total kemasan PL (misal: 816 BOX)
+        const isValeo = Boolean(
+            (parsedData.shipperName && /valeo/i.test(parsedData.shipperName)) ||
+            (parsedData.safeCheck?.matchedIdentifiers && parsedData.safeCheck.matchedIdentifiers.some(m => /valeo/i.test(m))) ||
+            (parsedData.safeCheck?.summary && /valeo/i.test(parsedData.safeCheck.summary))
+        );
+
+        if (isValeo && Array.isArray(parsedData.items) && parsedData.items.length > 0) {
+            let valeoPack = '';
+            for (const it of parsedData.items) {
+                if (it.kemasan && /\d+/.test(it.kemasan)) {
+                    valeoPack = it.kemasan;
+                    break;
+                }
+            }
+            if (!valeoPack && parsedData.totalKemasan) {
+                const boxMatch = String(parsedData.totalKemasan).match(/([\d.,]+)\s*(BOX|BOXES|BX|CTN|CARTON|CARTONS)/i);
+                if (boxMatch) {
+                    valeoPack = `${boxMatch[1]} BOX`;
+                } else {
+                    const numMatch = String(parsedData.totalKemasan).match(/([\d.,]+)/);
+                    valeoPack = numMatch ? `${numMatch[1]} BOX` : parsedData.totalKemasan;
+                }
+            }
+            if (valeoPack) {
+                parsedData.items.forEach(it => {
+                    it.kemasan = valeoPack;
+                });
+            }
+        } else if (Array.isArray(parsedData.items) && parsedData.items.length > 0) {
+            // Auto-alokasi kemasan per baris barang jika belum terisi oleh AI (Non-Valeo)
+            const missingKemasan = parsedData.items.some(i => !i.kemasan);
+            if (missingKemasan) {
+                const totalKemasanStr = String(parsedData.totalKemasan || '').trim();
+                const countMatch = totalKemasanStr.match(/(\d+[\d.,]*)\s*([A-Za-z]+)?/);
+                let totalCount = countMatch ? parseFloat(countMatch[1].replace(/,/g, '')) : 0;
+                let packType = 'BX';
+                if (/pallet|plt/i.test(totalKemasanStr)) packType = 'PLT';
+                else if (/box|boxes|bx/i.test(totalKemasanStr)) packType = 'BOX';
+                else if (/package|pkg|pk/i.test(totalKemasanStr)) packType = 'PKG';
+                else if (/carton|ctn|ct/i.test(totalKemasanStr)) packType = 'CTN';
+                else if (countMatch && countMatch[2]) packType = countMatch[2].toUpperCase();
+
+                if (parsedData.items.length === 1 && totalCount > 0) {
+                    parsedData.items[0].kemasan = `${totalCount} ${packType}`;
+                } else if (totalCount > 0 && totalCount >= parsedData.items.length) {
+                    let sumQty = 0;
+                    parsedData.items.forEach(it => {
+                        const q = parseFloat(String(it.jumlahDanSatuanBarang || '').replace(/[^0-9.]/g, '')) || 0;
+                        sumQty += q;
+                    });
+                    let remaining = totalCount;
+                    parsedData.items.forEach((it, idx) => {
+                        if (it.kemasan) return;
+                        if (idx === parsedData.items.length - 1) {
+                            it.kemasan = `${Math.max(1, Math.round(remaining))} ${packType}`;
+                        } else {
+                            const q = parseFloat(String(it.jumlahDanSatuanBarang || '').replace(/[^0-9.]/g, '')) || 0;
+                            const alloc = sumQty > 0 ? Math.round((q / sumQty) * totalCount) : Math.floor(totalCount / parsedData.items.length);
+                            const finalAlloc = Math.max(1, alloc);
+                            it.kemasan = `${finalAlloc} ${packType}`;
+                            remaining -= finalAlloc;
+                        }
+                    });
+                } else {
+                    parsedData.items.forEach(it => {
+                        if (!it.kemasan) it.kemasan = `1 ${packType}`;
+                    });
                 }
             }
         }

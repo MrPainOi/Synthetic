@@ -502,6 +502,40 @@ textarea.form-control {
     box-shadow: 0 0 0 1px var(--border-focus);
 }
 
+/* Composite Table Input (Value + Dropdown) */
+.table-input-composite {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    width: 100%;
+    min-width: 0;
+}
+
+.table-input-composite .table-input-mono {
+    flex: 1;
+    min-width: 0;
+}
+
+.table-select-unit {
+    flex-shrink: 0;
+    width: 96px;
+    padding: 6px 4px;
+    font-family: var(--font-sans);
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--text-primary);
+    background: #f8fafc;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    outline: none;
+    cursor: pointer;
+}
+
+.table-select-unit:focus {
+    border-color: var(--border-focus);
+    background: #ffffff;
+}
+
 .btn-table-del {
     background: transparent;
     border: none;

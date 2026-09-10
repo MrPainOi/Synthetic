@@ -1,134 +1,1547 @@
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CEISA Inspector - Web Data Dashboard</title>
+    <title>CEISA 4.0 - Portal Terpadu Bea dan Cukai</title>
     <link rel="stylesheet" href="dashboard.css">
 </head>
+
 <body>
-    <div class="app-container">
-        <!-- HEADER -->
-        <header class="app-header">
-            <div class="brand">
-                <span class="brand-icon">📊</span>
-                <div>
-                    <h1>CEISA Inspector Dashboard</h1>
-                    <p class="subtitle">Monitoring & Format Data Dokumen Pabean (SPPB & NPPB)</p>
-                </div>
-            </div>
-            <div class="header-actions">
-                <span id="wifiSyncStatus" class="wifi-badge">📶 Wi-Fi Sync Aktiv</span>
-                <input type="date" id="scanDate" class="date-picker-dash">
-                <button id="saveAllBtn" class="btn btn-primary">💾 Simpan Data</button>
-                <button id="refreshDataBtn" class="btn btn-secondary">🔄 Refresh</button>
-                <button id="clearCacheBtn" class="btn btn-danger">🗑️ Clear Cache</button>
-            </div>
-        </header>
 
-        <!-- STATS CARDS -->
-        <section class="stats-grid">
-            <div class="stat-card card-total">
-                <span class="stat-icon">📄</span>
-                <div>
-                    <span class="stat-value" id="statTotal">0</span>
-                    <span class="stat-label">Total Cached</span>
+    <!-- ======================================================================
+         1. TOP PORTAL HEADER (OFFICIAL DJBC HEADER & MASTER MODULE SWITCHER)
+         ====================================================================== -->
+    <header class="portal-header">
+        <div class="portal-header-inner">
+            <!-- Brand Emblem & Identity -->
+            <div class="portal-brand">
+                <div class="portal-logo-emblem">BC</div>
+                <div class="portal-brand-text">
+                    <span class="portal-system-title">PORTAL PENGGUNA JASA &bull; CEISA 4.0</span>
+                    <span class="portal-system-sub">Direktorat Jenderal Bea dan Cukai - Kementerian Keuangan RI</span>
                 </div>
             </div>
-            <div class="stat-card card-orange">
-                <span class="stat-icon">🟧</span>
-                <div>
-                    <span class="stat-value" id="statOrange">0</span>
-                    <span class="stat-label">Daftar Oren</span>
-                </div>
+
+            <!-- Master Module Switcher Navigation -->
+            <nav class="portal-module-switcher" role="tablist" aria-label="Modul Portal">
+                <button type="button" class="portal-nav-tab active" id="btnNavPeb" onclick="switchPortalModule('peb')">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                    </svg>
+                    Modul Draft PEB (Ekspor)
+                </button>
+                <button type="button" class="portal-nav-tab" id="btnNavInspector" onclick="switchPortalModule('inspector')">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="20" x2="18" y2="10"></line>
+                        <line x1="12" y1="20" x2="12" y2="4"></line>
+                        <line x1="6" y1="20" x2="6" y2="14"></line>
+                    </svg>
+                    CEISA Inspector (Monitoring & SPPB)
+                </button>
+            </nav>
+
+            <!-- Contextual Header Actions: PEB Mode -->
+            <div class="portal-header-actions" id="pebHeaderActions">
+                <input type="file" id="headerJsonFileInput" accept=".json" style="display: none;">
+                <button type="button" class="btn btn-header-primary"
+                    onclick="document.getElementById('headerJsonFileInput').click()"
+                    title="Unggah berkas JSON hasil ekstraksi AI">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                    Unggah JSON
+                </button>
+                <button type="button" class="btn btn-header-subtle" id="btnHeaderSample" title="Muat draft sampel">
+                    Muat Sampel
+                </button>
+                <button type="button" class="btn btn-header-subtle" onclick="window.print()" title="Cetak formulir">
+                    Cetak
+                </button>
             </div>
-            <div class="stat-card card-green">
-                <span class="stat-icon">🟩</span>
-                <div>
-                    <span class="stat-value" id="statGreen">0</span>
-                    <span class="stat-label">Selesai Hijau</span>
-                </div>
+
+            <!-- Contextual Header Actions: Inspector Mode -->
+            <div class="portal-header-actions" id="inspectorHeaderActions" style="display: none;">
+                <span id="wifiSyncStatus" class="wifi-badge">📶 Wi-Fi Sync Aktif</span>
+                <input type="date" id="scanDate" class="date-picker-dash" title="Pilih Tanggal Pindai Data">
+                <button type="button" id="saveAllBtn" class="btn btn-header-primary" title="Simpan data ke server & Wi-Fi">
+                    Simpan Data
+                </button>
+                <button type="button" id="refreshDataBtn" class="btn btn-header-subtle" title="Muat ulang data">
+                    Refresh
+                </button>
+                <button type="button" id="clearCacheBtn" class="btn btn-danger btn-sm" title="Hapus cache lokal">
+                    Clear Cache
+                </button>
             </div>
-            <div class="stat-card card-yellow">
-                <span class="stat-icon">🟨</span>
-                <div>
-                    <span class="stat-value" id="statYellow">0</span>
-                    <span class="stat-label">Batu Ampar (Kuning)</span>
+        </div>
+    </header>
+
+    <!-- ======================================================================
+         MODUL 1: CEISA 4.0 PEMBERITAHUAN EKSPOR BARANG (PEB DRAFT & SAFECHECK)
+         ====================================================================== -->
+    <div id="module-peb" class="portal-module-view">
+        <!-- Sub-Header Strip -->
+        <section class="doc-title-strip">
+            <div class="doc-title-container">
+                <div class="doc-title-left">
+                    <h1>Pemberitahuan Ekspor Barang (PEB / BC 3.0)</h1>
+                    <span class="badge-draft-status">Draft Siap Review</span>
+                    <span id="saveIndicator" style="font-size: 12px; color: var(--color-green-text); background: var(--color-green-bg); padding: 2px 8px; border-radius: 3px; border: 1px solid var(--color-green-border); font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
+                        <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--color-green-text);"></span>
+                        Tersimpan Otomatis
+                    </span>
+                </div>
+                <div class="doc-title-meta" id="docSubMeta">
+                    No. Aju: <strong id="lblNoAju">030000-001534-20260907-007732</strong> &bull; File: <strong id="lblFileName">Sample_Customs_Clearance_Draft.json</strong>
                 </div>
             </div>
         </section>
 
-        <!-- COLOR INFO LEGEND CARD DROPDOWN -->
-        <section class="panel-card info-panel">
-            <div class="panel-header" id="dashInfoToggleBtn" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
-                <h2 style="margin: 0; font-size: 14px;">ℹ️ Legenda & Info Warna Highlight Web</h2>
-                <span id="dashInfoArrow" style="font-size: 12px; color: #0284c7;">▼</span>
+        <!-- Main Workspace PEB -->
+        <main class="main-workspace">
+            <!-- CEISA 4.0 Tabs Strip -->
+            <nav class="ceisa-tabs" role="tablist">
+                <button type="button" class="ceisa-tab-btn active" onclick="switchCeisaTab('tab-header')">
+                    1. Header & Aju
+                </button>
+                <button type="button" class="ceisa-tab-btn" onclick="switchCeisaTab('tab-entitas')">
+                    2. Entitas (Pihak)
+                </button>
+                <button type="button" class="ceisa-tab-btn" onclick="switchCeisaTab('tab-dokumen')">
+                    3. Dokumen & SafeCheck
+                    <span class="tab-badge" id="badgeDocCount">3</span>
+                </button>
+                <button type="button" class="ceisa-tab-btn" onclick="switchCeisaTab('tab-pengangkut')">
+                    4. Pengangkut & Kemasan
+                </button>
+                <button type="button" class="ceisa-tab-btn" onclick="switchCeisaTab('tab-barang')">
+                    5. Barang
+                    <span class="tab-badge" id="badgeItemCount">12</span>
+                </button>
+            </nav>
+
+            <!-- TAB 1: HEADER & PENGURUSAN -->
+            <section id="tab-header" class="tab-content-panel active">
+                <div class="ceisa-form-card">
+                    <div class="ceisa-card-header">
+                        <span class="ceisa-card-title">Data Pengajuan & Kantor Pabean</span>
+                    </div>
+                    <div class="ceisa-card-body">
+                        <div class="form-grid-3">
+                            <div class="form-group">
+                                <label class="form-label">Nomor Pengajuan (26 Digit) <span class="req">*</span></label>
+                                <input type="text" id="noAju" class="form-control form-control-mono" value="030000-001534-20260907-007732">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Kantor Pabean Pemuatan <span class="req">*</span></label>
+                                <input type="text" id="kantorPabean" class="form-control" value="030000 - KPU BEA DAN CUKAI TIPE B BATAM">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Jenis Ekspor <span class="req">*</span></label>
+                                <input type="text" id="jenisEkspor" class="form-control" value="1 - EKSPOR BIASA">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Kategori Ekspor</label>
+                                <input type="text" id="kategoriEkspor" class="form-control" value="10 - UMUM (BIASA)">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Cara Perdagangan</label>
+                                <input type="text" id="caraDagang" class="form-control" value="1 - FOB (FREE ON BOARD)">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Cara Pembayaran</label>
+                                <input type="text" id="caraBayar" class="form-control" value="2 - PEMBAYARAN KEMUDIAN">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ceisa-form-card">
+                    <div class="ceisa-card-header">
+                        <span class="ceisa-card-title">Valuta & Nilai Transaksi Ekspor</span>
+                    </div>
+                    <div class="ceisa-card-body">
+                        <div class="form-grid-3">
+                            <div class="form-group">
+                                <label class="form-label">Jenis Valuta Asing</label>
+                                <input type="text" id="valutaHeader" class="form-control" value="USD - US DOLLAR">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Nilai Ekspor (FOB Total)</label>
+                                <input type="text" id="nilaiEksporHeader" class="form-control form-control-mono" value="120,666.55">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Freight (Ongkos Angkut)</label>
+                                <input type="text" id="freightHeader" class="form-control form-control-mono" value="0.00">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 2: ENTITAS (PIHAK TERKAIT) -->
+            <section id="tab-entitas" class="tab-content-panel">
+                <div class="ceisa-form-card">
+                    <div class="ceisa-card-header">
+                        <span class="ceisa-card-title">Eksportir (Shipper / Pemilik Barang)</span>
+                    </div>
+                    <div class="ceisa-card-body">
+                        <div class="form-grid-2">
+                            <div class="form-group">
+                                <label class="form-label">Nama Eksportir / Perusahaan <span class="req">*</span></label>
+                                <input type="text" id="shipperName" class="form-control" value="PT. VALEO AC INDONESIA">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Nomor Identitas Pabean (NIB / NPWP)</label>
+                                <input type="text" id="shipperId" class="form-control form-control-mono" value="01.884.283.4-215.000 / NIB 812000213012">
+                            </div>
+                            <div class="form-group" style="grid-column: 1 / -1;">
+                                <label class="form-label">Alamat Lengkap Eksportir <span class="req">*</span></label>
+                                <textarea id="shipperAddress" class="form-control" rows="2">Panbil Industrial Estate Factory Blok D Lot.1 - 3, Jl. Ahmad Yani, Kel. Muka Kuning, Kec. Sei Beduk, Kota Batam, Provinsi Kepulauan Riau. Postal Code : 29433 - INDONESIA</textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ceisa-form-card">
+                    <div class="ceisa-card-header">
+                        <span class="ceisa-card-title">Penerima Luar Negeri (Consignee)</span>
+                    </div>
+                    <div class="ceisa-card-body">
+                        <div class="form-grid-2">
+                            <div class="form-group">
+                                <label class="form-label">Nama Pembeli / Penerima <span class="req">*</span></label>
+                                <input type="text" id="consigneeName" class="form-control" value="GM CCA Pontiac RDC">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Negara Tujuan</label>
+                                <input type="text" id="consigneeCountry" class="form-control" value="US - UNITED STATES">
+                            </div>
+                            <div class="form-group" style="grid-column: 1 / -1;">
+                                <label class="form-label">Alamat Lengkap Penerima <span class="req">*</span></label>
+                                <textarea id="consigneeAddress" class="form-control" rows="2">Joslyn Road, 1251, 48340, Pontiac, USA</textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 3: DOKUMEN PERSYARATAN & SAFECHECK -->
+            <section id="tab-dokumen" class="tab-content-panel">
+                <div class="ceisa-form-card">
+                    <div class="ceisa-card-header">
+                        <span class="ceisa-card-title">Daftar Dokumen Pelengkap Pabean</span>
+                    </div>
+                    <div class="table-container-responsive">
+                        <table class="ceisa-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 44px; text-align: center;">No</th>
+                                    <th style="width: 220px;">Jenis Dokumen</th>
+                                    <th>Nomor Dokumen</th>
+                                    <th style="width: 140px;">Tanggal Dokumen</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td style="text-align: center; font-family: var(--font-mono); font-weight: 600;">1</td>
+                                    <td><strong>380 - Invoice (Komersial)</strong></td>
+                                    <td><input type="text" id="invoiceNumber" class="table-input-mono" placeholder="Nomor invoice..."></td>
+                                    <td><input type="text" id="invoiceDate" class="table-input-mono" placeholder="10.09.2026"></td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: center; font-family: var(--font-mono); font-weight: 600;">2</td>
+                                    <td><strong>217 - Packing List (Daftar Kemasan)</strong></td>
+                                    <td><input type="text" id="packingListNumber" class="table-input-mono" placeholder="Nomor PL..."></td>
+                                    <td><input type="text" id="packingListDate" class="table-input-mono" placeholder="10.09.2026"></td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: center; font-family: var(--font-mono); font-weight: 600;">3</td>
+                                    <td><strong>705 - Bill of Lading (Ocean B/L)</strong></td>
+                                    <td><input type="text" id="blNumber" class="table-input-mono" placeholder="Nomor B/L..."></td>
+                                    <td><input type="text" id="blDate" class="table-input-mono" placeholder="11/09/2026"></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- HASIL AUDIT KESESUAIAN DOKUMEN (SAFETY CHECK) -->
+                <div class="ceisa-form-card" id="safeCheckSection" style="margin-top: 16px;">
+                    <div class="ceisa-card-header">
+                        <span class="ceisa-card-title">Hasil Audit & Validasi Keterkaitan Dokumen (Safety Check)</span>
+                        <span id="safeCheckStatusBadge" class="badge-safe-valid">Tervalidasi: 1 Shipment</span>
+                    </div>
+                    <div class="ceisa-card-body">
+                        <!-- Banner Status -->
+                        <div id="safeCheckBanner" class="safecheck-banner">
+                            <div class="safecheck-banner-icon">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                                </svg>
+                            </div>
+                            <div class="safecheck-banner-content">
+                                <div class="safecheck-banner-title" id="safeCheckTitle">Semua Dokumen Cocok & Terverifikasi 1 Kesatuan Pengiriman</div>
+                                <div class="safecheck-banner-desc" id="safeCheckSummary">
+                                    Seluruh berkas saling bersesuaian tanpa ada indikasi dokumen asing.
+                                </div>
+                            </div>
+                            <div class="safecheck-score-box">
+                                <div class="safecheck-score-val" id="safeCheckScore">100%</div>
+                                <div class="safecheck-score-label">Tingkat Keyakinan</div>
+                            </div>
+                        </div>
+
+                        <!-- Parameter yang Cocok -->
+                        <div style="margin-top: 16px;">
+                            <label class="form-label" style="display: block; margin-bottom: 8px;">Indikator Keselarasan Antar-Dokumen (Matched Identifiers):</label>
+                            <ul id="safeCheckMatchedList" class="safecheck-list">
+                                <!-- Populated via JS -->
+                            </ul>
+                        </div>
+
+                        <!-- Temuan Selisih (Bila Ada) -->
+                        <div id="safeCheckWarningsBox" style="margin-top: 14px; display: none;">
+                            <label class="form-label" style="display: block; margin-bottom: 6px; color: #dc2626;">Temuan Ketidaksesuaian / Peringatan:</label>
+                            <ul id="safeCheckWarningsList" class="safecheck-warnings-list">
+                                <!-- Populated via JS -->
+                            </ul>
+                        </div>
+
+                        <!-- Matriks Berkas Dokumen Terlampir -->
+                        <div style="margin-top: 16px;">
+                            <label class="form-label" style="display: block; margin-bottom: 8px;">Status Verifikasi Berkas Dokumen:</label>
+                            <div class="table-container-responsive">
+                                <table class="ceisa-table">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 44px; text-align: center;">No</th>
+                                            <th style="width: 240px;">Nama Berkas File</th>
+                                            <th style="width: 170px;">Tipe Dokumen</th>
+                                            <th style="width: 160px; text-align: center;">Status Relevansi</th>
+                                            <th>Keterangan / Catatan Verifikasi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="safeCheckDocTableBody">
+                                        <!-- Populated via JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 4: PENGANGKUT & KEMASAN -->
+            <section id="tab-pengangkut" class="tab-content-panel">
+                <div class="ceisa-form-card">
+                    <div class="ceisa-card-header">
+                        <span class="ceisa-card-title">Sarana Pengangkut & Pelabuhan</span>
+                    </div>
+                    <div class="ceisa-card-body">
+                        <div class="form-grid-3">
+                            <div class="form-group">
+                                <label class="form-label">Cara Pengangkutan <span class="req">*</span></label>
+                                <input type="text" id="caraAngkut" class="form-control" value="1 - LAUT (SEA FREIGHT)" readonly>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Pelabuhan Muat Asal (POL) <span class="req">*</span></label>
+                                <input type="text" id="loadingPort" class="form-control" placeholder="BATAM, BATU AMPAR">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Pelabuhan Bongkar / Transit (POD) <span class="req">*</span></label>
+                                <input type="text" id="dischargePort" class="form-control" placeholder="SINGAPORE">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ceisa-form-card">
+                    <div class="ceisa-card-header">
+                        <span class="ceisa-card-title">Peti Kemas (Kontainer), Kemasan & Berat</span>
+                    </div>
+                    <div class="ceisa-card-body">
+                        <div class="form-grid-3">
+                            <div class="form-group">
+                                <label class="form-label">Nomor Kontainer & Segel <span class="req">*</span></label>
+                                <input type="text" id="containerNumber" class="form-control form-control-mono" placeholder="WHSU0243603 / WHLW 184912">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Ukuran & Tipe Kontainer</label>
+                                <input type="text" id="tipeKontainer" class="form-control" value="20 FEET / FULL CONTAINER LOAD (FCL)" readonly>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Jumlah & Jenis Kemasan <span class="req">*</span></label>
+                                <input type="text" id="totalKemasan" class="form-control" placeholder="816 BOXES (7 PALLETS)">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Berat Bersih (Netto KGM) <span class="req">*</span></label>
+                                <input type="text" id="totalNetWeightKGM" class="form-control form-control-mono" oninput="calculateTare()" placeholder="1,345.60 KG">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Berat Kotor (Bruto KGM) <span class="req">*</span></label>
+                                <input type="text" id="totalGrossWeightKGM" class="form-control form-control-mono" oninput="calculateTare()" placeholder="1,450.60 KG">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Selisih Berat Kemasan (Tare)</label>
+                                <input type="text" id="tareCalcInput" class="form-control form-control-mono" readonly value="105.00 KG">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 5: TRANSAKSI & DATA BARANG (TABEL RESMI PEB) -->
+            <section id="tab-barang" class="tab-content-panel">
+                <div class="ceisa-form-card">
+                    <div class="ceisa-card-header">
+                        <span class="ceisa-card-title">Rincian Komoditas & Data Barang Ekspor</span>
+                        <button type="button" class="btn btn-secondary" onclick="addNewItemRow()" style="padding: 4px 10px; font-size: 12px;">
+                            + Tambah Barang
+                        </button>
+                    </div>
+                    <div class="table-container-responsive">
+                        <table class="ceisa-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 44px; text-align: center;">No</th>
+                                    <th>Uraian Jenis Barang</th>
+                                    <th style="width: 195px;">Jumlah dan Satuan</th>
+                                    <th style="width: 190px;">Kemasan</th>
+                                    <th style="width: 115px;">Berat Bersih (Kg)</th>
+                                    <th style="width: 115px;">Berat Kotor (Kg)</th>
+                                    <th style="width: 130px;">Amount</th>
+                                    <th style="width: 38px; text-align: center;"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="itemsTableBody">
+                                <tr>
+                                    <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 24px;">
+                                        Memuat data rincian barang...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Summary Metrics Strip -->
+                    <div class="ceisa-table-summary">
+                        <div class="summary-metrics">
+                            <div class="summary-item">
+                                <span class="summary-item-label">Total Baris:</span>
+                                <span class="summary-item-val" id="kpiTotalLines">4 Item</span>
+                            </div>
+                            <div class="summary-item">
+                                <span class="summary-item-label">Total Qty:</span>
+                                <span class="summary-item-val" id="kpiTotalQty">8,160 PCS</span>
+                            </div>
+                            <div class="summary-item">
+                                <span class="summary-item-label">Total Kemasan:</span>
+                                <span class="summary-item-val" id="kpiTotalPack">816 BX</span>
+                            </div>
+                            <div class="summary-item">
+                                <span class="summary-item-label">Total Netto:</span>
+                                <span class="summary-item-val" id="kpiTotalNet">1,345.60 Kg</span>
+                            </div>
+                            <div class="summary-item">
+                                <span class="summary-item-label">Total Bruto:</span>
+                                <span class="summary-item-val" id="kpiTotalGross">1,450.60 Kg</span>
+                            </div>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-item-label">Total Nilai Ekspor:</span>
+                            <span class="summary-item-val highlight" id="kpiTotalAmount">USD 13,264.00</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Bottom Submission Dock -->
+            <div class="ceisa-bottom-dock">
+                <div class="dock-status-message">
+                    <span class="status-dot-green"></span>
+                    <span>Modul siap review pabean &bull; Status verifikasi dokumen: Valid</span>
+                </div>
+                <div class="dock-actions">
+                    <button type="button" class="btn btn-secondary-ceisa" onclick="resetDraftForm()" title="Bersihkan dan reset form">
+                        Reset Formulir
+                    </button>
+                    <button type="button" class="btn btn-secondary-ceisa" onclick="exportJsonDraft()" title="Unduh berkas JSON draft PEB">
+                        Ekspor Berkas JSON
+                    </button>
+                    <button type="button" class="btn btn-primary-ceisa" id="btnSubmitCustoms" onclick="submitToCustoms()">
+                        Validasi & Kirim ke OpenAPI Bea Cukai
+                    </button>
+                </div>
             </div>
-            <div id="dashInfoContent" class="legend-grid hidden" style="margin-top: 10px; border-top: 1px solid #e2e8f0; padding-top: 10px;">
-                <div class="legend-item"><span class="badge bg-green">Hijau</span> <span>SPPB/NPPB Udah Di Print (SEWU)</span></div>
-                <div class="legend-item"><span class="badge bg-yellow">Kuning</span> <span>SPPB/NPPB Udah Di Print (BATU AMPAR)</span></div>
-                <div class="legend-item"><span class="badge bg-purple">Ungu</span> <span>PIB/PEB Udah Di Print (SEWU)</span></div>
-                <div class="legend-item"><span class="badge bg-pink">Pink</span> <span>PIB/PEB Udah Di Print (BATU AMPAR)</span></div>
-                <div class="legend-item"><span class="badge bg-blue">Biru</span> <span>PIB/PEB + SPPB/NPPB Udah Di Print (SEWU)</span></div>
-                <div class="legend-item"><span class="badge bg-aqua">Aqua</span> <span>PIB/PEB + SPPB/NPPB Udah Di Print (BATU AMPAR)</span></div>
-                <div class="legend-item"><span class="badge bg-orange">Oren</span> <span>BELUM DI PRINT SPPB/NPPB (SEWU)</span></div>
-                <div class="legend-item"><span class="badge bg-red">Merah</span> <span>BELUM DI PRINT SPPB/NPPB (BATU AMPAR)</span></div>
-            </div>
-        </section>
-
-        <!-- MAIN CONTENT COLUMNS -->
-        <main class="dashboard-grid">
-            <!-- COLUMN 1: OREN & MERAH -->
-            <section class="panel-card">
-                <div class="panel-header">
-                    <h2>🟧 Daftar Oren & Merah (Belum Selesai)</h2>
-                    <button id="copyOrangeBtn" class="btn btn-sm btn-primary">📋 Salin Teks</button>
-                </div>
-                <p class="panel-desc">Hasil format terkelompokkan SPPB & NPPB dengan nomor urut & lokasi.</p>
-                <div class="textarea-wrapper">
-                    <textarea id="orangeTextarea" readonly placeholder="Belum ada data Oren/Merah..."></textarea>
-                </div>
-            </section>
-
-            <!-- COLUMN 2: HIJAU -->
-            <section class="panel-card">
-                <div class="panel-header">
-                    <h2>🟩 Hasil Format Hijau (Nomor Selesai)</h2>
-                    <button id="copyGreenBtn" class="btn btn-sm btn-success">📋 Salin Teks</button>
-                </div>
-                <p class="panel-desc">Hasil format lengkap dokumen yang telah dimasukkan ke daftar selesai.</p>
-                <div class="textarea-wrapper">
-                    <textarea id="greenTextarea" readonly placeholder="Belum ada data Hijau..."></textarea>
-                </div>
-            </section>
-
-            <!-- COLUMN 3: INPUT KODE HIJAU & PIB/PEB -->
-            <section class="panel-card full-width">
-                <div class="panel-header">
-                    <h2>✏️ Input Kode Selesai (Hijau & PIB/PEB)</h2>
-                    <div class="actions-group">
-                        <button id="saveCompletedBtn" class="btn btn-success">💾 Simpan Nomor Hijau</button>
-                        <button id="savePibPebBtn" class="btn btn-blue">💾 Simpan Nomor PIB/PEB</button>
-                    </div>
-                </div>
-                <div class="inputs-grid">
-                    <div>
-                        <label class="input-label font-green">🟩 Nomor Selesai SPPB/NPPB (Kode Hijau):</label>
-                        <textarea id="completedInput" rows="4" placeholder="Contoh:&#10;082202&#10;082073&#10;082267"></textarea>
-                    </div>
-                    <div>
-                        <label class="input-label font-blue">🔵 Nomor Selesai PIB / PEB:</label>
-                        <textarea id="pibPebInput" rows="4" placeholder="Contoh:&#10;082202&#10;082073"></textarea>
-                    </div>
-                </div>
-            </section>
         </main>
-
-        <!-- TOAST NOTIFICATION -->
-        <div id="toast" class="toast hidden">Pesan Toast</div>
     </div>
 
+    <!-- ======================================================================
+         MODUL 2: CEISA INSPECTOR (MONITORING & FORMATTER SPPB/NPPB)
+         ====================================================================== -->
+    <div id="module-inspector" class="portal-module-view" style="display: none;">
+        <!-- Sub-Header Strip Inspector -->
+        <section class="doc-title-strip">
+            <div class="doc-title-container">
+                <div class="doc-title-left">
+                    <h1>CEISA Inspector Dashboard</h1>
+                    <span class="badge-draft-status">Monitoring Aktif</span>
+                </div>
+                <div class="doc-title-meta">
+                    Format & Pengelompokan Data Dokumen Pabean (SPPB, NPPB & PIB/PEB)
+                </div>
+            </div>
+        </section>
+
+        <!-- Main Workspace Inspector -->
+        <main class="main-workspace">
+            <!-- 4 STATS CARDS -->
+            <section class="stats-grid">
+                <div class="stat-card card-total">
+                    <span class="stat-icon">📄</span>
+                    <div class="stat-val-group">
+                        <span class="stat-value" id="statTotal">0</span>
+                        <span class="stat-label">Total Cached</span>
+                    </div>
+                </div>
+                <div class="stat-card card-orange">
+                    <span class="stat-icon">🟧</span>
+                    <div class="stat-val-group">
+                        <span class="stat-value" id="statOrange">0</span>
+                        <span class="stat-label">Daftar Oren</span>
+                    </div>
+                </div>
+                <div class="stat-card card-green">
+                    <span class="stat-icon">🟩</span>
+                    <div class="stat-val-group">
+                        <span class="stat-value" id="statGreen">0</span>
+                        <span class="stat-label">Selesai Hijau</span>
+                    </div>
+                </div>
+                <div class="stat-card card-yellow">
+                    <span class="stat-icon">🟨</span>
+                    <div class="stat-val-group">
+                        <span class="stat-value" id="statYellow">0</span>
+                        <span class="stat-label">Batu Ampar (Kuning)</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- COLOR INFO LEGEND ACCORDION -->
+            <section class="legend-panel">
+                <div class="legend-header" id="dashInfoToggleBtn">
+                    <span class="legend-title">Legenda & Panduan Warna Highlight Status Web</span>
+                    <span id="dashInfoArrow" style="font-size: 12px; color: #0369a1;">▼ Buka Panduan</span>
+                </div>
+                <div id="dashInfoContent" class="legend-grid hidden">
+                    <div class="legend-item"><span class="badge bg-green">Hijau</span> <span>SPPB/NPPB Sudah Di-print (SEWU)</span></div>
+                    <div class="legend-item"><span class="badge bg-yellow">Kuning</span> <span>SPPB/NPPB Sudah Di-print (BATU AMPAR)</span></div>
+                    <div class="legend-item"><span class="badge bg-purple">Ungu</span> <span>PIB/PEB Sudah Di-print (SEWU)</span></div>
+                    <div class="legend-item"><span class="badge bg-pink">Pink</span> <span>PIB/PEB Sudah Di-print (BATU AMPAR)</span></div>
+                    <div class="legend-item"><span class="badge bg-blue">Biru</span> <span>PIB/PEB + SPPB/NPPB Sudah Di-print (SEWU)</span></div>
+                    <div class="legend-item"><span class="badge bg-aqua">Aqua</span> <span>PIB/PEB + SPPB/NPPB Sudah Di-print (BATU AMPAR)</span></div>
+                    <div class="legend-item"><span class="badge bg-orange">Oren</span> <span>BELUM DI-PRINT SPPB/NPPB (SEWU)</span></div>
+                    <div class="legend-item"><span class="badge bg-red">Merah</span> <span>BELUM DI-PRINT SPPB/NPPB (BATU AMPAR)</span></div>
+                </div>
+            </section>
+
+            <!-- MAIN CONTENT COLUMNS (2-COL GRID) -->
+            <div class="dashboard-grid">
+                <!-- COLUMN 1: OREN & MERAH -->
+                <section class="panel-card">
+                    <div class="panel-header">
+                        <h2>Daftar Oren & Merah (Belum Selesai)</h2>
+                        <button type="button" id="copyOrangeBtn" class="btn btn-sm btn-primary">Salin Teks</button>
+                    </div>
+                    <p class="panel-desc">Hasil format terkelompokkan SPPB & NPPB dengan nomor urut & lokasi.</p>
+                    <div class="textarea-wrapper">
+                        <textarea id="orangeTextarea" readonly placeholder="Belum ada data dokumen Oren/Merah..."></textarea>
+                    </div>
+                </section>
+
+                <!-- COLUMN 2: HIJAU -->
+                <section class="panel-card">
+                    <div class="panel-header">
+                        <h2>Hasil Format Hijau (Nomor Selesai)</h2>
+                        <button type="button" id="copyGreenBtn" class="btn btn-sm btn-success">Salin Teks</button>
+                    </div>
+                    <p class="panel-desc">Hasil format lengkap dokumen yang telah dimasukkan ke daftar selesai.</p>
+                    <div class="textarea-wrapper">
+                        <textarea id="greenTextarea" readonly placeholder="Belum ada data dokumen Hijau..."></textarea>
+                    </div>
+                </section>
+
+                <!-- COLUMN 3: INPUT KODE SELESAI -->
+                <section class="panel-card full-width">
+                    <div class="panel-header">
+                        <h2>Input Kode Selesai (Hijau & PIB/PEB)</h2>
+                        <div class="actions-group" style="display: flex; gap: 8px;">
+                            <button type="button" id="saveCompletedBtn" class="btn btn-sm btn-success">Simpan Nomor Hijau</button>
+                            <button type="button" id="savePibPebBtn" class="btn btn-sm btn-blue">Simpan Nomor PIB/PEB</button>
+                        </div>
+                    </div>
+                    <div class="inputs-grid">
+                        <div>
+                            <label class="input-label font-green">Nomor Selesai SPPB/NPPB (Kode Hijau):</label>
+                            <textarea id="completedInput" rows="5" placeholder="Contoh:&#10;082202&#10;082073&#10;082267"></textarea>
+                        </div>
+                        <div>
+                            <label class="input-label font-blue">Nomor Selesai PIB / PEB:</label>
+                            <textarea id="pibPebInput" rows="5" placeholder="Contoh:&#10;082202&#10;082073"></textarea>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- TOAST NOTIFICATION CONTAINER -->
+    <div class="toast-shelf" id="toastShelf">
+        <div id="toast" class="toast">Pemberitahuan Sistem</div>
+    </div>
+
+    <!-- ======================================================================
+         SCRIPTS: EXTENSION SYNC & DASHBOARD LOGIC
+         ====================================================================== -->
     <script src="sync.js"></script>
     <script src="dashboard.js"></script>
+
+    <!-- ======================================================================
+         SCRIPTS: PORTAL MASTER & MODUL PEB LOGIC
+         ====================================================================== -->
+    <script>
+        // MASTER PORTAL MODULE SWITCHER
+        function switchPortalModule(moduleName) {
+            const pebView = document.getElementById('module-peb');
+            const inspectorView = document.getElementById('module-inspector');
+            const btnPeb = document.getElementById('btnNavPeb');
+            const btnInspector = document.getElementById('btnNavInspector');
+            const pebHeaderActions = document.getElementById('pebHeaderActions');
+            const inspectorHeaderActions = document.getElementById('inspectorHeaderActions');
+
+            if (moduleName === 'inspector') {
+                pebView.style.display = 'none';
+                inspectorView.style.display = 'block';
+                btnPeb.classList.remove('active');
+                btnInspector.classList.add('active');
+                if (pebHeaderActions) pebHeaderActions.style.display = 'none';
+                if (inspectorHeaderActions) inspectorHeaderActions.style.display = 'flex';
+                if (typeof loadDashboardData === 'function') loadDashboardData();
+            } else {
+                pebView.style.display = 'block';
+                inspectorView.style.display = 'none';
+                btnPeb.classList.add('active');
+                btnInspector.classList.remove('active');
+                if (pebHeaderActions) pebHeaderActions.style.display = 'flex';
+                if (inspectorHeaderActions) inspectorHeaderActions.style.display = 'none';
+            }
+            localStorage.setItem('ceisa_active_portal_module', moduleName);
+        }
+
+        // UNIFIED TOAST NOTIFICATION
+        function showToast(msg, type = "info") {
+            const toast = document.getElementById("toast");
+            if (!toast) return;
+            toast.textContent = msg;
+            toast.className = 'toast visible';
+            if (type === 'success') toast.classList.add('toast-success');
+            else if (type === 'error') toast.classList.add('toast-error');
+            else toast.classList.add('toast-info');
+
+            setTimeout(() => {
+                toast.className = 'toast';
+            }, 2500);
+        }
+
+        // ====================================================================
+        // MODUL PEB: PERSISTENCE & DATA MANAGEMENT
+        // ====================================================================
+        const STORAGE_KEY_LAST_DRAFT = 'ceisa_last_loaded_draft';
+        const STORAGE_KEY_LAST_FILENAME = 'ceisa_last_loaded_filename';
+        let autoSaveTimer = null;
+
+        function triggerAutoSave() {
+            if (autoSaveTimer) clearTimeout(autoSaveTimer);
+            autoSaveTimer = setTimeout(() => {
+                saveCurrentDraftState();
+            }, 600);
+        }
+
+        function saveCurrentDraftState() {
+            try {
+                const draft = collectFormData();
+                localStorage.setItem(STORAGE_KEY_LAST_DRAFT, JSON.stringify(draft));
+                const indicator = document.getElementById('saveIndicator');
+                if (indicator) {
+                    indicator.style.opacity = '1';
+                    indicator.innerHTML = '<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--color-green-text);"></span> Tersimpan Otomatis';
+                }
+            } catch (err) {
+                console.warn('Gagal menyimpan draft ke localStorage:', err);
+            }
+        }
+
+        function restoreDraftState() {
+            try {
+                const saved = localStorage.getItem(STORAGE_KEY_LAST_DRAFT);
+                const savedName = localStorage.getItem(STORAGE_KEY_LAST_FILENAME);
+                if (saved) {
+                    const data = JSON.parse(saved);
+                    if (savedName) document.getElementById('lblFileName').textContent = savedName;
+                    loadDraftData(data, false);
+                    return true;
+                }
+            } catch (e) {
+                console.warn('Draft lokal tidak valid, memuat data default.');
+            }
+            return false;
+        }
+
+        function resetDraftForm() {
+            if (confirm("Kosongkan seluruh formulir draft PEB? Memori draft tersimpan akan dibersihkan.")) {
+                localStorage.removeItem(STORAGE_KEY_LAST_DRAFT);
+                localStorage.removeItem(STORAGE_KEY_LAST_FILENAME);
+                document.getElementById('lblFileName').textContent = 'Draft_Baru.json';
+                loadDraftData({
+                    nomorAju: '030000-' + Math.floor(100000 + Math.random() * 900000) + '-' + new Date().toISOString().slice(0, 10).replace(/-/g, '') + '-000001',
+                    shipperName: '',
+                    shipperAddress: '',
+                    consigneeName: '',
+                    consigneeAddress: '',
+                    invoiceNumber: '',
+                    invoiceDate: '',
+                    packingListNumber: '',
+                    packingListDate: '',
+                    blNumber: '',
+                    blDate: '',
+                    loadingPort: '',
+                    dischargePort: '',
+                    containerNumber: '',
+                    totalKemasan: '',
+                    totalNetWeightKGM: '',
+                    totalGrossWeightKGM: '',
+                    items: []
+                }, false);
+                showToast("Formulir telah dikosongkan.", "info");
+            }
+        }
+
+        function exportJsonDraft() {
+            const draft = collectFormData();
+            const jsonStr = JSON.stringify(draft, null, 2);
+            const blob = new Blob([jsonStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            const noAju = document.getElementById('noAju').value || 'PEB_Draft';
+            a.href = url;
+            a.download = `Draft_PEB_${noAju.replace(/[^a-zA-Z0-9-]/g, '_')}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast("Berkas JSON berhasil diekspor!", "success");
+        }
+
+        function collectFormData() {
+            const rows = document.querySelectorAll('#itemsTableBody tr');
+            const items = [];
+
+            rows.forEach(r => {
+                if (r.querySelector('td[colspan="8"]')) return;
+                const desc = r.querySelector('.item-desc')?.value.trim();
+                const qtyVal = r.querySelector('.item-qty-val')?.value.trim();
+                const qtyUnit = r.querySelector('.item-qty-unit')?.value || 'PCE';
+                const packVal = r.querySelector('.item-pack-val')?.value.trim();
+                const packType = r.querySelector('.item-pack-type')?.value || 'BX';
+                const net = r.querySelector('.item-net')?.value.trim();
+                const gross = r.querySelector('.item-gross')?.value.trim();
+                const amt = r.querySelector('.item-amt')?.value.trim();
+
+                if (desc || qtyVal) {
+                    items.push({
+                        uraianJenisBarang: desc,
+                        jumlahDanSatuanBarang: qtyVal ? `${qtyVal} ${qtyUnit}` : '',
+                        kemasan: packVal ? `${packVal} ${packType}` : '',
+                        beratBersih: net,
+                        beratKotor: gross,
+                        amount: amt
+                    });
+                }
+            });
+
+            return {
+                nomorAju: document.getElementById('noAju').value,
+                kantorPabean: document.getElementById('kantorPabean').value,
+                jenisEkspor: document.getElementById('jenisEkspor').value,
+                kategoriEkspor: document.getElementById('kategoriEkspor').value,
+                caraDagang: document.getElementById('caraDagang').value,
+                caraBayar: document.getElementById('caraBayar').value,
+                valutaHeader: document.getElementById('valutaHeader').value,
+                nilaiEksporHeader: document.getElementById('nilaiEksporHeader').value,
+                shipperName: document.getElementById('shipperName').value,
+                shipperAddress: document.getElementById('shipperAddress').value,
+                consigneeName: document.getElementById('consigneeName').value,
+                consigneeAddress: document.getElementById('consigneeAddress').value,
+                invoiceNumber: document.getElementById('invoiceNumber').value,
+                invoiceDate: document.getElementById('invoiceDate').value,
+                packingListNumber: document.getElementById('packingListNumber').value,
+                packingListDate: document.getElementById('packingListDate').value,
+                blNumber: document.getElementById('blNumber').value,
+                blDate: document.getElementById('blDate').value,
+                loadingPort: document.getElementById('loadingPort').value,
+                dischargePort: document.getElementById('dischargePort').value,
+                containerNumber: document.getElementById('containerNumber').value,
+                totalKemasan: document.getElementById('totalKemasan').value,
+                totalNetWeightKGM: document.getElementById('totalNetWeightKGM').value,
+                totalGrossWeightKGM: document.getElementById('totalGrossWeightKGM').value,
+                items: items,
+                safeCheck: window._currentSafeCheck || null
+            };
+        }
+
+        // TAB SWITCHING IN PEB MODULE
+        function switchCeisaTab(tabId) {
+            document.querySelectorAll('#module-peb .tab-content-panel').forEach(panel => {
+                panel.classList.remove('active');
+            });
+            document.querySelectorAll('#module-peb .ceisa-tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            const targetPanel = document.getElementById(tabId);
+            if (targetPanel) targetPanel.classList.add('active');
+
+            const btnMap = {
+                'tab-header': 0,
+                'tab-entitas': 1,
+                'tab-dokumen': 2,
+                'tab-pengangkut': 3,
+                'tab-barang': 4
+            };
+            const btnIdx = btnMap[tabId];
+            if (btnIdx !== undefined) {
+                const buttons = document.querySelectorAll('#module-peb .ceisa-tab-btn');
+                if (buttons[btnIdx]) buttons[btnIdx].classList.add('active');
+            }
+        }
+
+        // LOAD PEB DRAFT DATA
+        function loadDraftData(data, shouldSave = true) {
+            if (!data) return;
+            window._currentSafeCheck = data.safeCheck || null;
+
+            if (data.nomorAju) {
+                document.getElementById('noAju').value = data.nomorAju;
+                document.getElementById('lblNoAju').textContent = data.nomorAju;
+            }
+
+            document.getElementById('shipperName').value = data.shipperName || '';
+            document.getElementById('shipperAddress').value = data.shipperAddress || '';
+            document.getElementById('consigneeName').value = data.consigneeName || '';
+            document.getElementById('consigneeAddress').value = data.consigneeAddress || '';
+
+            document.getElementById('invoiceNumber').value = data.invoiceNumber || '';
+            document.getElementById('invoiceDate').value = data.invoiceDate || '';
+            document.getElementById('packingListNumber').value = data.packingListNumber || data.invoiceNumber || '';
+            document.getElementById('packingListDate').value = data.packingListDate || data.invoiceDate || '';
+            document.getElementById('blNumber').value = data.blNumber || '';
+            document.getElementById('blDate').value = data.blDate || '';
+
+            document.getElementById('loadingPort').value = data.loadingPort || '';
+            document.getElementById('dischargePort').value = data.dischargePort || '';
+            document.getElementById('containerNumber').value = data.containerNumber || '';
+            document.getElementById('totalKemasan').value = data.totalKemasan || '';
+
+            // ATURAN BERAT KHUSUS SINAR ASIA PACK
+            const isSinarAsia = Boolean(
+                (data.shipperName && /sinar\s*asia/i.test(data.shipperName)) ||
+                (data.safeCheck?.matchedIdentifiers && data.safeCheck.matchedIdentifiers.some(m => /sinar\s*asia/i.test(m)))
+            );
+            if (isSinarAsia && Array.isArray(data.items) && data.items.length > 0) {
+                const hasMissing = data.items.some(i => !i.beratBersih || !i.beratKotor || i.beratBersih === 'null' || i.beratKotor === 'null');
+                if (hasMissing) {
+                    const rawTotal = data.totalGrossWeightKGM || data.totalNetWeightKGM || '';
+                    const match = String(rawTotal).replace(/,/g, '').match(/([\d.]+)\s*([A-Za-z]+)?/);
+                    if (match) {
+                        const totalVal = parseFloat(match[1]);
+                        const unit = match[2] || 'KGS';
+                        if (!isNaN(totalVal) && totalVal > 0) {
+                            const divided = (totalVal / data.items.length).toFixed(2);
+                            const allocated = `${divided} ${unit}`;
+                            data.items.forEach(i => {
+                                if (!i.beratBersih || i.beratBersih === 'null') i.beratBersih = allocated;
+                                if (!i.beratKotor || i.beratKotor === 'null') i.beratKotor = allocated;
+                            });
+                            if (!data.totalNetWeightKGM && data.totalGrossWeightKGM) {
+                                data.totalNetWeightKGM = data.totalGrossWeightKGM;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ATURAN KEMASAN KHUSUS VALEO (PT. VALEO AC INDONESIA)
+            const isValeo = Boolean(
+                (data.shipperName && /valeo/i.test(data.shipperName)) ||
+                (data.safeCheck?.matchedIdentifiers && data.safeCheck.matchedIdentifiers.some(m => /valeo/i.test(m)))
+            );
+
+            if (isValeo && Array.isArray(data.items) && data.items.length > 0) {
+                let valeoKemasan = '';
+                for (const it of data.items) {
+                    if (it.kemasan && /\d+/.test(it.kemasan)) {
+                        valeoKemasan = it.kemasan;
+                        break;
+                    }
+                }
+                if (!valeoKemasan && data.totalKemasan) {
+                    const totalStr = String(data.totalKemasan).trim();
+                    const boxMatch = totalStr.match(/([\d.,]+)\s*(BOX|BOXES|BX|CTN|CARTON|CARTONS)/i);
+                    if (boxMatch) {
+                        valeoKemasan = `${boxMatch[1]} BX`;
+                    } else {
+                        const numMatch = totalStr.match(/([\d.,]+)/);
+                        valeoKemasan = numMatch ? `${numMatch[1]} BX` : totalStr;
+                    }
+                }
+                if (valeoKemasan) {
+                    data.items.forEach(it => {
+                        it.kemasan = valeoKemasan;
+                    });
+                }
+            } else if (Array.isArray(data.items) && data.items.length > 0) {
+                // Auto-alokasi kemasan Non-Valeo jika belum terisi
+                const missingKemasan = data.items.some(i => !i.kemasan && !i.kemasanJumlah);
+                if (missingKemasan) {
+                    const totalKemasanStr = String(data.totalKemasan || '').trim();
+                    const countMatch = totalKemasanStr.match(/(\d+[\d.,]*)\s*([A-Za-z]+)?/);
+                    let totalCount = countMatch ? parseFloat(countMatch[1].replace(/,/g, '')) : 0;
+                    let packType = 'BX';
+                    if (/pallet|plt/i.test(totalKemasanStr)) packType = 'PL';
+                    else if (/box|boxes|bx/i.test(totalKemasanStr)) packType = 'BX';
+                    else if (/package|pkg|pk/i.test(totalKemasanStr)) packType = 'PK';
+                    else if (/carton|ctn|ct/i.test(totalKemasanStr)) packType = 'CT';
+                    else if (/drum/i.test(totalKemasanStr)) packType = '1A';
+                    else if (countMatch && countMatch[2]) packType = normalizePack(countMatch[2]);
+
+                    if (data.items.length === 1 && totalCount > 0) {
+                        data.items[0].kemasan = `${totalCount} ${packType}`;
+                    } else if (totalCount > 0 && totalCount >= data.items.length) {
+                        let sumQty = 0;
+                        data.items.forEach(it => {
+                            const q = parseFloat(String(it.jumlahDanSatuanBarang || it.jumlahBarang || '').replace(/[^0-9.]/g, '')) || 0;
+                            sumQty += q;
+                        });
+                        let remaining = totalCount;
+                        data.items.forEach((it, idx) => {
+                            if (it.kemasan || it.kemasanJumlah) return;
+                            if (idx === data.items.length - 1) {
+                                it.kemasan = `${Math.max(1, Math.round(remaining))} ${packType}`;
+                            } else {
+                                const q = parseFloat(String(it.jumlahDanSatuanBarang || it.jumlahBarang || '').replace(/[^0-9.]/g, '')) || 0;
+                                const alloc = sumQty > 0 ? Math.round((q / sumQty) * totalCount) : Math.floor(totalCount / data.items.length);
+                                const finalAlloc = Math.max(1, alloc);
+                                it.kemasan = `${finalAlloc} ${packType}`;
+                                remaining -= finalAlloc;
+                            }
+                        });
+                    } else {
+                        data.items.forEach(it => {
+                            if (!it.kemasan && !it.kemasanJumlah) {
+                                it.kemasan = `1 ${packType}`;
+                            }
+                        });
+                    }
+                }
+            }
+
+            document.getElementById('totalNetWeightKGM').value = data.totalNetWeightKGM || data.totalGrossWeightKGM || '';
+            document.getElementById('totalGrossWeightKGM').value = data.totalGrossWeightKGM || data.totalNetWeightKGM || '';
+
+            calculateTare();
+            renderItemsTable(data.items || []);
+            renderSafeCheck(data.safeCheck);
+
+            if (shouldSave) {
+                saveCurrentDraftState();
+            }
+        }
+
+        // RENDER ITEMS TABLE
+        function renderItemsTable(items) {
+            const tbody = document.getElementById('itemsTableBody');
+            tbody.innerHTML = '';
+
+            if (!items || items.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 24px;">Belum ada rincian barang.</td></tr>`;
+                updateLiveKPIs();
+                return;
+            }
+
+            items.forEach((item, idx) => {
+                appendItemRow(item, idx + 1);
+            });
+
+            setTimeout(() => {
+                document.querySelectorAll('.table-input-text').forEach(el => autoGrow(el));
+            }, 60);
+
+            updateLiveKPIs();
+        }
+
+        // NORMALISASI SATUAN (CEISA 4.0 CODES)
+        function parseQtyAndUnit(rawQty, explicitUnit) {
+            if (explicitUnit) {
+                return { qty: String(rawQty || '').replace(/[^\d.,]/g, '').trim(), unit: normalizeUnit(explicitUnit) };
+            }
+            if (!rawQty) return { qty: '', unit: 'PCE' };
+            const s = String(rawQty).trim();
+            const match = s.match(/^([\d.,]+)\s*(.*)$/);
+            if (match) {
+                const qty = match[1].trim();
+                const unitStr = match[2].trim();
+                return { qty, unit: normalizeUnit(unitStr) };
+            }
+            return { qty: s, unit: 'PCE' };
+        }
+
+        function normalizeUnit(unitStr) {
+            if (!unitStr) return 'PCE';
+            const u = String(unitStr).trim().toUpperCase();
+            if (u === 'PCE' || u === 'PC' || u === 'PCS' || u.includes('PIECE')) return 'PCE';
+            if (u === '--' || u === '------' || u === '-- -- --') return '--';
+            if (u === '05' || u.includes('LIFT')) return '05';
+            if (u === '06' || u.includes('SMALL SPRAY') || u.includes('SMALLSPRAY')) return '06';
+            if (u === '08' || u.includes('HEAT LOT') || u.includes('HEATLOT')) return '08';
+            if (u === '10' || u.includes('GROUP')) return '10';
+            if (u === '11' || u.includes('OUTFIT')) return '11';
+            if (u === '123' || u === '124' || u.includes('124')) return '123';
+            if (u === '13' || u.includes('RATION')) return '13';
+            if (u === 'KGM' || u === 'KG' || u === 'KGS' || u.includes('KILOGRAM')) return 'KGM';
+            if (u === 'SET' || u === 'SETS') return 'SET';
+            if (u === 'ROL' || u === 'ROLL' || u === 'ROLLS') return 'ROL';
+            if (u === 'DZN' || u === 'DOZEN' || u === 'DOZ') return 'DZN';
+            if (u === 'UNT' || u === 'UNIT' || u === 'UNITS') return 'UNT';
+            if (u === 'BOX' || u === 'BOXES' || u === 'BX') return 'BOX';
+            if (u === 'MTR' || u === 'METER' || u === 'METERS') return 'MTR';
+            if (u === 'LTR' || u === 'LITER' || u === 'LITERS') return 'LTR';
+            if (u === 'LBR' || u === 'LEMBAR' || u === 'SHEET') return 'LBR';
+            if (u === 'PRS' || u === 'PAIR' || u === 'PAIRS') return 'PRS';
+            if (u === 'BAG' || u === 'BAGS') return 'BAG';
+            return 'PCE';
+        }
+
+        // NORMALISASI KEMASAN (CEISA 4.0 CODES)
+        function parsePackaging(item) {
+            if (item.kemasanJumlah !== undefined && item.kemasanJenis !== undefined && item.kemasanJumlah !== null && item.kemasanJumlah !== '') {
+                return { count: item.kemasanJumlah, type: normalizePack(item.kemasanJenis) };
+            }
+            if (item.kemasan) {
+                const match = String(item.kemasan).trim().match(/^([\d.,]+)\s*(.*)$/);
+                if (match) {
+                    return { count: match[1].trim(), type: normalizePack(match[2].trim()) };
+                }
+                return { count: item.kemasan, type: 'BX' };
+            }
+            return { count: '1', type: 'BX' };
+        }
+
+        function normalizePack(packStr) {
+            if (!packStr) return 'BX';
+            const p = String(packStr).trim().toUpperCase();
+            if (p === 'NE' || p.includes('UNPACKED') || p.includes('UNPACKAGED')) return 'NE';
+            if (p === '1A' || p.includes('DRUM, STEEL') || p.includes('DRUM STEEL')) return '1A';
+            if (p === '1B' || p.includes('DRUM, ALUMINIUM') || p.includes('DRUM ALUMINIUM')) return '1B';
+            if (p === '1D' || p.includes('DRUM, PLYWOOD') || p.includes('DRUM PLYWOOD')) return '1D';
+            if (p === '1F' || p.includes('CONTAINER, FLEXIBLE') || p.includes('CONTAINER FLEXIBLE')) return '1F';
+            if (p === '1G' || p.includes('DRUM, FIBRE') || p.includes('DRUM FIBRE')) return '1G';
+            if (p === '1W' || p.includes('DRUM, WOODEN') || p.includes('DRUM WOODEN')) return '1W';
+            if (p === '2C' || p.includes('BARREL, WOODEN') || p.includes('BARREL WOODEN')) return '2C';
+            if (p === '3A' || p.includes('JERRICAN, STEEL') || p.includes('JERRICAN STEEL')) return '3A';
+            if (p === 'BX' || p === 'BOX' || p === 'BOXES') return 'BX';
+            if (p === 'CT' || p === 'CTN' || p === 'CARTON' || p === 'CARTONS') return 'CT';
+            if (p === 'PK' || p === 'PKG' || p === 'PACKAGE' || p === 'PACKAGES') return 'PK';
+            if (p === 'PL' || p === 'PLT' || p === 'PALLET' || p === 'PALLETS') return 'PL';
+            if (p === 'BG' || p === 'BAG' || p === 'BAGS') return 'BG';
+            if (p === 'DR' || p === 'DRUM' || p === 'DRUMS') return 'DR';
+            if (p === 'CS' || p === 'CASE' || p === 'CASES') return 'CS';
+            if (p === 'CR' || p === 'CRATE' || p === 'CRATES') return 'CR';
+            if (p === 'SK' || p === 'SACK' || p === 'SACKS') return 'SK';
+            if (p === 'RL' || p === 'REEL' || p === 'REELS') return 'RL';
+            return 'BX';
+        }
+
+        // APPEND ITEM ROW
+        function appendItemRow(item = {}, rowNum = null) {
+            const tbody = document.getElementById('itemsTableBody');
+            const index = rowNum || (tbody.querySelectorAll('tr').length + 1);
+
+            const qtyInfo = parseQtyAndUnit(item.jumlahDanSatuanBarang || item.jumlahBarang, item.satuanBarang);
+            const packInfo = parsePackaging(item);
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td style="text-align: center; font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--text-muted); vertical-align: top; padding-top: 10px;" class="row-num-cell">${index}</td>
+                <td style="vertical-align: top;">
+                    <textarea class="table-input-text item-desc" rows="2" placeholder="Uraian jenis barang...">${escapeHtml(item.uraianJenisBarang || '')}</textarea>
+                </td>
+                <td style="vertical-align: top;">
+                    <div class="table-input-composite">
+                        <input type="text" class="table-input-mono item-qty-val" value="${escapeHtml(qtyInfo.qty)}" placeholder="0" oninput="updateLiveKPIs();">
+                        <select class="table-select-unit item-qty-unit" onchange="updateLiveKPIs();">
+                            <optgroup label="CEISA 4.0 Satuan">
+                                <option value="PCE"${qtyInfo.unit === 'PCE' ? ' selected' : ''}>PCE - PIECE</option>
+                                <option value="--"${qtyInfo.unit === '--' ? ' selected' : ''}>-- -- --</option>
+                                <option value="05"${qtyInfo.unit === '05' ? ' selected' : ''}>05 - LIFT</option>
+                                <option value="06"${qtyInfo.unit === '06' ? ' selected' : ''}>06 - SMALL SPRAY</option>
+                                <option value="08"${qtyInfo.unit === '08' ? ' selected' : ''}>08 - HEAT LOT</option>
+                                <option value="10"${qtyInfo.unit === '10' ? ' selected' : ''}>10 - GROUP</option>
+                                <option value="11"${qtyInfo.unit === '11' ? ' selected' : ''}>11 - OUTFIT</option>
+                                <option value="123"${qtyInfo.unit === '123' ? ' selected' : ''}>123 - 124</option>
+                                <option value="13"${qtyInfo.unit === '13' ? ' selected' : ''}>13 - RATION</option>
+                            </optgroup>
+                            <optgroup label="Standar Umum Lainnya">
+                                <option value="KGM"${qtyInfo.unit === 'KGM' ? ' selected' : ''}>KGM - KILOGRAM</option>
+                                <option value="SET"${qtyInfo.unit === 'SET' ? ' selected' : ''}>SET - SET</option>
+                                <option value="ROL"${qtyInfo.unit === 'ROL' ? ' selected' : ''}>ROL - ROLL</option>
+                                <option value="DZN"${qtyInfo.unit === 'DZN' ? ' selected' : ''}>DZN - DOZEN</option>
+                                <option value="UNT"${qtyInfo.unit === 'UNT' ? ' selected' : ''}>UNT - UNIT</option>
+                                <option value="BOX"${qtyInfo.unit === 'BOX' ? ' selected' : ''}>BOX - BOX</option>
+                                <option value="MTR"${qtyInfo.unit === 'MTR' ? ' selected' : ''}>MTR - METER</option>
+                                <option value="LTR"${qtyInfo.unit === 'LTR' ? ' selected' : ''}>LTR - LITER</option>
+                                <option value="LBR"${qtyInfo.unit === 'LBR' ? ' selected' : ''}>LBR - LEMBAR</option>
+                                <option value="PRS"${qtyInfo.unit === 'PRS' ? ' selected' : ''}>PRS - PAIRS</option>
+                                <option value="BAG"${qtyInfo.unit === 'BAG' ? ' selected' : ''}>BAG - BAG</option>
+                            </optgroup>
+                        </select>
+                    </div>
+                </td>
+                <td style="vertical-align: top;">
+                    <div class="table-input-composite">
+                        <input type="text" class="table-input-mono item-pack-val" value="${escapeHtml(packInfo.count)}" placeholder="0" oninput="handleItemPackChange(this);">
+                        <select class="table-select-unit item-pack-type" onchange="handleItemPackTypeChange(this);">
+                            <optgroup label="CEISA 4.0 Kemasan">
+                                <option value="NE"${packInfo.type === 'NE' ? ' selected' : ''}>NE - UNPACKED OR UNPACKAGED</option>
+                                <option value="1A"${packInfo.type === '1A' ? ' selected' : ''}>1A - DRUM, STEEL</option>
+                                <option value="1B"${packInfo.type === '1B' ? ' selected' : ''}>1B - DRUM, ALUMINIUM</option>
+                                <option value="1D"${packInfo.type === '1D' ? ' selected' : ''}>1D - DRUM, PLYWOOD</option>
+                                <option value="1F"${packInfo.type === '1F' ? ' selected' : ''}>1F - CONTAINER, FLEXIBLE</option>
+                                <option value="1G"${packInfo.type === '1G' ? ' selected' : ''}>1G - DRUM, FIBRE</option>
+                                <option value="1W"${packInfo.type === '1W' ? ' selected' : ''}>1W - DRUM, WOODEN</option>
+                                <option value="2C"${packInfo.type === '2C' ? ' selected' : ''}>2C - BARREL, WOODEN</option>
+                                <option value="3A"${packInfo.type === '3A' ? ' selected' : ''}>3A - JERRICAN, STEEL</option>
+                            </optgroup>
+                            <optgroup label="Standar Umum Lainnya">
+                                <option value="BX"${packInfo.type === 'BX' ? ' selected' : ''}>BX - BOX</option>
+                                <option value="CT"${packInfo.type === 'CT' ? ' selected' : ''}>CT - CARTON</option>
+                                <option value="PK"${packInfo.type === 'PK' ? ' selected' : ''}>PK - PACKAGE</option>
+                                <option value="PL"${packInfo.type === 'PL' ? ' selected' : ''}>PL - PALLET</option>
+                                <option value="BG"${packInfo.type === 'BG' ? ' selected' : ''}>BG - BAG</option>
+                                <option value="DR"${packInfo.type === 'DR' ? ' selected' : ''}>DR - DRUM</option>
+                                <option value="CS"${packInfo.type === 'CS' ? ' selected' : ''}>CS - CASE</option>
+                                <option value="CR"${packInfo.type === 'CR' ? ' selected' : ''}>CR - CRATE</option>
+                                <option value="SK"${packInfo.type === 'SK' ? ' selected' : ''}>SK - SACK</option>
+                                <option value="RL"${packInfo.type === 'RL' ? ' selected' : ''}>RL - REEL</option>
+                            </optgroup>
+                        </select>
+                    </div>
+                </td>
+                <td style="vertical-align: top;">
+                    <input type="text" class="table-input-mono item-net" value="${escapeHtml(item.beratBersih || '')}" placeholder="0.00" oninput="updateLiveKPIs();">
+                </td>
+                <td style="vertical-align: top;">
+                    <input type="text" class="table-input-mono item-gross" value="${escapeHtml(item.beratKotor || '')}" placeholder="0.00" oninput="updateLiveKPIs();">
+                </td>
+                <td style="vertical-align: top;">
+                    <input type="text" class="table-input-mono item-amt" value="${escapeHtml(item.amount || '')}" placeholder="0.00" oninput="updateLiveKPIs();" style="font-weight: 700; color: var(--ceisa-blue);">
+                </td>
+                <td style="text-align: center; vertical-align: top; padding-top: 8px;">
+                    <button type="button" class="btn-table-del" onclick="removeRow(this)" title="Hapus Baris Barang">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+            autoGrow(tr.querySelector('.item-desc'));
+        }
+
+        function addNewItemRow() {
+            const tbody = document.getElementById('itemsTableBody');
+            if (tbody.querySelector('td[colspan="8"]')) tbody.innerHTML = '';
+            appendItemRow({ uraianJenisBarang: '', jumlahDanSatuanBarang: '', kemasan: '', beratBersih: '', beratKotor: '', amount: '' });
+            updateLiveKPIs();
+            triggerAutoSave();
+            showToast("Baris barang baru ditambahkan.", "info");
+        }
+
+        function removeRow(btn) {
+            const row = btn.closest('tr');
+            if (row) {
+                row.remove();
+                reindexRows();
+                updateLiveKPIs();
+                triggerAutoSave();
+            }
+        }
+
+        function reindexRows() {
+            const tbody = document.getElementById('itemsTableBody');
+            tbody.querySelectorAll('tr').forEach((r, idx) => {
+                const cell = r.querySelector('.row-num-cell');
+                if (cell) cell.textContent = idx + 1;
+            });
+        }
+
+        function autoGrow(element) {
+            if (!element) return;
+            element.style.height = 'auto';
+            const computedHeight = Math.max(48, element.scrollHeight);
+            element.style.height = computedHeight + 'px';
+        }
+
+        // VALEO PACK AUTO-SYNC HANDLERS
+        function handleItemPackChange(inputEl) {
+            updateLiveKPIs();
+            const shipper = document.getElementById('shipperName')?.value || '';
+            if (/valeo/i.test(shipper)) {
+                const val = inputEl.value;
+                document.querySelectorAll('.item-pack-val').forEach(el => {
+                    if (el !== inputEl) el.value = val;
+                });
+                updateLiveKPIs();
+            }
+        }
+
+        function handleItemPackTypeChange(selectEl) {
+            updateLiveKPIs();
+            const shipper = document.getElementById('shipperName')?.value || '';
+            if (/valeo/i.test(shipper)) {
+                const type = selectEl.value;
+                document.querySelectorAll('.item-pack-type').forEach(el => {
+                    if (el !== selectEl) el.value = type;
+                });
+                updateLiveKPIs();
+            }
+        }
+
+        // TARE & LIVE SUMMARY CALCULATIONS
+        function calculateTare() {
+            const net = parseNum(document.getElementById('totalNetWeightKGM').value);
+            const gross = parseNum(document.getElementById('totalGrossWeightKGM').value);
+            const tareInput = document.getElementById('tareCalcInput');
+
+            if (gross > 0 && net > 0) {
+                const tare = Math.max(0, gross - net);
+                tareInput.value = tare.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' KG';
+            }
+        }
+
+        function updateLiveKPIs() {
+            const rows = document.querySelectorAll('#itemsTableBody tr');
+            let count = 0;
+            let totalQty = 0;
+            let totalPack = 0;
+            let totalNet = 0;
+            let totalGross = 0;
+            let totalAmt = 0;
+            let currency = 'USD';
+            let mainUnit = 'PCE';
+
+            rows.forEach(r => {
+                if (r.querySelector('td[colspan="8"]')) return;
+                count++;
+                const q = parseNum(r.querySelector('.item-qty-val')?.value);
+                const u = r.querySelector('.item-qty-unit')?.value;
+                if (u && u !== '--') mainUnit = u;
+                const p = parseNum(r.querySelector('.item-pack-val')?.value);
+                const n = parseNum(r.querySelector('.item-net')?.value);
+                const g = parseNum(r.querySelector('.item-gross')?.value);
+                const a = parseNum(r.querySelector('.item-amt')?.value);
+
+                totalQty += q;
+                totalPack += p;
+                totalNet += n;
+                totalGross += g;
+                totalAmt += a;
+            });
+
+            document.getElementById('kpiTotalLines').textContent = `${count} Item`;
+            document.getElementById('badgeItemCount').textContent = count;
+            document.getElementById('kpiTotalQty').textContent = totalQty > 0 ? `${totalQty.toLocaleString('en-US')} ${mainUnit}` : '-';
+            const packLabel = document.getElementById('kpiTotalPack');
+            if (packLabel) packLabel.textContent = totalPack > 0 ? `${totalPack.toLocaleString('en-US')} BX` : '-';
+            document.getElementById('kpiTotalNet').textContent = totalNet > 0 ? `${totalNet.toLocaleString('en-US', { minimumFractionDigits: 2 })} Kg` : '-';
+            document.getElementById('kpiTotalGross').textContent = totalGross > 0 ? `${totalGross.toLocaleString('en-US', { minimumFractionDigits: 2 })} Kg` : '-';
+
+            const amtFormatted = `${currency} ${totalAmt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            document.getElementById('kpiTotalAmount').textContent = totalAmt > 0 ? amtFormatted : '-';
+            const headerNilai = document.getElementById('nilaiEksporHeader');
+            if (headerNilai && totalAmt > 0) {
+                headerNilai.value = totalAmt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            }
+        }
+
+        function parseNum(str) {
+            if (!str) return 0;
+            const cleaned = str.replace(/[^0-9.-]/g, '');
+            const num = parseFloat(cleaned);
+            return isNaN(num) ? 0 : num;
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        // RENDER SAFETY CHECK AUDIT CARD
+        function renderSafeCheck(safeCheck) {
+            const container = document.getElementById('safeCheckSection');
+            if (!container) return;
+
+            if (!safeCheck) {
+                container.style.display = 'none';
+                return;
+            }
+            container.style.display = 'block';
+
+            const isRelated = safeCheck.isRelated !== false;
+            const score = safeCheck.confidenceScore !== undefined ? safeCheck.confidenceScore : 100;
+            const banner = document.getElementById('safeCheckBanner');
+            const statusBadge = document.getElementById('safeCheckStatusBadge');
+            const scoreVal = document.getElementById('safeCheckScore');
+            const title = document.getElementById('safeCheckTitle');
+            const summary = document.getElementById('safeCheckSummary');
+            const matchedList = document.getElementById('safeCheckMatchedList');
+            const warningsBox = document.getElementById('safeCheckWarningsBox');
+            const warningsList = document.getElementById('safeCheckWarningsList');
+            const docTbody = document.getElementById('safeCheckDocTableBody');
+
+            scoreVal.textContent = score + '%';
+            summary.textContent = safeCheck.summary || 'Validasi keterkaitan dokumen selesai.';
+
+            if (isRelated) {
+                banner.className = 'safecheck-banner';
+                statusBadge.className = 'badge-safe-valid';
+                statusBadge.textContent = 'Tervalidasi: 1 Shipment';
+                title.textContent = 'Semua Dokumen Cocok & Terverifikasi 1 Kesatuan Pengiriman';
+            } else {
+                banner.className = 'safecheck-banner safecheck-banner-warning';
+                statusBadge.className = 'badge-safe-warning';
+                statusBadge.textContent = 'Peringatan: Dokumen Asing / Selisih';
+                title.textContent = 'Perhatian: Ditemukan Ketidaksesuaian Antar-Dokumen';
+            }
+
+            matchedList.innerHTML = '';
+            const matched = safeCheck.matchedIdentifiers || [];
+            if (matched.length > 0) {
+                matched.forEach(m => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `<span style="color: var(--color-green-text); font-weight: 700; flex-shrink: 0;">✓</span><span>${escapeHtml(m)}</span>`;
+                    matchedList.appendChild(li);
+                });
+            } else {
+                matchedList.innerHTML = `<li style="color: #64748b;">Tidak ada catatan parameter khusus.</li>`;
+            }
+
+            const warnings = safeCheck.discrepanciesOrWarnings || [];
+            if (warnings && warnings.length > 0) {
+                warningsBox.style.display = 'block';
+                warningsList.innerHTML = '';
+                warnings.forEach(w => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `<span style="color: var(--color-red-text); font-weight: 700; flex-shrink: 0;">⚠</span><span>${escapeHtml(w)}</span>`;
+                    warningsList.appendChild(li);
+                });
+            } else {
+                warningsBox.style.display = 'none';
+            }
+
+            docTbody.innerHTML = '';
+            const docs = safeCheck.documentList || [];
+            if (docs.length > 0) {
+                docs.forEach((d, idx) => {
+                    const tr = document.createElement('tr');
+                    const isShipmentDoc = d.belongsToShipment !== false;
+                    tr.innerHTML = `
+                        <td style="text-align: center; font-family: var(--font-mono); font-weight: 600;">${idx + 1}</td>
+                        <td style="font-family: var(--font-mono); font-size: 12px; font-weight: 600;">${escapeHtml(d.fileName || 'Berkas Dokumen')}</td>
+                        <td><span style="font-size: 11.5px; font-weight: 600; background: #e2e8f0; padding: 2px 6px; border-radius: 3px;">${escapeHtml(d.documentType || 'DOKUMEN')}</span></td>
+                        <td style="text-align: center;">
+                            <span class="${isShipmentDoc ? 'badge-safe-valid' : 'badge-safe-warning'}" style="font-size: 11px; padding: 2px 6px;">
+                                ${isShipmentDoc ? 'Cocok (1 Shipment)' : 'Asing / Tidak Cocok'}
+                            </span>
+                        </td>
+                        <td style="font-size: 12px; color: var(--text-secondary);">${escapeHtml(d.notes || '-')}</td>
+                    `;
+                    docTbody.appendChild(tr);
+                });
+            } else {
+                docTbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 12px;">Tidak ada perincian berkas.</td></tr>`;
+            }
+        }
+
+        // SUBMIT ACTION
+        function submitToCustoms() {
+            const noAju = document.getElementById('noAju').value;
+            showToast(`Mengirim No. Aju: ${noAju} ke OpenAPI CEISA 4.0 Bea Cukai...`, "info");
+            setTimeout(() => {
+                showToast("Berhasil terkirim ke CEISA 4.0! Menunggu respon Nomor Pendaftaran.", "success");
+            }, 1200);
+        }
+
+        // SAMPLE DATA (VALEO DEFAULT SHIPMENT)
+        const SAMPLE_DATA = {
+            "safeCheck": {
+                "isRelated": true,
+                "confidenceScore": 100,
+                "summary": "Seluruh berkas (Commercial Invoice, Packing List, dan Ocean B/L) saling bersesuaian tanpa indikasi dokumen asing. No. Invoice 98007744, No. Kontainer WHSU0243603, serta Shipper PT. VALEO AC INDONESIA dan Consignee GM CCA Pontiac RDC selaras di semua dokumen.",
+                "matchedIdentifiers": [
+                    "Nomor Invoice 98007744 cocok di Bill of Lading, Invoice, dan Packing List",
+                    "Nomor Kontainer WHSU0243603 dan Seal WHLW 184912 serasi di seluruh dokumen",
+                    "Shipper PT. VALEO AC INDONESIA dan Consignee GM CCA Pontiac RDC terkonfirmasi sama"
+                ],
+                "discrepanciesOrWarnings": [],
+                "documentList": [
+                    {
+                        "fileName": "BL BAPSIN0153818 PT VALEO AC-RBB47.pdf",
+                        "documentType": "BILL_OF_LADING",
+                        "belongsToShipment": true,
+                        "notes": "Ocean B/L No. BAPSIN0153818 tanggal 11/09/2026"
+                    },
+                    {
+                        "fileName": "INV.98007744.pdf",
+                        "documentType": "INVOICE",
+                        "belongsToShipment": true,
+                        "notes": "Commercial Invoice No. 98007744 tanggal 10.09.2026"
+                    },
+                    {
+                        "fileName": "PL.98007744.pdf",
+                        "documentType": "PACKING_LIST",
+                        "belongsToShipment": true,
+                        "notes": "Packing List No. 98007744 merinci 816 Box / 7 Pallet"
+                    }
+                ]
+            },
+            "nomorAju": "030000-001538-20260910-007744",
+            "blNumber": "BAPSIN0153818",
+            "blDate": "11/09/2026",
+            "invoiceNumber": "98007744",
+            "invoiceDate": "10.09.2026",
+            "packingListNumber": "98007744",
+            "packingListDate": "10/09/2026",
+            "containerNumber": "WHSU0243603 / WHLW 184912",
+            "shipperName": "PT. VALEO AC INDONESIA",
+            "shipperAddress": "Panbil Industrial Estate Factory Blok D Lot.1 - 3, Jl. Ahmad Yani, Kel. Muka Kuning, Kec. Sei Beduk, Kota Batam, Provinsi Kepulauan Riau. Postal Code : 29433 - INDONESIA",
+            "consigneeName": "GM CCA Pontiac RDC",
+            "consigneeAddress": "Joslyn Road, 1251, 48340, Pontiac, USA",
+            "loadingPort": "BATAM, BATU AMPAR",
+            "dischargePort": "SINGAPORE",
+            "totalKemasan": "816 BOXES (7 PALLETS)",
+            "totalGrossWeightKGM": "1,450.60 KG",
+            "totalNetWeightKGM": "1,345.60 KG",
+            "items": [
+                {
+                    "uraianJenisBarang": "FG AC Delco US Gold Hybrid 21\" 525mm",
+                    "jumlahDanSatuanBarang": "960 PCS",
+                    "kemasan": "816 BX",
+                    "beratBersih": "159.36 KG",
+                    "beratKotor": "174.36 KG",
+                    "amount": "1,929.60"
+                },
+                {
+                    "uraianJenisBarang": "FG AC Delco US Silver SVB 21\" 525mm",
+                    "jumlahDanSatuanBarang": "960 PCS",
+                    "kemasan": "816 BX",
+                    "beratBersih": "166.08 KG",
+                    "beratKotor": "181.08 KG",
+                    "amount": "1,545.60"
+                },
+                {
+                    "uraianJenisBarang": "FG AC Delco US Silver SVB 26\" 650mm",
+                    "jumlahDanSatuanBarang": "800 PCS",
+                    "kemasan": "816 BX",
+                    "beratBersih": "168.80 KG",
+                    "beratKotor": "183.80 KG",
+                    "amount": "1,520.00"
+                },
+                {
+                    "uraianJenisBarang": "FG AC Delco US Silver SVB 18\" 450mm",
+                    "jumlahDanSatuanBarang": "5,440 PCS",
+                    "kemasan": "816 BX",
+                    "beratBersih": "851.36 KG",
+                    "beratKotor": "911.36 KG",
+                    "amount": "8,268.80"
+                }
+            ]
+        };
+
+        // INITIALIZATION ON DOM LOAD
+        window.addEventListener('DOMContentLoaded', () => {
+            // Restore previous active portal module
+            const lastModule = localStorage.getItem('ceisa_active_portal_module') || 'peb';
+            switchPortalModule(lastModule);
+
+            // Restore PEB draft or load sample
+            const hasRestored = restoreDraftState();
+            if (!hasRestored) {
+                loadDraftData(SAMPLE_DATA, false);
+            }
+
+            // PEB Header Upload Listener
+            const headerInput = document.getElementById('headerJsonFileInput');
+            if (headerInput) {
+                headerInput.addEventListener('change', function (e) {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    document.getElementById('lblFileName').textContent = file.name;
+                    localStorage.setItem(STORAGE_KEY_LAST_FILENAME, file.name);
+
+                    const reader = new FileReader();
+                    reader.onload = function (evt) {
+                        try {
+                            const parsed = JSON.parse(evt.target.result);
+                            loadDraftData(parsed, true);
+                            showToast(`Berkas '${file.name}' berhasil dimuat & tersimpan otomatis!`, "success");
+                        } catch (err) {
+                            alert("Format berkas JSON tidak valid: " + err.message);
+                        }
+                    };
+                    reader.readAsText(file);
+                });
+            }
+
+            // PEB Sample Button
+            const btnSample = document.getElementById('btnHeaderSample');
+            if (btnSample) {
+                btnSample.addEventListener('click', () => {
+                    document.getElementById('lblFileName').textContent = 'Sample_Customs_Clearance_Draft.json';
+                    localStorage.setItem(STORAGE_KEY_LAST_FILENAME, 'Sample_Customs_Clearance_Draft.json');
+                    loadDraftData(SAMPLE_DATA, true);
+                    showToast("Sampel data pengapalan berhasil dimuat!", "info");
+                });
+            }
+
+            // Global Auto-Save Listener on PEB inputs
+            document.getElementById('module-peb').addEventListener('input', () => triggerAutoSave());
+            document.getElementById('module-peb').addEventListener('change', () => triggerAutoSave());
+        });
+    </script>
 </body>
+
 </html>
