@@ -94,26 +94,28 @@ body {
 }
 
 .portal-header-inner {
-    max-width: 1360px;
+    max-width: 1440px;
     margin: 0 auto;
-    padding: 8px 20px;
+    padding: 7px 18px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 16px;
-    flex-wrap: wrap;
+    gap: 12px;
+    min-height: 48px;
+    flex-wrap: nowrap;
 }
 
 .portal-brand {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
+    flex-shrink: 0;
 }
 
 .portal-logo-emblem {
-    width: 32px;
-    height: 32px;
-    background: #1e40af;
+    width: 30px;
+    height: 30px;
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
     border-radius: var(--radius-sm);
     display: flex;
     align-items: center;
@@ -121,7 +123,9 @@ body {
     color: #ffffff;
     font-weight: 700;
     font-size: 13px;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    letter-spacing: 0.5px;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
 }
 
 .portal-brand-text {
@@ -130,26 +134,30 @@ body {
 }
 
 .portal-system-title {
-    font-size: 14px;
+    font-size: 13.5px;
     font-weight: 700;
     letter-spacing: 0.3px;
     color: #ffffff;
+    white-space: nowrap;
 }
 
 .portal-system-sub {
     font-size: 12px;
     color: #93c5fd;
+    white-space: nowrap;
 }
 
-/* Master Module Switcher in Header */
+/* Master Module Switcher in Header - Centered flex child with no overlap */
 .portal-module-switcher {
     display: flex;
     align-items: center;
-    background: rgba(15, 23, 42, 0.6);
+    background: rgba(15, 23, 42, 0.65);
     padding: 3px;
     border-radius: var(--radius-sm);
     border: 1px solid rgba(255, 255, 255, 0.15);
     gap: 2px;
+    flex-shrink: 0;
+    margin: 0 auto;
 }
 
 .portal-nav-tab {
@@ -159,7 +167,7 @@ body {
     font-family: var(--font-sans);
     font-size: 12px;
     font-weight: 600;
-    padding: 6px 14px;
+    padding: 5px 12px;
     border-radius: var(--radius-sm);
     cursor: pointer;
     display: inline-flex;
@@ -184,8 +192,117 @@ body {
 .portal-header-actions {
     display: flex;
     align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 6px;
+    flex-wrap: nowrap;
+    flex-shrink: 0;
+    margin-left: auto;
+}
+
+.portal-header-actions .btn {
+    padding: 4px 10px;
+    font-size: 11.5px;
+    height: 28px;
+    line-height: 1;
+}
+
+.btn-header-danger {
+    background: rgba(239, 68, 68, 0.15);
+    color: #fca5a5;
+    border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.btn-header-danger:hover {
+    background: rgba(239, 68, 68, 0.3);
+    color: #ffffff;
+    border-color: #ef4444;
+}
+
+.wifi-badge {
+    font-size: 11.5px;
+    font-weight: 700;
+    padding: 3px 8px;
+    height: 28px;
+    box-sizing: border-box;
+    border-radius: var(--radius-sm);
+    background: rgba(22, 163, 74, 0.18);
+    color: #4ade80;
+    border: 1px solid rgba(34, 197, 94, 0.4);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+}
+
+.wifi-badge.offline {
+    background: rgba(220, 38, 38, 0.2);
+    color: #f87171;
+    border-color: rgba(239, 68, 68, 0.4);
+}
+
+.date-picker-dash {
+    background: rgba(255, 255, 255, 0.15);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: var(--radius-sm);
+    padding: 2px 8px;
+    font-size: 11.5px;
+    font-family: var(--font-mono);
+    font-weight: 600;
+    outline: none;
+    cursor: pointer;
+    height: 28px;
+    box-sizing: border-box;
+    transition: all 0.15s ease;
+}
+
+.date-picker-dash:hover {
+    background: rgba(255, 255, 255, 0.22);
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+.date-picker-dash:focus {
+    border-color: #60a5fa;
+    box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.3);
+}
+
+.date-picker-dash::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+    opacity: 0.92;
+    cursor: pointer;
+    padding: 2px;
+    margin-left: 4px;
+    transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.date-picker-dash::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
+    transform: scale(1.18);
+}
+
+/* Compact Icon-Only Buttons */
+.btn-icon-only {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    flex-shrink: 0;
+}
+
+.btn-icon-only svg {
+    display: block;
+    transition: transform 0.2s ease;
+}
+
+.btn-header-subtle.btn-icon-only:hover svg {
+    transform: rotate(180deg);
+}
+
+.btn-header-danger.btn-icon-only:hover svg {
+    transform: scale(1.12);
 }
 
 /* Base Buttons */
@@ -311,7 +428,7 @@ body {
 }
 
 .doc-title-left h1 {
-    font-size: 15px;
+    font-size: 18px;
     font-weight: 700;
     color: var(--text-primary);
 }
@@ -334,6 +451,9 @@ body {
 .doc-title-meta strong {
     color: var(--text-primary);
 }
+
+
+
 
 /* ==========================================================================
    3. WORKSPACE CONTAINER & MODULE SWITCHING
@@ -960,32 +1080,17 @@ textarea.form-control {
     border-color: var(--color-red-border);
 }
 
-.date-picker-dash {
-    height: 32px;
-    border: 1px solid var(--border-strong);
-    border-radius: var(--radius-sm);
-    background: #ffffff;
-    color: var(--text-primary);
-    padding: 0 10px;
-    font-size: 12.5px;
-    font-weight: 600;
-    outline: none;
-    cursor: pointer;
-}
 
-.date-picker-dash:focus {
-    border-color: var(--border-focus);
-}
 
-/* Stats Cards */
+/* Stats Inline Pills (Horizontal & Sejajar) */
 .stats-grid {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 14px;
+    gap: 12px;
     margin-bottom: 16px;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 960px) {
     .stats-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
@@ -995,15 +1100,23 @@ textarea.form-control {
     background: #ffffff;
     border: 1px solid var(--border-color);
     border-radius: var(--radius-sm);
-    padding: 12px 16px;
+    padding: 9px 14px;
     box-shadow: var(--shadow-sm);
     display: flex;
+    flex-direction: row;
     align-items: center;
-    gap: 12px;
+    gap: 8px;
+    white-space: nowrap;
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.stat-card:hover {
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
 }
 
 .stat-card.card-total {
     border-color: #cbd5e1;
+    background: #ffffff;
 }
 
 .stat-card.card-orange {
@@ -1022,28 +1135,38 @@ textarea.form-control {
 }
 
 .stat-icon {
-    font-size: 20px;
-    opacity: 0.85;
-}
-
-.stat-val-group {
-    display: flex;
-    flex-direction: column;
+    font-size: 16px;
+    line-height: 1;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
 }
 
 .stat-value {
     font-family: var(--font-mono);
-    font-size: 22px;
+    font-size: 16px;
     font-weight: 800;
     color: var(--text-primary);
-    line-height: 1.1;
+    line-height: 1;
+}
+
+.stat-card.card-orange .stat-value {
+    color: #c2410c;
+}
+
+.stat-card.card-green .stat-value {
+    color: #15803d;
+}
+
+.stat-card.card-yellow .stat-value {
+    color: #b45309;
 }
 
 .stat-label {
-    font-size: 12px;
+    font-size: 12.5px;
     font-weight: 600;
-    color: var(--text-muted);
-    margin-top: 2px;
+    color: var(--text-secondary);
+    line-height: 1;
 }
 
 /* Legend Info Box */
@@ -1311,3 +1434,23 @@ textarea.form-control {
 .toast.toast-success { border-color: #10b981; }
 .toast.toast-error { border-color: #ef4444; }
 .toast.toast-info { border-color: #3b82f6; }
+
+@media (max-width: 992px) {
+    .portal-header-inner {
+        flex-direction: column;
+        gap: 10px;
+        padding: 10px 16px;
+    }
+
+    .portal-module-switcher {
+        position: static;
+        transform: none;
+        margin: 0 auto;
+    }
+
+    .portal-header-actions {
+        margin-left: 0;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+}

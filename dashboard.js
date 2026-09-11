@@ -36,6 +36,15 @@ function initDashboard() {
             await storageSet({ ceisa_last_scan_date: datePicker.value });
             await loadDashboardData();
         });
+        datePicker.addEventListener("click", () => {
+            try {
+                if (typeof datePicker.showPicker === "function") {
+                    datePicker.showPicker();
+                }
+            } catch (e) {
+                console.debug("showPicker not triggered:", e);
+            }
+        });
     }
 
     async function saveAllDataDashboard() {

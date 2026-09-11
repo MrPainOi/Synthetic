@@ -1,26 +1,10 @@
 {
   "completed": [
-    "165616",
-    "098913",
-    "099046",
-    "099020",
-    "099002",
-    "098904",
-    "098907",
-    "099091",
-    "098912",
-    "099174",
-    "099164",
-    "099192"
+    "166135",
+    "099750",
+    "166339"
   ],
-  "pibpeb": [
-    "099046",
-    "099020",
-    "099002",
-    "098904",
-    "098907",
-    "098912"
-  ],
+  "pibpeb": [],
   "cache": {
     "103299": {
       "companyName": "",
@@ -4071,6 +4055,66 @@
       "rowDate": "2026-09-10",
       "status": "red",
       "timestamp": 1789030112526
+    },
+    "165721": {
+      "companyName": "PT. SWTS BATAM",
+      "documentNumber": "165703/KPU.2/2026",
+      "documentType": "SPPB",
+      "location": "SEWU",
+      "registrationNumber": "165721",
+      "rowDate": "2026-09-10",
+      "status": "red",
+      "timestamp": 1789092131468
+    },
+    "165985": {
+      "companyName": "PT. TDK ELECTRONICS INDONESIA",
+      "documentNumber": "165967/KPU.2/2026",
+      "documentType": "SPPB",
+      "location": "SEWU",
+      "registrationNumber": "165985",
+      "rowDate": "2026-09-10",
+      "status": "orange",
+      "timestamp": 1789092268734
+    },
+    "165990": {
+      "companyName": "",
+      "documentNumber": "006510/KPU.2/2026",
+      "documentType": "",
+      "location": "",
+      "registrationNumber": "165990",
+      "rowDate": "2026-09-10",
+      "status": "",
+      "timestamp": 1789092043036
+    },
+    "166113": {
+      "companyName": "PT. VALEO AC INDONESIA",
+      "documentNumber": "166092/KPU.2/2026",
+      "documentType": "SPPB",
+      "location": "SEWU",
+      "registrationNumber": "166113",
+      "rowDate": "2026-09-11",
+      "status": "red",
+      "timestamp": 1789094023590
+    },
+    "166135": {
+      "companyName": "PT. JMS BATAM",
+      "documentNumber": "166114/KPU.2/2026",
+      "documentType": "SPPB",
+      "location": "SEWU",
+      "registrationNumber": "166135",
+      "rowDate": "2026-09-11",
+      "status": "orange",
+      "timestamp": 1789094021557
+    },
+    "166339": {
+      "companyName": "PT. HENG GUAN BATAM INDUSTRIES",
+      "documentNumber": "166317/KPU.2/2026",
+      "documentType": "SPPB",
+      "location": "SEWU",
+      "registrationNumber": "166339",
+      "rowDate": "2026-09-11",
+      "status": "orange",
+      "timestamp": 1789119769458
     },
     "171514": {
       "companyName": "",
@@ -9091,9 +9135,59 @@
       "rowDate": "2026-09-10",
       "status": "orange",
       "timestamp": 1789033036624
+    },
+    "099341": {
+      "companyName": "PT. SINAR ASIA PACK",
+      "documentNumber": "099275/KPU.2/2026",
+      "documentType": "NPPB",
+      "location": "IDKSP - SEKUPANG",
+      "registrationNumber": "099341",
+      "rowDate": "2026-09-10",
+      "status": "orange",
+      "timestamp": 1789092124525
+    },
+    "099467": {
+      "companyName": "PT. VALEO AC INDONESIA",
+      "documentNumber": "099409/KPU.2/2026",
+      "documentType": "NPPB",
+      "location": "IDBTU - BATU AMPAR",
+      "registrationNumber": "099467",
+      "rowDate": "2026-09-11",
+      "status": "red",
+      "timestamp": 1789094025733
+    },
+    "099489": {
+      "companyName": "PT. VALEO AC INDONESIA",
+      "documentNumber": "099440/KPU.2/2026",
+      "documentType": "NPPB",
+      "location": "IDBTU - BATU AMPAR",
+      "registrationNumber": "099489",
+      "rowDate": "2026-09-11",
+      "status": "red",
+      "timestamp": 1789119774193
+    },
+    "099624": {
+      "companyName": "PT. VALEO AC INDONESIA",
+      "documentNumber": "099591/KPU.2/2026",
+      "documentType": "NPPB",
+      "location": "IDBTU - BATU AMPAR",
+      "registrationNumber": "099624",
+      "rowDate": "2026-09-11",
+      "status": "red",
+      "timestamp": 1789119761820
+    },
+    "099750": {
+      "companyName": "PT. BLACKMAGIC DESIGN MANUFACTURING",
+      "documentNumber": "099729/KPU.2/2026",
+      "documentType": "NPPB",
+      "location": "IDKSP - SEKUPANG",
+      "registrationNumber": "099750",
+      "rowDate": "2026-09-11",
+      "status": "orange",
+      "timestamp": 1789119765552
     }
   },
-  "updatedAt": 1789034459734,
+  "updatedAt": 1789120978096,
   "completedByDate": {
     "2026-08-05": [
       "083930",
@@ -9650,7 +9744,14 @@
       "098912",
       "099174",
       "099164",
-      "099192"
+      "099192",
+      "099341",
+      "165985"
+    ],
+    "2026-09-11": [
+      "166135",
+      "099750",
+      "166339"
     ]
   },
   "pibpebByDate": {
@@ -10106,6 +10207,7 @@
       "098904",
       "098907",
       "098912"
-    ]
+    ],
+    "2026-09-11": []
   }
 }
