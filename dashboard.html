@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CEISA Inspector Workspace - Smart Customs Hub</title>
+    <title>CEISA Inspector</title>
     <link rel="stylesheet" href="dashboard.css">
 </head>
 
@@ -267,38 +267,63 @@
                             <thead>
                                 <tr>
                                     <th style="width: 44px; text-align: center;">No</th>
-                                    <th style="width: 220px;">Jenis Dokumen</th>
+                                    <th style="width: 200px;">Jenis Dokumen</th>
                                     <th>Nomor Dokumen</th>
                                     <th style="width: 140px;">Tanggal Dokumen</th>
+                                    <th style="width: 220px; text-align: center;">Tautan Dokumen (Aksi)</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td style="text-align: center; font-family: var(--font-mono); font-weight: 600;">1
-                                    </td>
+                                    <td style="text-align: center; font-family: var(--font-mono); font-weight: 600;">1</td>
                                     <td><strong>380 - Invoice (Komersial)</strong></td>
                                     <td><input type="text" id="invoiceNumber" class="table-input-mono"
                                             placeholder="Nomor invoice..."></td>
                                     <td><input type="text" id="invoiceDate" class="table-input-mono"
                                             placeholder="10.09.2026"></td>
+                                    <td style="text-align: center;">
+                                        <div class="doc-link-wrap">
+                                            <button type="button" class="btn-doc-link" id="btnOpenDocInvoice" data-doc-type="INVOICE" title="Buka dan lihat dokumen Invoice langsung di web">
+                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                                <span>Buka Dokumen</span>
+                                            </button>
+                                            <span class="doc-file-tag" id="tagFileInvoice" title="Nama berkas PDF terhubung">INV.98007744.pdf</span>
+                                        </div>
+                                    </td>
                                 </tr>
                                 <tr>
-                                    <td style="text-align: center; font-family: var(--font-mono); font-weight: 600;">2
-                                    </td>
+                                    <td style="text-align: center; font-family: var(--font-mono); font-weight: 600;">2</td>
                                     <td><strong>217 - Packing List (Daftar Kemasan)</strong></td>
                                     <td><input type="text" id="packingListNumber" class="table-input-mono"
                                             placeholder="Nomor PL..."></td>
                                     <td><input type="text" id="packingListDate" class="table-input-mono"
                                             placeholder="10.09.2026"></td>
+                                    <td style="text-align: center;">
+                                        <div class="doc-link-wrap">
+                                            <button type="button" class="btn-doc-link" id="btnOpenDocPackingList" data-doc-type="PACKING_LIST" title="Buka dan lihat dokumen Packing List langsung di web">
+                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                                <span>Buka Dokumen</span>
+                                            </button>
+                                            <span class="doc-file-tag" id="tagFilePackingList" title="Nama berkas PDF terhubung">PL.98007744.pdf</span>
+                                        </div>
+                                    </td>
                                 </tr>
                                 <tr>
-                                    <td style="text-align: center; font-family: var(--font-mono); font-weight: 600;">3
-                                    </td>
+                                    <td style="text-align: center; font-family: var(--font-mono); font-weight: 600;">3</td>
                                     <td><strong>705 - Bill of Lading (Ocean B/L)</strong></td>
                                     <td><input type="text" id="blNumber" class="table-input-mono"
                                             placeholder="Nomor B/L..."></td>
                                     <td><input type="text" id="blDate" class="table-input-mono"
                                             placeholder="11/09/2026"></td>
+                                    <td style="text-align: center;">
+                                        <div class="doc-link-wrap">
+                                            <button type="button" class="btn-doc-link" id="btnOpenDocBL" data-doc-type="BILL_OF_LADING" title="Buka dan lihat dokumen Bill of Lading langsung di web">
+                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                                <span>Buka Dokumen</span>
+                                            </button>
+                                            <span class="doc-file-tag" id="tagFileBL" title="Nama berkas PDF terhubung">BL BAPSIN0153818...</span>
+                                        </div>
+                                    </td>
                                 </tr>
                             </tbody>
                         </table>
@@ -361,10 +386,11 @@
                                     <thead>
                                         <tr>
                                             <th style="width: 44px; text-align: center;">No</th>
-                                            <th style="width: 240px;">Nama Berkas File</th>
-                                            <th style="width: 170px;">Tipe Dokumen</th>
-                                            <th style="width: 160px; text-align: center;">Status Relevansi</th>
+                                            <th style="width: 220px;">Nama Berkas File</th>
+                                            <th style="width: 150px;">Tipe Dokumen</th>
+                                            <th style="width: 150px; text-align: center;">Status Relevansi</th>
                                             <th>Keterangan / Catatan Verifikasi</th>
+                                            <th style="width: 130px; text-align: center;">Aksi</th>
                                         </tr>
                                     </thead>
                                     <tbody id="safeCheckDocTableBody">
@@ -656,6 +682,87 @@
                 </section>
             </div>
         </main>
+    </div>
+
+    <!-- ======================================================================
+         MODAL: CEISA 4.0 DOCUMENT VIEWER (PREVIEW DOKUMEN PABEAN LANGSUNG)
+         ====================================================================== -->
+    <div id="ceisaDocViewerModal" class="doc-modal-overlay" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="modalDocTitle">
+        <div class="doc-modal-container">
+            <!-- Modal Header -->
+            <div class="doc-modal-header">
+                <div class="doc-modal-title-group">
+                    <span class="doc-modal-badge" id="modalDocTypeBadge">380 - INVOICE</span>
+                    <h3 class="doc-modal-title" id="modalDocTitle">INV.98007744.pdf</h3>
+                    <span class="doc-modal-meta" id="modalDocMeta">No: 98007744 &bull; Tanggal: 10.09.2026</span>
+                </div>
+                <div class="doc-modal-actions">
+                    <input type="file" id="docModalFileInput" accept=".pdf,image/*" style="display: none;">
+                    <button type="button" class="btn btn-sm btn-secondary" id="btnModalUploadCustom" title="Pilih berkas PDF dari komputer">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                        Pilih File PDF
+                    </button>
+                    <a href="#" class="btn btn-sm btn-secondary" id="btnModalOpenTab" target="_blank" rel="noopener noreferrer" title="Buka di tab browser baru">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                            <polyline points="15 3 21 3 21 9"></polyline>
+                            <line x1="10" y1="14" x2="21" y2="3"></line>
+                        </svg>
+                        Tab Baru
+                    </a>
+                    <a href="#" class="btn btn-sm btn-primary-ceisa" id="btnModalDownload" download title="Unduh berkas dokumen">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7 10 12 15 17 10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                        Unduh
+                    </a>
+                    <button type="button" class="doc-modal-close-btn" id="btnModalCloseDoc" title="Tutup Viewer (Esc)">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="doc-modal-body">
+                <!-- Loading State -->
+                <div id="modalDocLoading" class="doc-modal-loading" style="display: none;">
+                    <div class="doc-spinner"></div>
+                    <span>Memuat dokumen pabean...</span>
+                </div>
+
+                <!-- Embedded PDF Viewer Frame -->
+                <iframe id="docViewerIframe" class="doc-viewer-frame" src="about:blank" title="Pratinjau Dokumen Pabean"></iframe>
+
+                <!-- Fallback / Uploader if file not yet loaded in browser -->
+                <div id="modalDocFallback" class="doc-modal-fallback" style="display: none;">
+                    <div class="fallback-icon">📄</div>
+                    <h4 id="fallbackTitle">Pratinjau Berkas Dokumen</h4>
+                    <p id="fallbackDesc">
+                        Berkas <strong id="fallbackFileName">INV.98007744.pdf</strong> dapat dibuka langsung.<br>
+                        Pastikan server lokal aktif atau pilih berkas PDF dari komputer Anda.
+                    </p>
+                    <div class="fallback-btn-group" style="margin-top: 14px;">
+                        <button type="button" class="btn btn-primary-ceisa" id="btnFallbackSelectFile">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="17 8 12 3 7 8"></polyline>
+                                <line x1="12" y1="3" x2="12" y2="15"></line>
+                            </svg>
+                            Pilih Berkas PDF Dari Komputer
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- TOAST NOTIFICATION CONTAINER -->

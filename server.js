@@ -97,6 +97,69 @@ const server = http.createServer((req, res) => {
     const url = new URL(req.url, `http://${req.headers.host}`);
     const pathname = url.pathname;
 
+    // API GET / HEAD Documents (Serve PDF & attached clearance files)
+    if (pathname.startsWith("/api/documents/") && (req.method === "GET" || req.method === "HEAD")) {
+        const rawFileName = decodeURIComponent(pathname.replace(/^\/api\/documents\//, ""));
+        const searchDirs = [
+            path.join(__dirname, "backend-service", "temp", "attachments"),
+            path.join(__dirname, "backend-service", "temp"),
+            path.join(__dirname, "attachments"),
+            __dirname
+        ];
+
+        let foundPath = null;
+        for (const dir of searchDirs) {
+            if (fs.existsSync(dir)) {
+                const candidate = path.join(dir, rawFileName);
+                if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) {
+                    foundPath = candidate;
+                    break;
+                }
+            }
+        }
+
+        // Fuzzy match if exact file name is not found
+        if (!foundPath) {
+            for (const dir of searchDirs) {
+                if (fs.existsSync(dir) && fs.statSync(dir).isDirectory()) {
+                    const files = fs.readdirSync(dir);
+                    const cleanTarget = rawFileName.toLowerCase().replace(/[^a-z0-9]/g, "");
+                    const matched = files.find(f => {
+                        const cleanF = f.toLowerCase().replace(/[^a-z0-9]/g, "");
+                        return cleanF === cleanTarget || cleanF.includes(cleanTarget) || cleanTarget.includes(cleanF);
+                    });
+                    if (matched) {
+                        foundPath = path.join(dir, matched);
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (foundPath) {
+            const ext = path.extname(foundPath).toLowerCase();
+            const mimeTypes = {
+                ".pdf": "application/pdf",
+                ".png": "image/png",
+                ".jpg": "image/jpeg",
+                ".jpeg": "image/jpeg",
+                ".json": "application/json"
+            };
+            const contentType = mimeTypes[ext] || "application/octet-stream";
+            res.writeHead(200, {
+                "Content-Type": contentType,
+                "Content-Disposition": `inline; filename="${path.basename(foundPath)}"`,
+                "Access-Control-Allow-Origin": "*"
+            });
+            fs.createReadStream(foundPath).pipe(res);
+            return;
+        } else {
+            res.writeHead(404, { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" });
+            res.end(JSON.stringify({ error: "File tidak ditemukan", requested: rawFileName }));
+            return;
+        }
+    }
+
     // API GET Sync
     if (pathname === "/api/sync" && req.method === "GET") {
         res.writeHead(200, { "Content-Type": "application/json" });

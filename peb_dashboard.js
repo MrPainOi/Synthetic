@@ -248,6 +248,25 @@ function loadDraftData(data, shouldSave = true) {
     setVal('blNumber', data.blNumber);
     setVal('blDate', data.blDate);
 
+    // Resolve Document Filenames for Table 1 Links
+    window._currentDocMap = window._currentDocMap || {};
+    const docList = data.safeCheck?.documentList || [];
+
+    const invDoc = docList.find(d => /invoice/i.test(d.documentType || '') || /inv/i.test(d.fileName || ''));
+    const plDoc = docList.find(d => /packing/i.test(d.documentType || '') || /pl/i.test(d.fileName || ''));
+    const blDoc = docList.find(d => /lading/i.test(d.documentType || '') || /bl/i.test(d.fileName || ''));
+
+    window._currentDocMap.INVOICE = invDoc?.fileName || (data.invoiceNumber ? `INV.${data.invoiceNumber}.pdf` : 'INV.98007744.pdf');
+    window._currentDocMap.PACKING_LIST = plDoc?.fileName || (data.packingListNumber ? `PL.${data.packingListNumber}.pdf` : 'PL.98007744.pdf');
+    window._currentDocMap.BILL_OF_LADING = blDoc?.fileName || (data.blNumber ? `BL BAPSIN0153818 PT VALEO AC-RBB47.pdf` : 'BL BAPSIN0153818 PT VALEO AC-RBB47.pdf');
+
+    const tagInv = document.getElementById('tagFileInvoice');
+    if (tagInv) tagInv.textContent = window._currentDocMap.INVOICE;
+    const tagPl = document.getElementById('tagFilePackingList');
+    if (tagPl) tagPl.textContent = window._currentDocMap.PACKING_LIST;
+    const tagBl = document.getElementById('tagFileBL');
+    if (tagBl) tagBl.textContent = window._currentDocMap.BILL_OF_LADING;
+
     setVal('loadingPort', data.loadingPort);
     setVal('dischargePort', data.dischargePort);
     setVal('containerNumber', data.containerNumber);
@@ -798,23 +817,169 @@ function renderSafeCheck(safeCheck) {
             docs.forEach((d, idx) => {
                 const tr = document.createElement('tr');
                 const isShipmentDoc = d.belongsToShipment !== false;
+                const fileName = d.fileName || 'Dokumen_Pabean.pdf';
+                const docType = d.documentType || 'DOKUMEN';
                 tr.innerHTML = `
                     <td style="text-align: center; font-family: var(--font-mono); font-weight: 600;">${idx + 1}</td>
-                    <td style="font-family: var(--font-mono); font-size: 12px; font-weight: 600;">${escapeHtml(d.fileName || 'Berkas Dokumen')}</td>
-                    <td><span style="font-size: 12px; font-weight: 600; background: #e2e8f0; padding: 2px 6px; border-radius: 3px;">${escapeHtml(d.documentType || 'DOKUMEN')}</span></td>
+                    <td style="font-family: var(--font-mono); font-size: 12px; font-weight: 600;">
+                        <span style="color: var(--text-primary);">${escapeHtml(fileName)}</span>
+                    </td>
+                    <td><span style="font-size: 12px; font-weight: 600; background: #e2e8f0; padding: 2px 6px; border-radius: 3px;">${escapeHtml(docType)}</span></td>
                     <td style="text-align: center;">
                         <span class="${isShipmentDoc ? 'badge-safe-valid' : 'badge-safe-warning'}" style="font-size: 12px; padding: 2px 6px;">
                             ${isShipmentDoc ? 'Cocok (1 Shipment)' : 'Asing / Tidak Cocok'}
                         </span>
                     </td>
                     <td style="font-size: 12px; color: var(--text-secondary);">${escapeHtml(d.notes || '-')}</td>
+                    <td style="text-align: center;">
+                        <button type="button" class="btn-doc-link btn-table-doc-open" data-filename="${escapeHtml(fileName)}" data-doctype="${escapeHtml(docType)}" title="Buka berkas ${escapeHtml(fileName)} langsung di web">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                            <span>Buka</span>
+                        </button>
+                    </td>
                 `;
                 docTbody.appendChild(tr);
             });
         } else {
-            docTbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 12px;">Tidak ada perincian berkas.</td></tr>`;
+            docTbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 16px;">Tidak ada perincian berkas.</td></tr>`;
         }
     }
+}
+
+// ====================================================================
+// CEISA 4.0 DOCUMENT VIEWER MODAL CONTROLLER
+// ====================================================================
+window._docFileMap = window._docFileMap || {};
+window._activeModalFileName = '';
+
+function openCeisaDocViewer({ docType, fileName, docNumber, docDate }) {
+    const modal = document.getElementById('ceisaDocViewerModal');
+    if (!modal) return;
+
+    window._activeModalFileName = fileName || 'Dokumen_Pabean.pdf';
+
+    const titleEl = document.getElementById('modalDocTitle');
+    const badgeEl = document.getElementById('modalDocTypeBadge');
+    const metaEl = document.getElementById('modalDocMeta');
+    const iframe = document.getElementById('docViewerIframe');
+    const loading = document.getElementById('modalDocLoading');
+    const fallback = document.getElementById('modalDocFallback');
+    const fallbackFileName = document.getElementById('fallbackFileName');
+    const btnDownload = document.getElementById('btnModalDownload');
+    const btnOpenTab = document.getElementById('btnModalOpenTab');
+
+    if (titleEl) titleEl.textContent = window._activeModalFileName;
+    if (badgeEl) badgeEl.textContent = docType || 'DOKUMEN PABEAN';
+    if (metaEl) metaEl.textContent = `No: ${docNumber || '-'} \u2022 Tanggal: ${docDate || '-'}`;
+    if (fallbackFileName) fallbackFileName.textContent = window._activeModalFileName;
+
+    // Show modal
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+
+    // Reset UI state
+    if (loading) loading.style.display = 'flex';
+    if (fallback) fallback.style.display = 'none';
+    if (iframe) {
+        iframe.style.display = 'block';
+        iframe.src = 'about:blank';
+    }
+
+    // 1. If user previously uploaded/attached this file in current session
+    if (window._docFileMap[window._activeModalFileName]) {
+        const blobUrl = window._docFileMap[window._activeModalFileName];
+        if (iframe) iframe.src = blobUrl;
+        if (btnDownload) {
+            btnDownload.href = blobUrl;
+            btnDownload.download = window._activeModalFileName;
+        }
+        if (btnOpenTab) btnOpenTab.href = blobUrl;
+        setTimeout(() => { if (loading) loading.style.display = 'none'; }, 200);
+        return;
+    }
+
+    // 2. Try loading from local Wi-Fi API server (server.js on port 8080)
+    const serverUrl = `http://127.0.0.1:8080/api/documents/${encodeURIComponent(window._activeModalFileName)}`;
+    const relativeUrl = `attachments/${encodeURIComponent(window._activeModalFileName)}`;
+
+    fetch(serverUrl, { method: 'HEAD' })
+        .then(res => {
+            if (res.ok) {
+                if (iframe) iframe.src = serverUrl;
+                if (btnDownload) {
+                    btnDownload.href = serverUrl;
+                    btnDownload.download = window._activeModalFileName;
+                }
+                if (btnOpenTab) btnOpenTab.href = serverUrl;
+                if (loading) loading.style.display = 'none';
+            } else {
+                throw new Error("Server 404");
+            }
+        })
+        .catch(() => {
+            // Test relative attachments path
+            fetch(relativeUrl, { method: 'HEAD' })
+                .then(r => {
+                    if (r.ok) {
+                        if (iframe) iframe.src = relativeUrl;
+                        if (btnDownload) {
+                            btnDownload.href = relativeUrl;
+                            btnDownload.download = window._activeModalFileName;
+                        }
+                        if (btnOpenTab) btnOpenTab.href = relativeUrl;
+                        if (loading) loading.style.display = 'none';
+                    } else {
+                        throw new Error("Relative 404");
+                    }
+                })
+                .catch(() => {
+                    // Show fallback view allowing file selection
+                    if (loading) loading.style.display = 'none';
+                    if (iframe) iframe.style.display = 'none';
+                    if (fallback) fallback.style.display = 'flex';
+                    if (btnDownload) btnDownload.href = '#';
+                    if (btnOpenTab) btnOpenTab.href = '#';
+                });
+        });
+}
+
+function closeCeisaDocViewer() {
+    const modal = document.getElementById('ceisaDocViewerModal');
+    if (!modal) return;
+    modal.style.display = 'none';
+    document.body.style.overflow = '';
+    const iframe = document.getElementById('docViewerIframe');
+    if (iframe) iframe.src = 'about:blank';
+}
+
+function handleDocViewerFileSelect(file) {
+    if (!file) return;
+    const blobUrl = URL.createObjectURL(file);
+    const targetName = window._activeModalFileName || file.name;
+    window._docFileMap[targetName] = blobUrl;
+    window._docFileMap[file.name] = blobUrl;
+
+    const iframe = document.getElementById('docViewerIframe');
+    const loading = document.getElementById('modalDocLoading');
+    const fallback = document.getElementById('modalDocFallback');
+    const btnDownload = document.getElementById('btnModalDownload');
+    const btnOpenTab = document.getElementById('btnModalOpenTab');
+    const titleEl = document.getElementById('modalDocTitle');
+
+    if (titleEl) titleEl.textContent = file.name;
+    if (iframe) {
+        iframe.style.display = 'block';
+        iframe.src = blobUrl;
+    }
+    if (loading) loading.style.display = 'none';
+    if (fallback) fallback.style.display = 'none';
+    if (btnDownload) {
+        btnDownload.href = blobUrl;
+        btnDownload.download = file.name;
+    }
+    if (btnOpenTab) btnOpenTab.href = blobUrl;
+
+    showToast(`Berkas '${file.name}' berhasil dimuat ke viewer!`, "success");
 }
 
 // SUBMIT ACTION
@@ -1048,7 +1213,98 @@ document.addEventListener('DOMContentLoaded', () => {
         modulePeb.addEventListener('change', () => triggerAutoSave());
     }
 
-    // 10. Restore PEB draft or load sample
+    // 10. CEISA Document Viewer Trigger Buttons (Table 1 & Table 2)
+    const btnOpenInv = document.getElementById('btnOpenDocInvoice');
+    if (btnOpenInv) {
+        btnOpenInv.addEventListener('click', () => {
+            openCeisaDocViewer({
+                docType: '380 - INVOICE (KOMERSIAL)',
+                fileName: window._currentDocMap?.INVOICE || 'INV.98007744.pdf',
+                docNumber: document.getElementById('invoiceNumber')?.value || '98007744',
+                docDate: document.getElementById('invoiceDate')?.value || '10.09.2026'
+            });
+        });
+    }
+
+    const btnOpenPl = document.getElementById('btnOpenDocPackingList');
+    if (btnOpenPl) {
+        btnOpenPl.addEventListener('click', () => {
+            openCeisaDocViewer({
+                docType: '217 - PACKING LIST (DAFTAR KEMASAN)',
+                fileName: window._currentDocMap?.PACKING_LIST || 'PL.98007744.pdf',
+                docNumber: document.getElementById('packingListNumber')?.value || '98007744',
+                docDate: document.getElementById('packingListDate')?.value || '10.09.2026'
+            });
+        });
+    }
+
+    const btnOpenBl = document.getElementById('btnOpenDocBL');
+    if (btnOpenBl) {
+        btnOpenBl.addEventListener('click', () => {
+            openCeisaDocViewer({
+                docType: '705 - BILL OF LADING (OCEAN B/L)',
+                fileName: window._currentDocMap?.BILL_OF_LADING || 'BL BAPSIN0153818 PT VALEO AC-RBB47.pdf',
+                docNumber: document.getElementById('blNumber')?.value || 'BAPSIN0153818',
+                docDate: document.getElementById('blDate')?.value || '11/09/2026'
+            });
+        });
+    }
+
+    // Delegated click for SafeCheck Document Table rows
+    const safeCheckTable = document.getElementById('safeCheckDocTableBody');
+    if (safeCheckTable) {
+        safeCheckTable.addEventListener('click', (e) => {
+            const btn = e.target.closest('.btn-table-doc-open');
+            if (btn) {
+                const fileName = btn.getAttribute('data-filename') || 'Dokumen_Pabean.pdf';
+                const docType = btn.getAttribute('data-doctype') || 'DOKUMEN PABEAN';
+                openCeisaDocViewer({
+                    docType: docType,
+                    fileName: fileName,
+                    docNumber: '',
+                    docDate: ''
+                });
+            }
+        });
+    }
+
+    // Modal Action Controls
+    const btnCloseModal = document.getElementById('btnModalCloseDoc');
+    if (btnCloseModal) {
+        btnCloseModal.addEventListener('click', closeCeisaDocViewer);
+    }
+
+    const modalOverlay = document.getElementById('ceisaDocViewerModal');
+    if (modalOverlay) {
+        modalOverlay.addEventListener('click', (e) => {
+            if (e.target === modalOverlay) closeCeisaDocViewer();
+        });
+    }
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeCeisaDocViewer();
+    });
+
+    const docModalInput = document.getElementById('docModalFileInput');
+    if (docModalInput) {
+        docModalInput.addEventListener('change', (e) => {
+            if (e.target.files && e.target.files[0]) {
+                handleDocViewerFileSelect(e.target.files[0]);
+            }
+        });
+    }
+
+    const btnModalUpload = document.getElementById('btnModalUploadCustom');
+    if (btnModalUpload && docModalInput) {
+        btnModalUpload.addEventListener('click', () => docModalInput.click());
+    }
+
+    const btnFallbackSelect = document.getElementById('btnFallbackSelectFile');
+    if (btnFallbackSelect && docModalInput) {
+        btnFallbackSelect.addEventListener('click', () => docModalInput.click());
+    }
+
+    // 11. Restore PEB draft or load sample
     const hasRestored = restoreDraftState();
     if (!hasRestored) {
         loadDraftData(SAMPLE_DATA, false);
