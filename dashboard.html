@@ -24,27 +24,6 @@
                 </div>
             </div>
 
-            <!-- Master Module Switcher Navigation -->
-            <nav class="portal-module-switcher" role="tablist" aria-label="Modul Portal">
-                <button type="button" class="portal-nav-tab" id="btnNavPeb">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                        <polyline points="14 2 14 8 20 8"></polyline>
-                        <line x1="16" y1="13" x2="8" y2="13"></line>
-                        <line x1="16" y1="17" x2="8" y2="17"></line>
-                    </svg>
-                    Modul Draft PEB (Ekspor)
-                </button>
-                <button type="button" class="portal-nav-tab active" id="btnNavInspector">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="18" y1="20" x2="18" y2="10"></line>
-                        <line x1="12" y1="20" x2="12" y2="4"></line>
-                        <line x1="6" y1="20" x2="6" y2="14"></line>
-                    </svg>
-                    CEISA Inspector (Monitoring & SPPB)
-                </button>
-            </nav>
-
             <!-- Contextual Header Actions: Inspector Mode -->
             <div class="portal-header-actions" id="inspectorHeaderActions" style="display: flex;">
                 <input type="date" id="scanDate" class="date-picker-dash"
@@ -96,57 +75,91 @@
     </header>
 
     <!-- ======================================================================
+         2. MASTER PORTAL WRAPPER (AUTHENTIC CEISA 4.0 SIDEBAR + WORKSPACE)
+         ====================================================================== -->
+    <div class="ceisa-portal-layout">
+        <!-- CEISA 4.0 Vertical Sidebar (1:1 Sesuai Screenshot CEISA Asli) -->
+        <aside class="ceisa-sidebar" id="ceisaSidebar" aria-label="Navigasi Menu CEISA 4.0">
+            <!-- Sidebar Header with Title Text & Expand/Collapse Toggle in Marked Spot -->
+            <div class="ceisa-sidebar-header">
+                <div class="ceisa-sidebar-brand-box">
+                    <span class="sidebar-brand-badge">PORTAL</span>
+                    <span class="sidebar-brand-title">MENU CEISA</span>
+                </div>
+                <button type="button" class="ceisa-sidebar-toggle" id="ceisaSidebarToggle"
+                    title="Perluas / Ciutkan Menu Samping" aria-label="Toggle Menu Samping" aria-expanded="false">
+                    <svg class="icon-toggle-expand" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="13 17 18 12 13 7"></polyline>
+                        <polyline points="6 17 11 12 6 7"></polyline>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Navigation Items: Strictly 2 Active Modules -->
+            <div class="ceisa-sidebar-nav" role="tablist" aria-label="Menu Utama Portal CEISA">
+                <!-- 1. Modul Draft PEB (Ekspor) -->
+                <button type="button" class="ceisa-sidebar-item" id="btnNavPeb" role="tab"
+                    aria-selected="false" title="Modul Draft PEB (Ekspor)" data-tooltip="Modul Draft PEB (Ekspor)">
+                    <div class="sidebar-icon-box">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="16" y1="13" x2="8" y2="13"></line>
+                            <line x1="16" y1="17" x2="8" y2="17"></line>
+                        </svg>
+                    </div>
+                    <span class="sidebar-label">Modul Draft PEB</span>
+                </button>
+
+                <!-- Dots Divider -->
+                <div class="ceisa-sidebar-dots" aria-hidden="true"><span></span><span></span><span></span></div>
+
+                <!-- 2. CEISA Inspector (Monitoring & SPPB - ACTIVE by default) -->
+                <button type="button" class="ceisa-sidebar-item active" id="btnNavInspector" role="tab"
+                    aria-selected="true" title="CEISA Inspector (Monitoring & SPPB)" data-tooltip="CEISA Inspector (Monitoring & SPPB)">
+                    <div class="sidebar-icon-box">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                            <line x1="8" y1="21" x2="16" y2="21"></line>
+                            <line x1="12" y1="17" x2="12" y2="21"></line>
+                        </svg>
+                    </div>
+                    <span class="sidebar-label">CEISA Inspector</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Workspace Viewport -->
+        <div class="ceisa-portal-content">
+
+
+    <!-- ======================================================================
          MODUL 1: CEISA 4.0 PEMBERITAHUAN EKSPOR BARANG (PEB DRAFT & SAFECHECK)
          ====================================================================== -->
     <div id="module-peb" class="portal-module-view" style="display: none;">
-        <!-- Sub-Header Strip -->
-        <section class="doc-title-strip">
-            <div class="doc-title-container">
-                <div class="doc-title-left">
-                    <h1>Pemberitahuan Ekspor Barang (PEB / BC 3.0)</h1>
-                    <span class="badge-draft-status">Draft Siap Review</span>
-                    <span id="saveIndicator"
-                        style="font-size: 12px; color: var(--color-green-text); background: var(--color-green-bg); padding: 2px 8px; border-radius: 3px; border: 1px solid var(--color-green-border); font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
-                        <span
-                            style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--color-green-text);"></span>
-                        Tersimpan Otomatis
-                    </span>
-                </div>
-                <div class="doc-title-meta" id="docSubMeta">
-                    No. Aju: <strong id="lblNoAju">030000-001534-20260907-007732</strong> &bull; File: <strong
-                        id="lblFileName">Sample_Customs_Clearance_Draft.json</strong>
-                </div>
-            </div>
-        </section>
-
-        <!-- Main Workspace PEB -->
-        <main class="main-workspace">
-            <!-- CEISA 4.0 Tabs Strip -->
+        <!-- Main Workspace PEB (Langsung 1 Header Utama) -->
+        <main class="main-workspace" style="padding-top: 18px;">
+            <!-- CEISA 4.0 Tabs Strip (1:1 Standar CEISA) -->
             <nav class="ceisa-tabs" role="tablist">
-                <button type="button" class="ceisa-tab-btn active" data-tab="tab-header">
-                    1. Header & Aju
-                </button>
-                <button type="button" class="ceisa-tab-btn" data-tab="tab-entitas">
-                    2. Entitas (Pihak)
-                </button>
-                <button type="button" class="ceisa-tab-btn" data-tab="tab-dokumen">
-                    3. Dokumen & SafeCheck
-                    <span class="tab-badge" id="badgeDocCount">3</span>
-                </button>
-                <button type="button" class="ceisa-tab-btn" data-tab="tab-pengangkut">
-                    4. Pengangkut & Kemasan
-                </button>
-                <button type="button" class="ceisa-tab-btn" data-tab="tab-barang">
-                    5. Barang
-                    <span class="tab-badge" id="badgeItemCount">12</span>
-                </button>
+                <button type="button" class="ceisa-tab-btn active" data-tab="tab-header">Header</button>
+                <button type="button" class="ceisa-tab-btn" data-tab="tab-entitas">Entitas</button>
+                <button type="button" class="ceisa-tab-btn" data-tab="tab-dokumen">Dokumen</button>
+                <button type="button" class="ceisa-tab-btn" data-tab="tab-pengangkut">Pengangkut</button>
+                <button type="button" class="ceisa-tab-btn" data-tab="tab-kemasan">Kemasan &amp; Peti Kemas</button>
+                <button type="button" class="ceisa-tab-btn" data-tab="tab-transaksi">Transaksi</button>
+                <button type="button" class="ceisa-tab-btn" data-tab="tab-barang">Barang</button>
+                <button type="button" class="ceisa-tab-btn tab-btn-pungutan" data-tab="tab-pungutan">Pungutan</button>
+                <button type="button" class="ceisa-tab-btn" data-tab="tab-pernyataan">Pernyataan</button>
             </nav>
 
-            <!-- TAB 1: HEADER & PENGURUSAN -->
+            <!-- TAB 1: HEADER -->
             <section id="tab-header" class="tab-content-panel active">
                 <div class="ceisa-form-card">
                     <div class="ceisa-card-header">
-                        <span class="ceisa-card-title">Data Pengajuan & Kantor Pabean</span>
+                        <span class="ceisa-card-title">Data Pengajuan &amp; Kantor Pabean</span>
                     </div>
                     <div class="ceisa-card-body">
                         <div class="form-grid-3">
@@ -175,30 +188,6 @@
                             <div class="form-group">
                                 <label class="form-label">Cara Pembayaran</label>
                                 <input type="text" id="caraBayar" class="form-control" value="2 - PEMBAYARAN KEMUDIAN">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="ceisa-form-card">
-                    <div class="ceisa-card-header">
-                        <span class="ceisa-card-title">Valuta & Nilai Transaksi Ekspor</span>
-                    </div>
-                    <div class="ceisa-card-body">
-                        <div class="form-grid-3">
-                            <div class="form-group">
-                                <label class="form-label">Jenis Valuta Asing</label>
-                                <input type="text" id="valutaHeader" class="form-control" value="USD - US DOLLAR">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Nilai Ekspor (FOB Total)</label>
-                                <input type="text" id="nilaiEksporHeader" class="form-control form-control-mono"
-                                    value="120,666.55">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Freight (Ongkos Angkut)</label>
-                                <input type="text" id="freightHeader" class="form-control form-control-mono"
-                                    value="0.00">
                             </div>
                         </div>
                     </div>
@@ -403,11 +392,11 @@
                 </div>
             </section>
 
-            <!-- TAB 4: PENGANGKUT & KEMASAN -->
+            <!-- TAB 4: PENGANGKUT -->
             <section id="tab-pengangkut" class="tab-content-panel">
                 <div class="ceisa-form-card">
                     <div class="ceisa-card-header">
-                        <span class="ceisa-card-title">Sarana Pengangkut & Pelabuhan</span>
+                        <span class="ceisa-card-title">Sarana Pengangkut &amp; Pelabuhan</span>
                     </div>
                     <div class="ceisa-card-body">
                         <div class="form-grid-3">
@@ -415,6 +404,21 @@
                                 <label class="form-label">Cara Pengangkutan <span class="req">*</span></label>
                                 <input type="text" id="caraAngkut" class="form-control" value="1 - LAUT (SEA FREIGHT)"
                                     readonly>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Nama Sarana Pengangkut (Vessel / Kapal)</label>
+                                <input type="text" id="namaPengangkut" class="form-control"
+                                    value="WAN HAI 215" placeholder="Nama kapal / pesawat...">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Nomor Pengangkut / Voyage / Flight</label>
+                                <input type="text" id="voyageNumber" class="form-control form-control-mono"
+                                    value="VOY 091S" placeholder="No. voyage...">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Bendera Sarana Pengangkut</label>
+                                <input type="text" id="benderaPengangkut" class="form-control"
+                                    value="PA - PANAMA" placeholder="Negara bendera...">
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Pelabuhan Muat Asal (POL) <span class="req">*</span></label>
@@ -426,30 +430,58 @@
                                         class="req">*</span></label>
                                 <input type="text" id="dischargePort" class="form-control" placeholder="SINGAPORE">
                             </div>
+                            <div class="form-group">
+                                <label class="form-label">Perkiraan Tanggal Ekspor / Berangkat</label>
+                                <input type="text" id="tglPerkiraanEkspor" class="form-control form-control-mono"
+                                    value="12/09/2026" placeholder="DD/MM/YYYY">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 5: KEMASAN & PETI KEMAS -->
+            <section id="tab-kemasan" class="tab-content-panel">
+                <div class="ceisa-form-card">
+                    <div class="ceisa-card-header">
+                        <span class="ceisa-card-title">Peti Kemas (Kontainer)</span>
+                    </div>
+                    <div class="ceisa-card-body">
+                        <div class="form-grid-3">
+                            <div class="form-group">
+                                <label class="form-label">Nomor Kontainer &amp; Segel <span class="req">*</span></label>
+                                <input type="text" id="containerNumber" class="form-control form-control-mono"
+                                    placeholder="WHSU0243603 / WHLW 184912">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Ukuran &amp; Tipe Kontainer</label>
+                                <input type="text" id="tipeKontainer" class="form-control"
+                                    value="20 FEET / FULL CONTAINER LOAD (FCL)" readonly>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Nomor Segel Pelayaran / Bea Cukai</label>
+                                <input type="text" id="segelKontainer" class="form-control form-control-mono"
+                                    value="WHLW 184912" placeholder="Nomor segel...">
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 <div class="ceisa-form-card">
                     <div class="ceisa-card-header">
-                        <span class="ceisa-card-title">Peti Kemas (Kontainer), Kemasan & Berat</span>
+                        <span class="ceisa-card-title">Kemasan &amp; Berat Muatan (Tonase)</span>
                     </div>
                     <div class="ceisa-card-body">
                         <div class="form-grid-3">
                             <div class="form-group">
-                                <label class="form-label">Nomor Kontainer & Segel <span class="req">*</span></label>
-                                <input type="text" id="containerNumber" class="form-control form-control-mono"
-                                    placeholder="WHSU0243603 / WHLW 184912">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Ukuran & Tipe Kontainer</label>
-                                <input type="text" id="tipeKontainer" class="form-control"
-                                    value="20 FEET / FULL CONTAINER LOAD (FCL)" readonly>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Jumlah & Jenis Kemasan <span class="req">*</span></label>
+                                <label class="form-label">Jumlah &amp; Jenis Kemasan <span class="req">*</span></label>
                                 <input type="text" id="totalKemasan" class="form-control"
                                     placeholder="816 BOXES (7 PALLETS)">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Merek Kemasan</label>
+                                <input type="text" id="merekKemasan" class="form-control"
+                                    value="AC DELCO / VALEO" placeholder="Merek kemasan...">
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Berat Bersih (Netto KGM) <span class="req">*</span></label>
@@ -471,11 +503,74 @@
                 </div>
             </section>
 
-            <!-- TAB 5: TRANSAKSI & DATA BARANG (TABEL RESMI PEB) -->
+            <!-- TAB 6: TRANSAKSI -->
+            <section id="tab-transaksi" class="tab-content-panel">
+                <div class="ceisa-form-card">
+                    <div class="ceisa-card-header">
+                        <span class="ceisa-card-title">Valuta &amp; Kurs Pabean (NDPBM)</span>
+                    </div>
+                    <div class="ceisa-card-body">
+                        <div class="form-grid-3">
+                            <div class="form-group">
+                                <label class="form-label">Jenis Valuta Asing</label>
+                                <input type="text" id="valutaHeader" class="form-control" value="USD - US DOLLAR">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Kurs Pabean (NDPBM Kemenkeu)</label>
+                                <input type="text" id="kursPabean" class="form-control form-control-mono" value="15,850.00">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Syarat Penyerahan (Incoterms)</label>
+                                <input type="text" id="incotermsTransaksi" class="form-control" value="FOB - FREE ON BOARD">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ceisa-form-card">
+                    <div class="ceisa-card-header">
+                        <span class="ceisa-card-title">Nilai Transaksi Ekspor</span>
+                    </div>
+                    <div class="ceisa-card-body">
+                        <div class="form-grid-3">
+                            <div class="form-group">
+                                <label class="form-label">Nilai Ekspor (FOB Total)</label>
+                                <input type="text" id="nilaiEksporHeader" class="form-control form-control-mono"
+                                    value="13,264.00">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Freight (Ongkos Angkut)</label>
+                                <input type="text" id="freightHeader" class="form-control form-control-mono"
+                                    value="0.00">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Asuransi (Insurance)</label>
+                                <input type="text" id="asuransiHeader" class="form-control form-control-mono"
+                                    value="0.00">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Nilai Pabean Total (IDR)</label>
+                                <input type="text" id="nilaiPabeanIdr" class="form-control form-control-mono" readonly
+                                    value="210,234,400.00">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Cara Pembayaran Transaksi</label>
+                                <input type="text" id="caraBayarTransaksi" class="form-control" value="2 - PEMBAYARAN KEMUDIAN">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Bank Devisa Hasil Ekspor (DHE)</label>
+                                <input type="text" id="bankDhe" class="form-control" value="BANK MANDIRI (PERSERO) TBK">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 7: BARANG -->
             <section id="tab-barang" class="tab-content-panel">
                 <div class="ceisa-form-card">
                     <div class="ceisa-card-header">
-                        <span class="ceisa-card-title">Rincian Komoditas & Data Barang Ekspor</span>
+                        <span class="ceisa-card-title">Rincian Komoditas &amp; Data Barang Ekspor</span>
                         <button type="button" class="btn btn-secondary" id="btnAddNewItem"
                             style="padding: 4px 10px; font-size: 12px;">
                             + Tambah Barang
@@ -538,11 +633,157 @@
                 </div>
             </section>
 
+            <!-- TAB 8: PUNGUTAN -->
+            <section id="tab-pungutan" class="tab-content-panel">
+                <div class="ceisa-form-card">
+                    <div class="ceisa-card-header">
+                        <span class="ceisa-card-title">Perhitungan Pungutan Pabean &amp; Pajak Ekspor</span>
+                        <span class="badge-draft-status" style="background: #fef3c7; color: #b45309; border-color: #fde68a;">
+                            Status Pungutan: Bebas / Nihil
+                        </span>
+                    </div>
+                    <div class="table-container-responsive">
+                        <table class="ceisa-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 44px; text-align: center;">No</th>
+                                    <th style="width: 220px;">Jenis Pungutan</th>
+                                    <th style="width: 140px; text-align: right;">Dasar Pengenaan</th>
+                                    <th style="width: 110px; text-align: center;">Tarif</th>
+                                    <th style="width: 150px; text-align: right;">Dibayar (IDR)</th>
+                                    <th style="width: 150px; text-align: right;">Ditanggung Pem.</th>
+                                    <th style="width: 150px; text-align: right;">Dibebaskan</th>
+                                    <th style="width: 130px; text-align: right;">Tidak Dipungut</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td style="text-align: center; font-family: var(--font-mono); font-weight: 600;">1</td>
+                                    <td><strong>Bea Keluar (Export Duty)</strong></td>
+                                    <td style="text-align: right; font-family: var(--font-mono);">0.00</td>
+                                    <td style="text-align: center;">0%</td>
+                                    <td style="text-align: right; font-family: var(--font-mono); font-weight: 600;">0.00</td>
+                                    <td style="text-align: right; font-family: var(--font-mono);">0.00</td>
+                                    <td style="text-align: right; font-family: var(--font-mono);">0.00</td>
+                                    <td style="text-align: right; font-family: var(--font-mono);">0.00</td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: center; font-family: var(--font-mono); font-weight: 600;">2</td>
+                                    <td><strong>Pungutan Sawit / Khusus</strong></td>
+                                    <td style="text-align: right; font-family: var(--font-mono);">0.00</td>
+                                    <td style="text-align: center;">0%</td>
+                                    <td style="text-align: right; font-family: var(--font-mono); font-weight: 600;">0.00</td>
+                                    <td style="text-align: right; font-family: var(--font-mono);">0.00</td>
+                                    <td style="text-align: right; font-family: var(--font-mono);">0.00</td>
+                                    <td style="text-align: right; font-family: var(--font-mono);">0.00</td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: center; font-family: var(--font-mono); font-weight: 600;">3</td>
+                                    <td><strong>PNBP Pelayanan Ekspor</strong></td>
+                                    <td style="text-align: right; font-family: var(--font-mono);">-</td>
+                                    <td style="text-align: center;">Tetap</td>
+                                    <td style="text-align: right; font-family: var(--font-mono); font-weight: 600;">0.00</td>
+                                    <td style="text-align: right; font-family: var(--font-mono);">0.00</td>
+                                    <td style="text-align: right; font-family: var(--font-mono);">0.00</td>
+                                    <td style="text-align: right; font-family: var(--font-mono);">0.00</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pungutan Summary Metrics -->
+                    <div class="ceisa-table-summary">
+                        <div class="summary-metrics">
+                            <div class="summary-item">
+                                <span class="summary-item-label">Total Dibayar:</span>
+                                <span class="summary-item-val" style="color: var(--color-green-text);">Rp 0.00</span>
+                            </div>
+                            <div class="summary-item">
+                                <span class="summary-item-label">Total Ditanggung:</span>
+                                <span class="summary-item-val">Rp 0.00</span>
+                            </div>
+                            <div class="summary-item">
+                                <span class="summary-item-label">Total Dibebaskan:</span>
+                                <span class="summary-item-val">Rp 0.00</span>
+                            </div>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-item-label">Total Tagihan Billing:</span>
+                            <span class="summary-item-val highlight" style="color: #059669;">NIHIL (BEBAS PUNGUTAN)</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 9: PERNYATAAN -->
+            <section id="tab-pernyataan" class="tab-content-panel">
+                <div class="ceisa-form-card">
+                    <div class="ceisa-card-header">
+                        <span class="ceisa-card-title">Pernyataan Tanggung Jawab Eksportir (Legal Declaration)</span>
+                    </div>
+                    <div class="ceisa-card-body">
+                        <div style="background: #f8fafc; border: 1px solid #cbd5e1; padding: 16px 20px; border-radius: var(--radius-sm); margin-bottom: 20px;">
+                            <p style="font-size: 13.5px; line-height: 1.6; color: var(--text-primary); margin: 0;">
+                                <em>"Dengan ini saya menyatakan bahwa data yang diberitahukan dalam dokumen Pemberitahuan Ekspor Barang (PEB) ini dibuat dengan sebenarnya, lengkap, dan sah. Apabila data yang diberitahukan ternyata tidak benar, saya bersedia bertanggung jawab dan dikenakan sanksi sesuai dengan peraturan perundang-undangan kepabeanan Republik Indonesia yang berlaku."</em>
+                            </p>
+                        </div>
+
+                        <div class="form-grid-3">
+                            <div class="form-group">
+                                <label class="form-label">Tempat Pernyataan <span class="req">*</span></label>
+                                <input type="text" id="pernyataanTempat" class="form-control" value="BATAM">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Tanggal Pernyataan <span class="req">*</span></label>
+                                <input type="text" id="pernyataanTanggal" class="form-control form-control-mono" value="14/09/2026">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Nama Penandatangan <span class="req">*</span></label>
+                                <input type="text" id="pernyataanNama" class="form-control" value="JEAN-LUC DUPONT">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Jabatan Penandatangan <span class="req">*</span></label>
+                                <input type="text" id="pernyataanJabatan" class="form-control" value="DIREKTUR EKSEKUTIF">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Nomor Identitas (NIK / Paspor)</label>
+                                <input type="text" id="pernyataanNik" class="form-control form-control-mono" value="2171012903780004">
+                            </div>
+                        </div>
+
+                        <div style="margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border-color);">
+                            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 13px; font-weight: 600; color: var(--text-primary);">
+                                <input type="checkbox" id="chkPernyataanSetuju" checked style="width: 17px; height: 17px; accent-color: var(--ceisa-blue); cursor: pointer;">
+                                <span>Saya menyetujui seluruh klausul pernyataan pabean dan menjamin keabsahan data pemberitahuan ini.</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- CEISA 4.0 Tab Stepper (Sebelumnya / Selanjutnya) -->
+            <div class="ceisa-tab-stepper">
+                <button type="button" class="btn btn-secondary ceisa-stepper-btn" id="btnTabPrev" disabled>
+                    <span style="font-size: 14px;">&#x2190;</span> Sebelumnya
+                </button>
+                <div class="ceisa-stepper-indicator">
+                    <span class="stepper-step-badge" id="ceisaStepBadge">Langkah 1 / 9</span>
+                    <span class="stepper-step-label" id="ceisaStepLabel">Header</span>
+                </div>
+                <button type="button" class="btn btn-primary ceisa-stepper-btn" id="btnTabNext">
+                    Selanjutnya <span style="font-size: 14px;">&#x2192;</span>
+                </button>
+            </div>
+
             <!-- Bottom Submission Dock -->
             <div class="ceisa-bottom-dock">
                 <div class="dock-status-message">
                     <span class="status-dot-green"></span>
-                    <span>Modul siap review pabean &bull; Status verifikasi dokumen: Valid</span>
+                    <span id="saveIndicator" style="font-weight: 600; color: var(--color-green-text);">Tersimpan Otomatis</span>
+                    <span style="color: var(--text-muted);">&bull;</span>
+                    <span class="doc-title-meta" id="docSubMeta">
+                        No. Aju: <strong id="lblNoAju">030000-001534-20260907-007732</strong> &bull; File: <strong id="lblFileName">Sample_Customs_Clearance_Draft.json</strong>
+                    </span>
                 </div>
                 <div class="dock-actions">
                     <button type="button" class="btn btn-secondary-ceisa" id="btnResetDraft"
@@ -761,7 +1002,8 @@
                         </button>
                     </div>
                 </div>
-            </div>
+        </div>
+    </div>
         </div>
     </div>
 

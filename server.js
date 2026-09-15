@@ -160,6 +160,21 @@ const server = http.createServer((req, res) => {
         }
     }
 
+    // API GET Status (Lightweight ping/healthcheck)
+    if (pathname === "/api/status" && req.method === "GET") {
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({
+            status: "ok",
+            message: "CEISA Inspector Server Aktif",
+            pid: process.pid,
+            port: PORT,
+            wifiIp: getLocalIP(),
+            wifiUrl: `http://${getLocalIP()}:${PORT}/dashboard.html`,
+            uptime: Math.floor(process.uptime())
+        }));
+        return;
+    }
+
     // API GET Sync
     if (pathname === "/api/sync" && req.method === "GET") {
         res.writeHead(200, { "Content-Type": "application/json" });

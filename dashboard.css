@@ -94,15 +94,17 @@ body {
 }
 
 .portal-header-inner {
-    max-width: 1440px;
-    margin: 0 auto;
-    padding: 7px 18px;
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    padding: 6px 20px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 12px;
     min-height: 48px;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
+    box-sizing: border-box;
 }
 
 .portal-brand {
@@ -110,6 +112,7 @@ body {
     align-items: center;
     gap: 10px;
     flex-shrink: 0;
+    min-width: 0;
 }
 
 .portal-logo-emblem {
@@ -126,11 +129,13 @@ body {
     letter-spacing: 0.5px;
     border: 1px solid rgba(255, 255, 255, 0.25);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+    flex-shrink: 0;
 }
 
 .portal-brand-text {
     display: flex;
     flex-direction: column;
+    min-width: 0;
 }
 
 .portal-system-title {
@@ -142,51 +147,256 @@ body {
 }
 
 .portal-system-sub {
-    font-size: 12px;
+    font-size: 11.5px;
     color: #93c5fd;
     white-space: nowrap;
 }
 
-/* Master Module Switcher in Header - Centered flex child with no overlap */
+@media (max-width: 900px) {
+    .portal-system-sub {
+        display: none;
+    }
+}
+
+/* Master Module Switcher - Legacy support */
 .portal-module-switcher {
+    display: none;
+}
+
+/* ==========================================================================
+   1.1 AUTHENTIC CEISA 4.0 LEFT SIDEBAR NAVIGATION & PORTAL LAYOUT
+   ========================================================================== */
+.ceisa-portal-layout {
+    display: flex;
+    flex-direction: row;
+    min-height: calc(100vh - 48px);
+    width: 100%;
+    background-color: var(--surface-bg);
+    position: relative;
+    box-sizing: border-box;
+}
+
+.ceisa-sidebar {
+    width: 50px;
+    background: #ffffff;
+    border-right: 1px solid #e2e8f0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px 0 24px 0;
+    flex-shrink: 0;
+    transition: width 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+    position: sticky;
+    top: 48px;
+    height: calc(100vh - 48px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    z-index: 90;
+    box-shadow: 1px 0 3px rgba(0, 0, 0, 0.02);
+    box-sizing: border-box;
+}
+
+.ceisa-sidebar.expanded {
+    width: 210px;
+    align-items: stretch;
+    padding: 8px 10px 24px 10px;
+}
+
+/* Sidebar Top Header Container with Title in Marked Spot */
+.ceisa-sidebar-header {
     display: flex;
     align-items: center;
-    background: rgba(15, 23, 42, 0.65);
-    padding: 3px;
-    border-radius: var(--radius-sm);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    gap: 2px;
-    flex-shrink: 0;
-    margin: 0 auto;
+    justify-content: center;
+    width: 100%;
+    margin-bottom: 8px;
+    min-height: 36px;
+    box-sizing: border-box;
 }
 
-.portal-nav-tab {
-    background: transparent;
+.ceisa-sidebar.expanded .ceisa-sidebar-header {
+    justify-content: space-between;
+    padding: 0 2px 8px 4px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.ceisa-sidebar-brand-box {
+    display: none;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.ceisa-sidebar.expanded .ceisa-sidebar-brand-box {
+    display: flex;
+}
+
+.sidebar-brand-badge {
+    font-size: 9.5px;
+    font-weight: 700;
+    color: #2563eb;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    line-height: 1.2;
+}
+
+.sidebar-brand-title {
+    font-size: 11.5px;
+    font-weight: 800;
+    color: #0f172a;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+    line-height: 1.3;
+}
+
+.ceisa-sidebar-toggle {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     border: none;
-    color: #cbd5e1;
-    font-family: var(--font-sans);
+    background: transparent;
+    color: #6366f1;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: transform 0.2s ease, background 0.15s ease, color 0.15s ease;
+    flex-shrink: 0;
+}
+
+.ceisa-sidebar-toggle:hover {
+    background: #eef2ff;
+    color: #3b82f6;
+}
+
+.ceisa-sidebar.expanded .ceisa-sidebar-toggle {
+    transform: rotate(180deg);
+}
+
+.ceisa-sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    gap: 2px;
+}
+
+.ceisa-sidebar.expanded .ceisa-sidebar-nav {
+    align-items: stretch;
+}
+
+.ceisa-sidebar-item {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    border: none;
+    background: transparent;
+    color: #818cf8; /* Soft blue-indigo matching CEISA screenshot */
+    cursor: pointer;
+    position: relative;
+    transition: all 0.15s ease;
+    text-decoration: none;
+    padding: 0;
+    flex-shrink: 0;
+}
+
+.ceisa-sidebar-item:hover {
+    background: #f1f5f9;
+    color: #2563eb;
+}
+
+/* Active item (e.g. Monitor in CEISA screenshot) */
+.ceisa-sidebar-item.active {
+    background: #eff6ff; /* Exact light blue background box */
+    color: #2563eb;
+    box-shadow: inset 0 0 0 1px #bfdbfe;
+}
+
+.ceisa-sidebar.expanded .ceisa-sidebar-item {
+    width: 100%;
+    height: 36px;
+    justify-content: flex-start;
+    padding: 0 10px;
+    border-radius: 6px;
+}
+
+.sidebar-icon-box {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+}
+
+.sidebar-label {
+    display: none;
     font-size: 12px;
     font-weight: 600;
-    padding: 5px 12px;
-    border-radius: var(--radius-sm);
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    transition: all 0.15s ease;
+    color: #334155;
+    margin-left: 10px;
     white-space: nowrap;
+    text-align: left;
 }
 
-.portal-nav-tab:hover {
-    color: #ffffff;
-    background: rgba(255, 255, 255, 0.1);
+.ceisa-sidebar.expanded .sidebar-label {
+    display: inline-block;
 }
 
-.portal-nav-tab.active {
-    background: #2563eb;
-    color: #ffffff;
+.ceisa-sidebar.expanded .ceisa-sidebar-item.active .sidebar-label {
+    color: #1e40af;
     font-weight: 700;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+/* Floating tooltip when collapsed */
+.ceisa-sidebar:not(.expanded) .ceisa-sidebar-item::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    left: calc(100% + 8px);
+    top: 50%;
+    transform: translateY(-50%);
+    background: #0f172a;
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 4px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+}
+
+.ceisa-sidebar:not(.expanded) .ceisa-sidebar-item:hover::after {
+    opacity: 1;
+}
+
+.ceisa-sidebar-dots {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    margin: 4px 0;
+    height: 8px;
+    width: 100%;
+}
+
+.ceisa-sidebar-dots span {
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background-color: #cbd5e1;
+}
+
+.ceisa-portal-content {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
 }
 
 .portal-header-actions {
@@ -410,14 +620,16 @@ body {
 }
 
 .doc-title-container {
-    max-width: 1360px;
-    margin: 0 auto;
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
     padding: 0 20px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 16px;
     flex-wrap: wrap;
+    box-sizing: border-box;
 }
 
 .doc-title-left {
@@ -425,12 +637,14 @@ body {
     align-items: center;
     gap: 12px;
     flex-wrap: wrap;
+    min-width: 0;
 }
 
 .doc-title-left h1 {
     font-size: 18px;
     font-weight: 700;
     color: var(--text-primary);
+    white-space: nowrap;
 }
 
 .badge-draft-status {
@@ -441,6 +655,7 @@ body {
     background: var(--color-green-bg);
     color: var(--color-green-text);
     border: 1px solid var(--color-green-border);
+    white-space: nowrap;
 }
 
 .doc-title-meta {
@@ -452,17 +667,14 @@ body {
     color: var(--text-primary);
 }
 
-
-
-
 /* ==========================================================================
    3. WORKSPACE CONTAINER & MODULE SWITCHING
    ========================================================================== */
 .main-workspace {
-    max-width: 1360px;
-    margin: 0 auto;
-    padding: 0 20px;
     width: 100%;
+    max-width: 100%;
+    margin: 0;
+    padding: 0 20px;
     box-sizing: border-box;
     overflow-x: hidden;
 }
@@ -473,62 +685,203 @@ body {
 }
 
 /* ==========================================================================
-   4. MODUL PEB: CEISA 4.0 TABS & FORM CARDS
+   2.1 CEISA SUB-BAR STRIP (STANDAR RESMI CEISA 4.0)
+   ========================================================================== */
+.ceisa-subbar-strip {
+    background: #ffffff;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 10px 0;
+    margin-bottom: 16px;
+}
+
+.ceisa-subbar-container {
+    max-width: 1360px;
+    margin: 0 auto;
+    padding: 0 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.ceisa-subbar-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.ceisa-subbar-doc-name {
+    font-size: 14.5px;
+    font-weight: 600;
+    color: #1e293b;
+    letter-spacing: -0.01em;
+}
+
+.ceisa-subbar-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.btn-ceisa-sub {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: var(--radius-sm);
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #334155;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: all 0.15s ease;
+}
+
+.btn-ceisa-sub:hover {
+    background: #f8fafc;
+    border-color: #94a3b8;
+    color: #0f172a;
+}
+
+.btn-ceisa-sub.btn-icon-only {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    justify-content: center;
+}
+
+/* ==========================================================================
+   4. MODUL PEB: CEISA 4.0 TABS & FORM CARDS (1:1 STANDAR RESMI)
    ========================================================================== */
 .ceisa-tabs {
     display: flex;
-    align-items: center;
-    gap: 2px;
-    border-bottom: 2px solid #cbd5e1;
-    margin-bottom: 16px;
+    align-items: flex-end;
+    gap: 22px;
+    border-bottom: 2px solid #e2e8f0;
+    margin-bottom: 18px;
     overflow-x: auto;
+    overflow-y: hidden !important; /* Mencegah scrollbar vertikal dan clipping penanda tab */
     white-space: nowrap;
+    padding: 6px 4px 0 4px;
+    box-sizing: border-box;
+    scrollbar-width: thin;
+}
+
+/* Scrollbar horizontal ramping jika layar sempit */
+.ceisa-tabs::-webkit-scrollbar {
+    height: 4px;
+}
+.ceisa-tabs::-webkit-scrollbar-track {
+    background: transparent;
+}
+.ceisa-tabs::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
 }
 
 .ceisa-tab-btn {
-    background: #e2e8f0;
-    border: 1px solid #cbd5e1;
-    border-bottom: none;
-    border-radius: 4px 4px 0 0;
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    border-radius: 0;
     font-family: var(--font-sans);
-    font-size: 12.5px;
-    font-weight: 600;
-    color: var(--text-secondary);
-    padding: 9px 16px;
+    font-size: 13.5px;
+    font-weight: 500;
+    color: #0d9488;
+    padding: 8px 4px 10px 4px;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    transition: all 0.12s ease;
-    margin-bottom: -2px;
+    transition: all 0.15s ease;
+    margin-bottom: -2px; /* Tepat menimpa garis border-bottom 2px milik container */
+    flex-shrink: 0;
+    box-sizing: border-box;
 }
 
 .ceisa-tab-btn:hover {
-    background: #f1f5f9;
-    color: var(--text-primary);
+    color: #0f766e;
 }
 
 .ceisa-tab-btn.active {
+    background: transparent;
+    color: #0088cc;
+    font-weight: 700;
+    border-bottom: 3px solid #0088cc; /* Penanda biru tebal, kokoh & tidak terpotong */
+}
+
+/* CEISA Orange Accent for Pungutan Tab */
+.ceisa-tab-btn.tab-btn-pungutan {
+    color: #ea580c;
+}
+
+.ceisa-tab-btn.tab-btn-pungutan:hover {
+    color: #c2410c;
+}
+
+.ceisa-tab-btn.tab-btn-pungutan.active {
+    color: #ea580c;
+    border-bottom: 3px solid #ea580c;
+}
+
+/* CEISA Stepper Navigation Bar (Sebelumnya / Selanjutnya) */
+.ceisa-tab-stepper {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
     background: #ffffff;
-    color: var(--ceisa-blue-dark);
-    font-weight: 700;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    margin: 20px 0 16px 0;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.ceisa-stepper-btn {
+    font-size: 13px;
+    font-weight: 600;
+    padding: 7px 18px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.ceisa-stepper-btn:disabled {
+    cursor: not-allowed;
+    background: #f1f5f9;
     border-color: #cbd5e1;
-    border-top: 3px solid var(--ceisa-blue);
-    border-bottom: 2px solid #ffffff;
+    color: #475569;
 }
 
-.tab-badge {
-    font-size: 12px;
-    background: #cbd5e1;
-    color: #0f172a;
-    padding: 1px 6px;
-    border-radius: 10px;
+.ceisa-stepper-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.stepper-step-badge {
+    background: #e0f2fe;
+    color: #0369a1;
+    font-family: var(--font-mono);
+    font-size: 11.5px;
     font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 12px;
+    border: 1px solid #bae6fd;
 }
 
-.ceisa-tab-btn.active .tab-badge {
-    background: #dbeafe;
-    color: #1e40af;
+.stepper-step-label {
+    font-weight: 600;
+    color: var(--text-primary);
 }
 
 .tab-content-panel {
@@ -575,7 +928,7 @@ body {
 .form-grid-2 {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 16px 24px;
+    gap: 16px 20px;
 }
 
 .form-grid-3 {
@@ -584,8 +937,25 @@ body {
     gap: 16px 20px;
 }
 
-@media (max-width: 768px) {
-    .form-grid-2, .form-grid-3 {
+.form-grid-4 {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px 18px;
+}
+
+@media (max-width: 1040px) {
+    .form-grid-3 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .form-grid-4 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 640px) {
+    .form-grid-2,
+    .form-grid-3,
+    .form-grid-4 {
         grid-template-columns: 1fr;
     }
 }
@@ -593,7 +963,7 @@ body {
 .form-group {
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    gap: 6px;
     min-width: 0;
 }
 
@@ -601,6 +971,9 @@ body {
     font-size: 12.5px;
     font-weight: 600;
     color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .form-label span.req {
@@ -612,6 +985,7 @@ body {
     width: 100%;
     max-width: 100%;
     min-width: 0;
+    height: 36px;
     box-sizing: border-box;
     font-family: var(--font-sans);
     font-size: 13px;
@@ -619,7 +993,7 @@ body {
     background: #ffffff;
     border: 1px solid var(--border-strong);
     border-radius: var(--radius-sm);
-    padding: 7px 10px;
+    padding: 7px 11px;
     outline: none;
     transition: border-color 0.15s ease;
 }
@@ -641,6 +1015,8 @@ body {
 }
 
 textarea.form-control {
+    height: auto;
+    min-height: 64px;
     line-height: 1.5;
     resize: vertical;
 }
@@ -1088,11 +1464,19 @@ textarea.form-control {
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 12px;
     margin-bottom: 16px;
+    width: 100%;
+    box-sizing: border-box;
 }
 
-@media (max-width: 960px) {
+@media (max-width: 1180px) {
     .stats-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 580px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
     }
 }
 
@@ -1100,13 +1484,14 @@ textarea.form-control {
     background: #ffffff;
     border: 1px solid var(--border-color);
     border-radius: var(--radius-sm);
-    padding: 9px 14px;
+    padding: 9px 12px;
     box-shadow: var(--shadow-sm);
     display: flex;
     flex-direction: row;
     align-items: center;
     gap: 8px;
-    white-space: nowrap;
+    min-width: 0;
+    box-sizing: border-box;
     transition: transform 0.12s ease, box-shadow 0.12s ease;
 }
 
@@ -1135,7 +1520,7 @@ textarea.form-control {
 }
 
 .stat-icon {
-    font-size: 16px;
+    font-size: 15px;
     line-height: 1;
     flex-shrink: 0;
     display: inline-flex;
@@ -1144,10 +1529,11 @@ textarea.form-control {
 
 .stat-value {
     font-family: var(--font-mono);
-    font-size: 16px;
+    font-size: 15px;
     font-weight: 800;
     color: var(--text-primary);
     line-height: 1;
+    flex-shrink: 0;
 }
 
 .stat-card.card-orange .stat-value {
@@ -1163,10 +1549,14 @@ textarea.form-control {
 }
 
 .stat-label {
-    font-size: 12.5px;
+    font-size: 12px;
     font-weight: 600;
     color: var(--text-secondary);
-    line-height: 1;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
 }
 
 /* Legend Info Box */
@@ -1177,6 +1567,8 @@ textarea.form-control {
     box-shadow: var(--shadow-sm);
     margin-bottom: 16px;
     overflow: hidden;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .legend-header {
@@ -1201,16 +1593,11 @@ textarea.form-control {
 
 .legend-grid {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: 10px 14px;
     padding: 14px 16px;
     background: #ffffff;
-}
-
-@media (max-width: 900px) {
-    .legend-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
+    box-sizing: border-box;
 }
 
 .legend-item {
@@ -1219,6 +1606,7 @@ textarea.form-control {
     gap: 8px;
     font-size: 12px;
     color: var(--text-secondary);
+    min-width: 0;
 }
 
 .badge {
@@ -1228,6 +1616,8 @@ textarea.form-control {
     font-weight: 700;
     letter-spacing: 0.2px;
     border: 1px solid transparent;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .bg-green {
@@ -1284,9 +1674,11 @@ textarea.form-control {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 16px;
     margin-bottom: 16px;
+    width: 100%;
+    box-sizing: border-box;
 }
 
-@media (max-width: 860px) {
+@media (max-width: 1040px) {
     .dashboard-grid {
         grid-template-columns: 1fr;
     }

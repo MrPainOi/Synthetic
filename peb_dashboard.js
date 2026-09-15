@@ -3,7 +3,7 @@
 // peb_dashboard.js - 100% External, Chrome Extension CSP Compliant
 // ====================================================================
 
-// MASTER PORTAL MODULE SWITCHER
+// MASTER PORTAL MODULE SWITCHER (CEISA 4.0 SIDEBAR & WORKSPACE)
 function switchPortalModule(moduleName) {
     const pebView = document.getElementById('module-peb');
     const inspectorView = document.getElementById('module-inspector');
@@ -15,16 +15,28 @@ function switchPortalModule(moduleName) {
     if (moduleName === 'inspector') {
         if (pebView) pebView.style.display = 'none';
         if (inspectorView) inspectorView.style.display = 'block';
-        if (btnPeb) btnPeb.classList.remove('active');
-        if (btnInspector) btnInspector.classList.add('active');
+        if (btnPeb) {
+            btnPeb.classList.remove('active');
+            btnPeb.setAttribute('aria-selected', 'false');
+        }
+        if (btnInspector) {
+            btnInspector.classList.add('active');
+            btnInspector.setAttribute('aria-selected', 'true');
+        }
         if (pebHeaderActions) pebHeaderActions.style.display = 'none';
         if (inspectorHeaderActions) inspectorHeaderActions.style.display = 'flex';
         if (typeof loadDashboardData === 'function') loadDashboardData();
     } else {
         if (pebView) pebView.style.display = 'block';
         if (inspectorView) inspectorView.style.display = 'none';
-        if (btnPeb) btnPeb.classList.add('active');
-        if (btnInspector) btnInspector.classList.remove('active');
+        if (btnPeb) {
+            btnPeb.classList.add('active');
+            btnPeb.setAttribute('aria-selected', 'true');
+        }
+        if (btnInspector) {
+            btnInspector.classList.remove('active');
+            btnInspector.setAttribute('aria-selected', 'false');
+        }
         if (pebHeaderActions) pebHeaderActions.style.display = 'flex';
         if (inspectorHeaderActions) inspectorHeaderActions.style.display = 'none';
     }
@@ -193,29 +205,135 @@ function collectFormData() {
         blDate: document.getElementById('blDate')?.value || '',
         loadingPort: document.getElementById('loadingPort')?.value || '',
         dischargePort: document.getElementById('dischargePort')?.value || '',
+        // Tab Pengangkut
+        namaPengangkut: document.getElementById('namaPengangkut')?.value || '',
+        voyageNumber: document.getElementById('voyageNumber')?.value || '',
+        benderaPengangkut: document.getElementById('benderaPengangkut')?.value || '',
+        tglPerkiraanEkspor: document.getElementById('tglPerkiraanEkspor')?.value || '',
+        // Tab Kemasan & Peti Kemas
         containerNumber: document.getElementById('containerNumber')?.value || '',
+        segelKontainer: document.getElementById('segelKontainer')?.value || '',
         totalKemasan: document.getElementById('totalKemasan')?.value || '',
+        merekKemasan: document.getElementById('merekKemasan')?.value || '',
         totalNetWeightKGM: document.getElementById('totalNetWeightKGM')?.value || '',
         totalGrossWeightKGM: document.getElementById('totalGrossWeightKGM')?.value || '',
+        // Tab Transaksi
+        kursPabean: document.getElementById('kursPabean')?.value || '',
+        incotermsTransaksi: document.getElementById('incotermsTransaksi')?.value || '',
+        freightHeader: document.getElementById('freightHeader')?.value || '',
+        asuransiHeader: document.getElementById('asuransiHeader')?.value || '',
+        nilaiPabeanIdr: document.getElementById('nilaiPabeanIdr')?.value || '',
+        caraBayarTransaksi: document.getElementById('caraBayarTransaksi')?.value || '',
+        bankDhe: document.getElementById('bankDhe')?.value || '',
+        // Tab Pernyataan
+        pernyataanTempat: document.getElementById('pernyataanTempat')?.value || '',
+        pernyataanTanggal: document.getElementById('pernyataanTanggal')?.value || '',
+        pernyataanNama: document.getElementById('pernyataanNama')?.value || '',
+        pernyataanJabatan: document.getElementById('pernyataanJabatan')?.value || '',
+        pernyataanNik: document.getElementById('pernyataanNik')?.value || '',
         items: items,
         safeCheck: window._currentSafeCheck || null
     };
 }
 
+// 9-TAB DEFINITION & TITLES (1:1 STANDAR RESMI CEISA 4.0)
+const CEISA_TAB_ORDER = [
+    'tab-header',
+    'tab-entitas',
+    'tab-dokumen',
+    'tab-pengangkut',
+    'tab-kemasan',
+    'tab-transaksi',
+    'tab-barang',
+    'tab-pungutan',
+    'tab-pernyataan'
+];
+
+const CEISA_TAB_TITLES = {
+    'tab-header': 'Header',
+    'tab-entitas': 'Entitas',
+    'tab-dokumen': 'Dokumen',
+    'tab-pengangkut': 'Pengangkut',
+    'tab-kemasan': 'Kemasan & Peti Kemas',
+    'tab-transaksi': 'Transaksi',
+    'tab-barang': 'Barang',
+    'tab-pungutan': 'Pungutan',
+    'tab-pernyataan': 'Pernyataan'
+};
+
 // TAB SWITCHING IN PEB MODULE
 function switchCeisaTab(tabId) {
+    if (!CEISA_TAB_ORDER.includes(tabId)) {
+        tabId = 'tab-header';
+    }
+
     document.querySelectorAll('#module-peb .tab-content-panel').forEach(panel => {
         panel.classList.remove('active');
     });
     document.querySelectorAll('#module-peb .ceisa-tab-btn').forEach(btn => {
         btn.classList.remove('active');
     });
+
     const targetPanel = document.getElementById(tabId);
     if (targetPanel) targetPanel.classList.add('active');
 
     const matchingBtn = document.querySelector(`#module-peb .ceisa-tab-btn[data-tab="${tabId}"]`);
     if (matchingBtn) {
         matchingBtn.classList.add('active');
+    }
+
+    // Update Stepper Navigation Controls
+    const currentIndex = CEISA_TAB_ORDER.indexOf(tabId);
+    const btnPrev = document.getElementById('btnTabPrev');
+    const btnNext = document.getElementById('btnTabNext');
+    const stepBadge = document.getElementById('ceisaStepBadge');
+    const stepLabel = document.getElementById('ceisaStepLabel');
+
+    if (btnPrev) {
+        btnPrev.disabled = (currentIndex === 0);
+    }
+
+    if (btnNext) {
+        if (currentIndex === CEISA_TAB_ORDER.length - 1) {
+            btnNext.innerHTML = 'Validasi &amp; Kirim PEB <span style="font-size: 14px;">&#x2714;</span>';
+            btnNext.classList.remove('btn-primary');
+            btnNext.classList.add('btn-success');
+        } else {
+            btnNext.innerHTML = 'Selanjutnya <span style="font-size: 14px;">&rarr;</span>';
+            btnNext.classList.remove('btn-success');
+            btnNext.classList.add('btn-primary');
+        }
+    }
+
+    if (stepBadge) {
+        stepBadge.textContent = `Langkah ${currentIndex + 1} / ${CEISA_TAB_ORDER.length}`;
+    }
+    if (stepLabel) {
+        stepLabel.textContent = CEISA_TAB_TITLES[tabId] || tabId;
+    }
+
+    window._activeCeisaTab = tabId;
+}
+
+function handleStepperPrev() {
+    const current = window._activeCeisaTab || 'tab-header';
+    const currentIndex = CEISA_TAB_ORDER.indexOf(current);
+    if (currentIndex > 0) {
+        switchCeisaTab(CEISA_TAB_ORDER[currentIndex - 1]);
+        const mainWorkspace = document.querySelector('#module-peb .main-workspace');
+        if (mainWorkspace) mainWorkspace.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+}
+
+function handleStepperNext() {
+    const current = window._activeCeisaTab || 'tab-header';
+    const currentIndex = CEISA_TAB_ORDER.indexOf(current);
+    if (currentIndex < CEISA_TAB_ORDER.length - 1) {
+        switchCeisaTab(CEISA_TAB_ORDER[currentIndex + 1]);
+        const mainWorkspace = document.querySelector('#module-peb .main-workspace');
+        if (mainWorkspace) mainWorkspace.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+        submitToCustoms();
     }
 }
 
@@ -269,8 +387,30 @@ function loadDraftData(data, shouldSave = true) {
 
     setVal('loadingPort', data.loadingPort);
     setVal('dischargePort', data.dischargePort);
+    setVal('namaPengangkut', data.namaPengangkut || 'WAN HAI 215');
+    setVal('voyageNumber', data.voyageNumber || 'VOY 091S');
+    setVal('benderaPengangkut', data.benderaPengangkut || 'PA - PANAMA');
+    setVal('tglPerkiraanEkspor', data.tglPerkiraanEkspor || data.blDate || '12/09/2026');
+
     setVal('containerNumber', data.containerNumber);
+    setVal('segelKontainer', data.segelKontainer || (data.containerNumber && data.containerNumber.includes('/') ? data.containerNumber.split('/')[1].trim() : 'WHLW 184912'));
     setVal('totalKemasan', data.totalKemasan);
+    setVal('merekKemasan', data.merekKemasan || 'AC DELCO / VALEO');
+
+    setVal('valutaHeader', data.valutaHeader || 'USD - US DOLLAR');
+    setVal('kursPabean', data.kursPabean || '15,850.00');
+    setVal('incotermsTransaksi', data.incotermsTransaksi || data.caraDagang || 'FOB - FREE ON BOARD');
+    setVal('nilaiEksporHeader', data.nilaiEksporHeader || '13,264.00');
+    setVal('freightHeader', data.freightHeader || '0.00');
+    setVal('asuransiHeader', data.asuransiHeader || '0.00');
+    setVal('caraBayarTransaksi', data.caraBayarTransaksi || data.caraBayar || '2 - PEMBAYARAN KEMUDIAN');
+    setVal('bankDhe', data.bankDhe || 'BANK MANDIRI (PERSERO) TBK');
+
+    setVal('pernyataanTempat', data.pernyataanTempat || 'BATAM');
+    setVal('pernyataanTanggal', data.pernyataanTanggal || (data.blDate || '14/09/2026'));
+    setVal('pernyataanNama', data.pernyataanNama || 'JEAN-LUC DUPONT');
+    setVal('pernyataanJabatan', data.pernyataanJabatan || 'DIREKTUR EKSEKUTIF');
+    setVal('pernyataanNik', data.pernyataanNik || '2171012903780004');
 
     // ATURAN BERAT KHUSUS SINAR ASIA PACK
     const isSinarAsia = Boolean(
@@ -1081,11 +1221,31 @@ const SAMPLE_DATA = {
 // INITIALIZATION ON DOM CONTENT LOADED (CSP COMPLIANT EVENT WIRING)
 // ====================================================================
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Top Portal Module Switcher Listeners
+    // 1. CEISA 4.0 Left Sidebar Module Switcher Listeners
     const btnNavPeb = document.getElementById('btnNavPeb');
     const btnNavInspector = document.getElementById('btnNavInspector');
     if (btnNavPeb) btnNavPeb.addEventListener('click', () => switchPortalModule('peb'));
     if (btnNavInspector) btnNavInspector.addEventListener('click', () => switchPortalModule('inspector'));
+
+    // 1.1 CEISA 4.0 Sidebar Toggle (Expand / Collapse >> / <<)
+    const sidebarToggle = document.getElementById('ceisaSidebarToggle');
+    const sidebar = document.getElementById('ceisaSidebar');
+    if (sidebarToggle && sidebar) {
+        sidebarToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('expanded');
+            const isExpanded = sidebar.classList.contains('expanded');
+            sidebarToggle.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
+            try {
+                localStorage.setItem('ceisa_sidebar_expanded', isExpanded ? '1' : '0');
+            } catch (e) {}
+        });
+        try {
+            if (localStorage.getItem('ceisa_sidebar_expanded') === '1') {
+                sidebar.classList.add('expanded');
+                sidebarToggle.setAttribute('aria-expanded', 'true');
+            }
+        } catch (e) {}
+    }
 
     // 2. Defaultkan selalu ke Ceisa Inspector saat web dashboard dibuka
     try {
@@ -1144,13 +1304,45 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 4. CEISA 5-Tab Navigation Buttons
+    // 4. CEISA 9-Tab Navigation Buttons
     document.querySelectorAll('#module-peb .ceisa-tab-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             const tabId = btn.getAttribute('data-tab');
             if (tabId) switchCeisaTab(tabId);
         });
     });
+
+    // 4.1 Stepper Navigation Buttons (Sebelumnya / Selanjutnya)
+    const btnTabPrev = document.getElementById('btnTabPrev');
+    if (btnTabPrev) {
+        btnTabPrev.addEventListener('click', handleStepperPrev);
+    }
+    const btnTabNext = document.getElementById('btnTabNext');
+    if (btnTabNext) {
+        btnTabNext.addEventListener('click', handleStepperNext);
+    }
+
+    // 4.2 CEISA Sub-Bar Buttons
+    const btnCeisaKembali = document.getElementById('btnCeisaKembali');
+    if (btnCeisaKembali) {
+        btnCeisaKembali.addEventListener('click', () => switchPortalModule('inspector'));
+    }
+    const btnCeisaUpdateData = document.getElementById('btnCeisaUpdateData');
+    if (btnCeisaUpdateData) {
+        btnCeisaUpdateData.addEventListener('click', () => {
+            saveCurrentDraftState();
+            updateLiveKPIs();
+            showToast("Data pabean berhasil diperbarui & tersimpan!", "success");
+        });
+    }
+    const btnCeisaMenu = document.getElementById('btnCeisaMenu');
+    if (btnCeisaMenu) {
+        btnCeisaMenu.addEventListener('click', () => {
+            if (confirm("Pilih opsi formulir pabean:\n\n[OK] Ekspor Berkas JSON Draft\n[Batal] Batal")) {
+                exportJsonDraft();
+            }
+        });
+    }
 
     // 5. Tare Calculation Inputs
     const netWeightInput = document.getElementById('totalNetWeightKGM');
@@ -1309,4 +1501,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!hasRestored) {
         loadDraftData(SAMPLE_DATA, false);
     }
+
+    // 12. Initialize 9-Tab Stepper State
+    switchCeisaTab('tab-header');
 });
