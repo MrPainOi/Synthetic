@@ -88,7 +88,7 @@ Kembalikan HANYA format JSON murni tanpa markdown/backticks (\`\`\`json):
     {
       "uraianJenisBarang": "Nama atau deskripsi komoditas barang SAJA (WAJIB HAPUS dan JANGAN sertakan part number maupun customer part no seperti (575000 / W000103691). Contoh: VS TMEAO FBP AIO with Logo 350mm 14\")",
       "jumlahDanSatuanBarang": "Misal: 3,975 PC",
-      "kemasan": "Jumlah dan jenis kemasan barang ini. KHUSUS dokumen VALEO: nilainya SAMA SEMUA untuk seluruh baris barang, yaitu diambil dari Grand Total Packing List (misal: '816 BOX')",
+      "kemasan": "Jumlah dan jenis kemasan barang ini. KHUSUS dokumen VALEO & SINAR ASIA: nilainya SAMA SEMUA untuk seluruh baris barang, yaitu diambil dari Total Kemasan / Total Pallet Packing List / Invoice (misal: '816 BOX' untuk Valeo, atau '22 PALLET' / '22 PL' untuk Sinar Asia). JANGAN beda-beda!",
       "beratBersih": "Net weight baris barang",
       "beratKotor": "Gross weight baris barang",
       "amount": "Total harga untuk baris barang ini"
@@ -98,12 +98,16 @@ Kembalikan HANYA format JSON murni tanpa markdown/backticks (\`\`\`json):
 
 PENTING:
 - Pada 'uraianJenisBarang': HANYA tuliskan nama atau uraian komoditas barangnya saja. JANGAN sertakan nomor part (part no) maupun customer part no (misal jangan sertakan angka dalam kurung seperti (575000 / W000103691)).
-- ATURAN KEMASAN BARANG (KHUSUS & HANYA UNTUK DOKUMEN PT. VALEO AC INDONESIA):
-  PERHATIAN: Aturan ini HANYA BERLAKU EKSKLUSIF untuk dokumen dari eksportir/shipper VALEO (PT. VALEO AC INDONESIA). JANGAN terapkan pada eksportir lain!
-  Khusus dokumen Valeo, nilai kemasan untuk SETIAP baris barang di dalam list ('items') nilainya SAMA SEMUA per Packing List, BUKAN per baris atau dibagi-bagi!
+- ATURAN KEMASAN BARANG KHUSUS PT. VALEO AC INDONESIA:
+  Nilai kemasan untuk SETIAP baris barang di dalam list ('items') nilainya SAMA SEMUA per Packing List, BUKAN per baris atau dibagi-bagi!
   Cara melihatnya: baca baris Grand Total kemasan pada Packing List (misal jika di baris Grand Total PL tertulis '816 BOXES', maka SEMUA baris barang kemasannya diisi '816 BOX').
   Dan pada 'totalKemasan', WAJIB cantumkan total kemasan dari Packing List tersebut (misal: '816 BOXES' atau '7 PALLETS = 816 BOXES').
-- ATURAN BERAT BARANG (KHUSUS & HANYA UNTUK DOKUMEN PT. SINAR ASIA PACK):
+- ATURAN KEMASAN BARANG KHUSUS PT. SINAR ASIA PACK:
+  Nilai kemasan untuk SETIAP baris barang di dalam list ('items') nilainya juga WAJIB SAMA SEMUA, TIDAK BOLEH BERBEDA-BEDA!
+  Cara melihatnya: baca TOTAL PALET yang tertera di Packing List / Invoice (misal jika total palet adalah 22 PALLETS, maka SEMUA baris barang kemasannya WAJIB diisi '22 PALLET' atau '22 PL').
+  JANGAN mengisi kemasan per baris dengan angka yang berbeda-beda (misal 2, 6, 1, 2, 8, 2, 1 itu SALAH, SEMUANYA HARUS '22 PALLET')!
+  Dan pada 'totalKemasan', WAJIB cantumkan total palet tersebut (misal: '22 PALLETS' atau '22 PL').
+- ATURAN BERAT BARANG KHUSUS PT. SINAR ASIA PACK:
   PERHATIAN: Aturan ini HANYA BERLAKU EKSKLUSIF untuk dokumen dari eksportir/shipper SINAR ASIA (PT. SINAR ASIA PACK). JANGAN terapkan pada dokumen dari perusahaan lain!
   Khusus dokumen Sinar Asia, Packing List tidak merinci berat kotor dan bersih per barang, melainkan hanya mencantumkan Total Weight.
   HANYA untuk dokumen Sinar Asia, hitung berat per baris barang dengan MEMBAGI Total Weight tersebut secara merata dengan jumlah baris barang (items).
@@ -209,6 +213,40 @@ PENTING:
                         }
                     }
                 }
+            }
+        }
+
+        // ATURAN KHUSUS SINAR ASIA (PT. SINAR ASIA PACK): KEMASAN TOTAL PALET SAMA SEMUA PER BARIS
+        if (isSinarAsia && Array.isArray(parsedData.items) && parsedData.items.length > 0) {
+            let totalPallets = 0;
+            // 1. Cek dari totalKemasan
+            const totalStr = String(parsedData.totalKemasan || '').trim();
+            const matchTotal = totalStr.match(/(\d+[\d.,]*)\s*(PALLET|PALLETS|PLT|PL)/i);
+            if (matchTotal) {
+                totalPallets = parseFloat(matchTotal[1].replace(/,/g, ''));
+            } else {
+                // 2. Jika totalKemasan hanya angka atau belum memuat 'PALLET'
+                const matchNum = totalStr.match(/(\d+[\d.,]*)/);
+                if (matchNum && /pallet|plt|pl/i.test(totalStr)) {
+                    totalPallets = parseFloat(matchNum[1].replace(/,/g, ''));
+                } else {
+                    // 3. Cek apakah di items baris-baris terpecah (misal: 2, 6, 1, 2, 8, 2, 1) -> jumlahkan jadi total palet!
+                    let sumP = 0;
+                    parsedData.items.forEach(it => {
+                        const m = String(it.kemasan || '').match(/(\d+[\d.,]*)/);
+                        if (m) sumP += parseFloat(m[1].replace(/,/g, ''));
+                    });
+                    if (sumP > 0) totalPallets = sumP;
+                }
+            }
+
+            if (totalPallets > 0) {
+                const palletStr = `${totalPallets} PALLET`;
+                console.log(`[Eksklusif Sinar Asia] Total ${totalPallets} PALLET diterapkan seragam ke seluruh baris barang.`);
+                parsedData.items.forEach(it => {
+                    it.kemasan = palletStr;
+                });
+                parsedData.totalKemasan = `${totalPallets} PALLETS`;
             }
         }
 

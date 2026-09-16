@@ -116,20 +116,23 @@ body {
 }
 
 .portal-logo-emblem {
-    width: 30px;
-    height: 30px;
-    background: linear-gradient(135deg, #2563eb, #1d4ed8);
-    border-radius: var(--radius-sm);
+    width: 32px;
+    height: 32px;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #ffffff;
-    font-weight: 700;
-    font-size: 13px;
-    letter-spacing: 0.5px;
-    border: 1px solid rgba(255, 255, 255, 0.25);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
     flex-shrink: 0;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    border: none;
+    box-shadow: none;
+}
+
+.portal-logo-svg {
+    width: 32px;
+    height: 32px;
+    display: block;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
 }
 
 .portal-brand-text {
@@ -726,6 +729,35 @@ body {
     flex-wrap: wrap;
 }
 
+/* ==========================================================================
+   2.1 CEISA SUB-BAR STRIP (STANDAR RESMI CEISA 4.0)
+   ========================================================================== */
+.ceisa-doc-header-strip {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: var(--radius-sm);
+    padding: 8px 16px;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+
+.ceisa-doc-header-title {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #1e293b;
+    letter-spacing: -0.01em;
+}
+
+.ceisa-doc-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
 .btn-ceisa-sub {
     background: #ffffff;
     border: 1px solid #cbd5e1;
@@ -737,8 +769,10 @@ body {
     cursor: pointer;
     display: inline-flex;
     align-items: center;
-    gap: 5px;
+    gap: 6px;
     transition: all 0.15s ease;
+    height: 28px;
+    line-height: 1;
 }
 
 .btn-ceisa-sub:hover {
@@ -754,6 +788,211 @@ body {
     justify-content: center;
 }
 
+/* CEISA Primary Blue Button (Matching #0284c7 in Screenshots) */
+.btn-ceisa-blue {
+    background: #0284c7;
+    color: #ffffff;
+    border: 1px solid #0284c7;
+    border-radius: var(--radius-sm);
+    padding: 4px 12px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: background 0.15s ease;
+    height: 28px;
+    line-height: 1;
+}
+
+.btn-ceisa-blue:hover {
+    background: #0369a1;
+    border-color: #0369a1;
+}
+
+/* Split Input Container (Select + Input or Input + Date) */
+.ceisa-split-input {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+}
+
+.ceisa-split-input .form-control {
+    flex: 1;
+}
+
+.ceisa-split-input select.form-control {
+    flex: 0 0 145px;
+    cursor: pointer;
+}
+
+/* CEISA Horizontal Form Rows (Tab 1 Header 1:1) */
+.ceisa-header-form {
+    padding: 20px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.ceisa-form-row {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    gap: 20px;
+}
+
+.ceisa-form-row-label {
+    width: 240px;
+    flex-shrink: 0;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: #334155;
+}
+
+.ceisa-form-row-label span.req {
+    color: #ef4444;
+}
+
+.ceisa-form-row-control {
+    flex: 1;
+    max-width: 680px;
+}
+
+@media (max-width: 900px) {
+    .ceisa-form-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+    }
+    .ceisa-form-row-label {
+        width: 100%;
+    }
+    .ceisa-form-row-control {
+        width: 100%;
+        max-width: 100%;
+    }
+}
+
+/* CEISA Table Filter Input Row */
+.table-filter-row th {
+    padding: 4px 6px !important;
+    background: #f8fafc !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+}
+
+.table-filter-input {
+    width: 100%;
+    height: 24px;
+    font-size: 11.5px;
+    padding: 2px 6px;
+    border: 1px solid #cbd5e1;
+    border-radius: 3px;
+    background: #ffffff;
+    color: #334155;
+    box-sizing: border-box;
+    outline: none;
+}
+
+.table-filter-input:focus {
+    border-color: #0284c7;
+}
+
+/* CEISA Table Pagination Strip */
+.ceisa-table-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 10px 16px;
+    font-size: 12px;
+    color: #64748b;
+    border-top: 1px solid #e2e8f0;
+    background: #ffffff;
+}
+
+.ceisa-page-ctrls {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.ceisa-page-btn {
+    width: 26px;
+    height: 26px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #cbd5e1;
+    border-radius: 3px;
+    background: #ffffff;
+    color: #334155;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.ceisa-page-btn.active {
+    background: #0284c7;
+    color: #ffffff;
+    border-color: #0284c7;
+    font-weight: 600;
+}
+
+/* CEISA Official Footer */
+.ceisa-official-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    margin-top: 24px;
+    border-top: 1px solid #e2e8f0;
+    font-size: 11.5px;
+    color: #64748b;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.ceisa-footer-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ceisa-footer-right {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.footer-link {
+    color: #64748b;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.footer-link:hover {
+    color: #0284c7;
+}
+
+.btn-ceisa-care {
+    background: #f97316;
+    color: #ffffff;
+    border: none;
+    border-radius: 4px;
+    padding: 4px 10px;
+    font-size: 11.5px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+}
+
+.btn-ceisa-care:hover {
+    background: #ea580c;
+}
+
 /* ==========================================================================
    4. MODUL PEB: CEISA 4.0 TABS & FORM CARDS (1:1 STANDAR RESMI)
    ========================================================================== */
@@ -762,11 +1001,12 @@ body {
     align-items: flex-end;
     gap: 22px;
     border-bottom: 2px solid #e2e8f0;
-    margin-bottom: 18px;
+    margin-top: 0;
+    margin-bottom: 14px;
     overflow-x: auto;
     overflow-y: hidden !important; /* Mencegah scrollbar vertikal dan clipping penanda tab */
     white-space: nowrap;
-    padding: 6px 4px 0 4px;
+    padding: 2px 4px 0 4px;
     box-sizing: border-box;
     scrollbar-width: thin;
 }
@@ -833,31 +1073,40 @@ body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 12px 20px;
-    background: #ffffff;
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-sm);
-    margin: 20px 0 16px 0;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    padding: 14px 0 6px 0;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    margin: 16px 0 12px 0;
+    box-shadow: none;
 }
 
 .ceisa-stepper-btn {
-    font-size: 13px;
-    font-weight: 600;
-    padding: 7px 18px;
+    font-size: 12.5px;
+    font-weight: 500;
+    padding: 6px 16px;
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     border-radius: var(--radius-sm);
     cursor: pointer;
     transition: all 0.15s ease;
+    background: #0284c7;
+    color: #ffffff;
+    border: 1px solid #0284c7;
+}
+
+.ceisa-stepper-btn:hover:not(:disabled) {
+    background: #0369a1;
+    border-color: #0369a1;
 }
 
 .ceisa-stepper-btn:disabled {
     cursor: not-allowed;
-    background: #f1f5f9;
+    background: #e2e8f0;
     border-color: #cbd5e1;
-    color: #475569;
+    color: #94a3b8;
+    opacity: 0.8;
 }
 
 .ceisa-stepper-indicator {
@@ -1301,6 +1550,47 @@ textarea.form-control {
     display: inline-flex;
     align-items: center;
     gap: 6px;
+}
+
+.safecheck-header-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-card-toggle {
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-sm);
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    color: #475569;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    padding: 0;
+    flex-shrink: 0;
+}
+
+.btn-card-toggle:hover {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+    color: #0f172a;
+}
+
+.icon-toggle-chevron {
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-card-toggle.expanded .icon-toggle-chevron,
+.ceisa-card-header.expanded .icon-toggle-chevron {
+    transform: rotate(180deg);
+}
+
+.safecheck-body-collapsible.collapsed {
+    display: none !important;
 }
 
 .safecheck-banner {

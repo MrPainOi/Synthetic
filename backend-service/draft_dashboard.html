@@ -812,6 +812,45 @@
                 }
             }
 
+            // ATURAN KEMASAN KHUSUS SINAR ASIA (PT. SINAR ASIA PACK)
+            const isSinarAsia = Boolean(
+                (data.shipperName && /sinar\s*asia/i.test(data.shipperName)) ||
+                (data.safeCheck?.matchedIdentifiers && data.safeCheck.matchedIdentifiers.some(m => /sinar\s*asia/i.test(m))) ||
+                (data.safeCheck?.summary && /sinar\s*asia/i.test(data.safeCheck.summary))
+            );
+
+            if (isSinarAsia && Array.isArray(data.items) && data.items.length > 0) {
+                let sinarAsiaKemasan = '';
+                const totalStr = String(data.totalKemasan || '').trim();
+                const mPallet = totalStr.match(/(\d+[\d.,]*)\s*(PALLET|PALLETS|PLT|PL)/i);
+                if (mPallet) {
+                    sinarAsiaKemasan = `${mPallet[1]} PL`;
+                } else {
+                    let sumP = 0;
+                    for (const it of data.items) {
+                        const m = String(it.kemasan || it.kemasanJumlah || '').match(/(\d+[\d.,]*)/);
+                        if (m) sumP += parseFloat(m[1].replace(/,/g, ''));
+                    }
+                    if (sumP > 0) {
+                        sinarAsiaKemasan = `${sumP} PL`;
+                    } else {
+                        const mNum = totalStr.match(/(\d+[\d.,]*)/);
+                        sinarAsiaKemasan = mNum ? `${mNum[1]} PL` : (totalStr ? `${totalStr} PL` : '22 PL');
+                    }
+                }
+
+                if (sinarAsiaKemasan) {
+                    data.items.forEach(it => {
+                        it.kemasan = sinarAsiaKemasan;
+                        it.kemasanJumlah = sinarAsiaKemasan.split(' ')[0];
+                        it.kemasanJenis = 'PL';
+                    });
+                    if (!data.totalKemasan || !/pallet|plt|pl/i.test(data.totalKemasan)) {
+                        data.totalKemasan = `${sinarAsiaKemasan.split(' ')[0]} PALLETS`;
+                    }
+                }
+            }
+
             // ATURAN KHUSUS VALEO (PT. VALEO AC INDONESIA):
             // Kemasan semua baris barang nilainya SAMA per Packing List (diambil dari total kemasan PL, misal: 816 BX)
             const isValeo = Boolean(
@@ -842,7 +881,7 @@
                         it.kemasan = valeoKemasan;
                     });
                 }
-            } else if (Array.isArray(data.items) && data.items.length > 0) {
+            } else if (!isSinarAsia && Array.isArray(data.items) && data.items.length > 0) {
                 // Auto-alokasi kemasan per baris barang jika di items belum terisi (Non-Valeo)
                 const missingKemasan = data.items.some(i => !i.kemasan && !i.kemasanJumlah);
                 if (missingKemasan) {
@@ -1138,7 +1177,7 @@
         function handleItemPackChange(inputEl) {
             updateLiveKPIs();
             const shipper = document.getElementById('shipperName')?.value || '';
-            if (/valeo/i.test(shipper)) {
+            if (/valeo|sinar\s*asia/i.test(shipper)) {
                 const val = inputEl.value;
                 document.querySelectorAll('.item-pack-val').forEach(el => {
                     if (el !== inputEl) el.value = val;
@@ -1150,7 +1189,7 @@
         function handleItemPackTypeChange(selectEl) {
             updateLiveKPIs();
             const shipper = document.getElementById('shipperName')?.value || '';
-            if (/valeo/i.test(shipper)) {
+            if (/valeo|sinar\s*asia/i.test(shipper)) {
                 const type = selectEl.value;
                 document.querySelectorAll('.item-pack-type').forEach(el => {
                     if (el !== selectEl) el.value = type;
@@ -1181,6 +1220,8 @@
             let totalAmt = 0;
             let currency = 'USD';
             let mainUnit = 'PCE';
+            let mainPackUnit = 'BX';
+            const packValues = [];
 
             rows.forEach(r => {
                 if (r.querySelector('td[colspan="8"]')) return;
@@ -1189,6 +1230,10 @@
                 const u = r.querySelector('.item-qty-unit')?.value;
                 if (u) mainUnit = u;
                 const p = parseNum(r.querySelector('.item-pack-val')?.value);
+                const pu = r.querySelector('.item-pack-type')?.value;
+                if (pu) mainPackUnit = pu;
+                packValues.push(p);
+
                 const n = parseNum(r.querySelector('.item-net')?.value);
                 const g = parseNum(r.querySelector('.item-gross')?.value);
                 const a = parseNum(r.querySelector('.item-amt')?.value);
@@ -1203,8 +1248,18 @@
             document.getElementById('kpiTotalLines').textContent = `${count} Item`;
             document.getElementById('badgeItemCount').textContent = count;
             document.getElementById('kpiTotalQty').textContent = totalQty > 0 ? `${totalQty.toLocaleString('en-US')} ${mainUnit}` : '-';
+
+            // Cek apakah shipper adalah Valeo atau Sinar Asia, atau jika semua baris kemasannya sama
+            const shipper = document.getElementById('shipperName')?.value || '';
+            const isSharedPack = /valeo|sinar\s*asia/i.test(shipper) || (packValues.length > 0 && packValues.every(v => v === packValues[0]));
+            if (isSharedPack && packValues.length > 0) {
+                totalPack = packValues[0];
+            }
+
             const packLabel = document.getElementById('kpiTotalPack');
-            if (packLabel) packLabel.textContent = totalPack > 0 ? `${totalPack.toLocaleString('en-US')} BX` : '-';
+            if (packLabel) {
+                packLabel.textContent = totalPack > 0 ? `${totalPack.toLocaleString('en-US')} ${mainPackUnit}` : '-';
+            }
             document.getElementById('kpiTotalNet').textContent = totalNet > 0 ? `${totalNet.toLocaleString('en-US', { minimumFractionDigits: 2 })} Kg` : '-';
             document.getElementById('kpiTotalGross').textContent = totalGross > 0 ? `${totalGross.toLocaleString('en-US', { minimumFractionDigits: 2 })} Kg` : '-';
 

@@ -289,19 +289,33 @@ function switchCeisaTab(tabId) {
     const stepBadge = document.getElementById('ceisaStepBadge');
     const stepLabel = document.getElementById('ceisaStepLabel');
 
-    if (btnPrev) {
-        btnPrev.disabled = (currentIndex === 0);
-    }
-
-    if (btnNext) {
-        if (currentIndex === CEISA_TAB_ORDER.length - 1) {
-            btnNext.innerHTML = 'Validasi &amp; Kirim PEB <span style="font-size: 14px;">&#x2714;</span>';
-            btnNext.classList.remove('btn-primary');
-            btnNext.classList.add('btn-success');
-        } else {
-            btnNext.innerHTML = 'Selanjutnya <span style="font-size: 14px;">&rarr;</span>';
-            btnNext.classList.remove('btn-success');
-            btnNext.classList.add('btn-primary');
+    if (currentIndex === 0) {
+        // Tab 1 (Header): Tidak ada tombol Sebelumnya, hanya tombol Selanjutnya di kanan
+        if (btnPrev) btnPrev.style.display = 'none';
+        if (btnNext) {
+            btnNext.style.display = 'inline-flex';
+            btnNext.style.marginLeft = 'auto';
+            btnNext.innerHTML = 'Selanjutnya <span style="font-size: 14px;">&#x21BB;</span>';
+        }
+    } else if (currentIndex === CEISA_TAB_ORDER.length - 1) {
+        // Tab terakhir (9/9 Pernyataan): tombol Sebelumnya di kiri disembunyikan, tombol kanan diubah jadi "Sebelumnya"
+        if (btnPrev) btnPrev.style.display = 'none';
+        if (btnNext) {
+            btnNext.style.display = 'inline-flex';
+            btnNext.style.marginLeft = 'auto';
+            btnNext.innerHTML = '<span style="font-size: 14px;">&#x21BA;</span> Sebelumnya';
+        }
+    } else {
+        // Tab 2 - 8: Tombol Sebelumnya di kiri dan Selanjutnya di kanan
+        if (btnPrev) {
+            btnPrev.style.display = 'inline-flex';
+            btnPrev.disabled = false;
+            btnPrev.innerHTML = '<span style="font-size: 14px;">&#x21BA;</span> Sebelumnya';
+        }
+        if (btnNext) {
+            btnNext.style.display = 'inline-flex';
+            btnNext.style.marginLeft = 'auto';
+            btnNext.innerHTML = 'Selanjutnya <span style="font-size: 14px;">&#x21BB;</span>';
         }
     }
 
@@ -328,6 +342,11 @@ function handleStepperPrev() {
 function handleStepperNext() {
     const current = window._activeCeisaTab || 'tab-header';
     const currentIndex = CEISA_TAB_ORDER.indexOf(current);
+    if (currentIndex === CEISA_TAB_ORDER.length - 1) {
+        // Pada tab 9/9, tombol kanan bertindak sebagai "Sebelumnya"
+        handleStepperPrev();
+        return;
+    }
     if (currentIndex < CEISA_TAB_ORDER.length - 1) {
         switchCeisaTab(CEISA_TAB_ORDER[currentIndex + 1]);
         const mainWorkspace = document.querySelector('#module-peb .main-workspace');
@@ -412,10 +431,11 @@ function loadDraftData(data, shouldSave = true) {
     setVal('pernyataanJabatan', data.pernyataanJabatan || 'DIREKTUR EKSEKUTIF');
     setVal('pernyataanNik', data.pernyataanNik || '2171012903780004');
 
-    // ATURAN BERAT KHUSUS SINAR ASIA PACK
+    // ATURAN BERAT & KEMASAN KHUSUS SINAR ASIA PACK
     const isSinarAsia = Boolean(
         (data.shipperName && /sinar\s*asia/i.test(data.shipperName)) ||
-        (data.safeCheck?.matchedIdentifiers && data.safeCheck.matchedIdentifiers.some(m => /sinar\s*asia/i.test(m)))
+        (data.safeCheck?.matchedIdentifiers && data.safeCheck.matchedIdentifiers.some(m => /sinar\s*asia/i.test(m))) ||
+        (data.safeCheck?.summary && /sinar\s*asia/i.test(data.safeCheck.summary))
     );
     if (isSinarAsia && Array.isArray(data.items) && data.items.length > 0) {
         const hasMissing = data.items.some(i => !i.beratBersih || !i.beratKotor || i.beratBersih === 'null' || i.beratKotor === 'null');
@@ -436,6 +456,37 @@ function loadDraftData(data, shouldSave = true) {
                         data.totalNetWeightKGM = data.totalGrossWeightKGM;
                     }
                 }
+            }
+        }
+
+        // KEMASAN SINAR ASIA: TOTAL PALET SAMA SEMUA PER BARIS
+        let sinarAsiaKemasan = '';
+        const totalStr = String(data.totalKemasan || '').trim();
+        const mPallet = totalStr.match(/(\d+[\d.,]*)\s*(PALLET|PALLETS|PLT|PL)/i);
+        if (mPallet) {
+            sinarAsiaKemasan = `${mPallet[1]} PL`;
+        } else {
+            let sumP = 0;
+            for (const it of data.items) {
+                const m = String(it.kemasan || it.kemasanJumlah || '').match(/(\d+[\d.,]*)/);
+                if (m) sumP += parseFloat(m[1].replace(/,/g, ''));
+            }
+            if (sumP > 0) {
+                sinarAsiaKemasan = `${sumP} PL`;
+            } else {
+                const mNum = totalStr.match(/(\d+[\d.,]*)/);
+                sinarAsiaKemasan = mNum ? `${mNum[1]} PL` : (totalStr ? `${totalStr} PL` : '22 PL');
+            }
+        }
+
+        if (sinarAsiaKemasan) {
+            data.items.forEach(it => {
+                it.kemasan = sinarAsiaKemasan;
+                it.kemasanJumlah = sinarAsiaKemasan.split(' ')[0];
+                it.kemasanJenis = 'PL';
+            });
+            if (!data.totalKemasan || !/pallet|plt|pl/i.test(data.totalKemasan)) {
+                data.totalKemasan = `${sinarAsiaKemasan.split(' ')[0]} PALLETS`;
             }
         }
     }
@@ -469,7 +520,7 @@ function loadDraftData(data, shouldSave = true) {
                 it.kemasan = valeoKemasan;
             });
         }
-    } else if (Array.isArray(data.items) && data.items.length > 0) {
+    } else if (!isSinarAsia && Array.isArray(data.items) && data.items.length > 0) {
         // Auto-alokasi kemasan Non-Valeo jika belum terisi
         const missingKemasan = data.items.some(i => !i.kemasan && !i.kemasanJumlah);
         if (missingKemasan) {
@@ -766,11 +817,11 @@ function autoGrow(element) {
     element.style.height = computedHeight + 'px';
 }
 
-// VALEO PACK AUTO-SYNC HANDLERS
+// VALEO & SINAR ASIA PACK AUTO-SYNC HANDLERS
 function handleItemPackChange(inputEl) {
     updateLiveKPIs();
     const shipper = document.getElementById('shipperName')?.value || '';
-    if (/valeo/i.test(shipper)) {
+    if (/valeo|sinar\s*asia/i.test(shipper)) {
         const val = inputEl.value;
         document.querySelectorAll('.item-pack-val').forEach(el => {
             if (el !== inputEl) el.value = val;
@@ -782,7 +833,7 @@ function handleItemPackChange(inputEl) {
 function handleItemPackTypeChange(selectEl) {
     updateLiveKPIs();
     const shipper = document.getElementById('shipperName')?.value || '';
-    if (/valeo/i.test(shipper)) {
+    if (/valeo|sinar\s*asia/i.test(shipper)) {
         const type = selectEl.value;
         document.querySelectorAll('.item-pack-type').forEach(el => {
             if (el !== selectEl) el.value = type;
@@ -817,6 +868,8 @@ function updateLiveKPIs() {
     let totalAmt = 0;
     let currency = 'USD';
     let mainUnit = 'PCE';
+    let mainPackUnit = 'BX';
+    const packValues = [];
 
     rows.forEach(r => {
         if (r.querySelector('td[colspan="8"]')) return;
@@ -825,6 +878,10 @@ function updateLiveKPIs() {
         const u = r.querySelector('.item-qty-unit')?.value;
         if (u && u !== '--') mainUnit = u;
         const p = parseNum(r.querySelector('.item-pack-val')?.value);
+        const pu = r.querySelector('.item-pack-type')?.value;
+        if (pu) mainPackUnit = pu;
+        packValues.push(p);
+
         const n = parseNum(r.querySelector('.item-net')?.value);
         const g = parseNum(r.querySelector('.item-gross')?.value);
         const a = parseNum(r.querySelector('.item-amt')?.value);
@@ -845,8 +902,17 @@ function updateLiveKPIs() {
     const kpiQty = document.getElementById('kpiTotalQty');
     if (kpiQty) kpiQty.textContent = totalQty > 0 ? `${totalQty.toLocaleString('en-US')} ${mainUnit}` : '-';
 
+    // Cek apakah shipper adalah Valeo atau Sinar Asia, atau jika semua baris kemasannya sama
+    const shipper = document.getElementById('shipperName')?.value || '';
+    const isSharedPack = /valeo|sinar\s*asia/i.test(shipper) || (packValues.length > 0 && packValues.every(v => v === packValues[0]));
+    if (isSharedPack && packValues.length > 0) {
+        totalPack = packValues[0];
+    }
+
     const packLabel = document.getElementById('kpiTotalPack');
-    if (packLabel) packLabel.textContent = totalPack > 0 ? `${totalPack.toLocaleString('en-US')} BX` : '-';
+    if (packLabel) {
+        packLabel.textContent = totalPack > 0 ? `${totalPack.toLocaleString('en-US')} ${mainPackUnit}` : '-';
+    }
 
     const kpiNet = document.getElementById('kpiTotalNet');
     if (kpiNet) kpiNet.textContent = totalNet > 0 ? `${totalNet.toLocaleString('en-US', { minimumFractionDigits: 2 })} Kg` : '-';
@@ -1239,6 +1305,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 localStorage.setItem('ceisa_sidebar_expanded', isExpanded ? '1' : '0');
             } catch (e) {}
         });
+
+        // Menutup otomatis saat kursor keluar dari sidebar (mouseleave)
+        sidebar.addEventListener('mouseleave', () => {
+            if (sidebar.classList.contains('expanded')) {
+                sidebar.classList.remove('expanded');
+                sidebarToggle.setAttribute('aria-expanded', 'false');
+                try {
+                    localStorage.setItem('ceisa_sidebar_expanded', '0');
+                } catch (e) {}
+            }
+        });
+
         try {
             if (localStorage.getItem('ceisa_sidebar_expanded') === '1') {
                 sidebar.classList.add('expanded');
@@ -1322,6 +1400,45 @@ document.addEventListener('DOMContentLoaded', () => {
         btnTabNext.addEventListener('click', handleStepperNext);
     }
 
+    // 4.1.1 Safety Check Collapsible Accordion (Arrow Toggle)
+    const btnToggleSafeCheck = document.getElementById('btnToggleSafeCheck');
+    const safeCheckHeader = document.getElementById('safeCheckHeader');
+    const safeCheckBody = document.getElementById('safeCheckBody');
+
+    function toggleSafeCheck() {
+        if (!safeCheckBody) return;
+        const isCollapsed = safeCheckBody.classList.contains('collapsed') || safeCheckBody.style.display === 'none';
+        if (isCollapsed) {
+            safeCheckBody.classList.remove('collapsed');
+            safeCheckBody.style.display = 'block';
+            if (btnToggleSafeCheck) {
+                btnToggleSafeCheck.classList.add('expanded');
+                btnToggleSafeCheck.setAttribute('aria-expanded', 'true');
+            }
+            if (safeCheckHeader) safeCheckHeader.classList.add('expanded');
+        } else {
+            safeCheckBody.classList.add('collapsed');
+            safeCheckBody.style.display = 'none';
+            if (btnToggleSafeCheck) {
+                btnToggleSafeCheck.classList.remove('expanded');
+                btnToggleSafeCheck.setAttribute('aria-expanded', 'false');
+            }
+            if (safeCheckHeader) safeCheckHeader.classList.remove('expanded');
+        }
+    }
+
+    if (btnToggleSafeCheck) {
+        btnToggleSafeCheck.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleSafeCheck();
+        });
+    }
+    if (safeCheckHeader) {
+        safeCheckHeader.addEventListener('click', () => {
+            toggleSafeCheck();
+        });
+    }
+
     // 4.2 CEISA Sub-Bar Buttons
     const btnCeisaKembali = document.getElementById('btnCeisaKembali');
     if (btnCeisaKembali) {
@@ -1341,6 +1458,78 @@ document.addEventListener('DOMContentLoaded', () => {
             if (confirm("Pilih opsi formulir pabean:\n\n[OK] Ekspor Berkas JSON Draft\n[Batal] Batal")) {
                 exportJsonDraft();
             }
+        });
+    }
+
+    // 4.3 CEISA Action Buttons (Detail Barang, Sync Netto, Salin Entitas)
+    const btnDetailBarang = document.getElementById('btnDetailBarang');
+    if (btnDetailBarang) {
+        btnDetailBarang.addEventListener('click', () => switchCeisaTab('tab-barang'));
+    }
+
+    const btnSyncNetto = document.getElementById('btnSyncNetto');
+    if (btnSyncNetto) {
+        btnSyncNetto.addEventListener('click', () => {
+            const kpiNet = document.getElementById('kpiTotalNet');
+            const netWeightInput = document.getElementById('totalNetWeightKGM');
+            if (kpiNet && netWeightInput) {
+                const val = kpiNet.textContent.replace(/[^\d.]/g, '');
+                if (val) {
+                    netWeightInput.value = parseFloat(val).toFixed(4);
+                    calculateTare();
+                    showToast("Netto berhasil disinkronkan dengan total rincian barang!", "success");
+                }
+            }
+        });
+    }
+
+    const btnSalinPenerima = document.getElementById('btnSalinPenerima');
+    if (btnSalinPenerima) {
+        btnSalinPenerima.addEventListener('click', () => {
+            const cName = document.getElementById('consigneeName')?.value || '';
+            const cAddr = document.getElementById('consigneeAddress')?.value || '';
+            const buyerName = document.getElementById('buyerName');
+            if (buyerName) buyerName.value = cName;
+            const buyerAddr = document.querySelector('#tab-entitas .form-grid-2 > div:nth-child(3) textarea');
+            if (buyerAddr) buyerAddr.value = cAddr;
+            showToast("Data penerima berhasil disalin ke pembeli!", "success");
+        });
+    }
+
+    const btnHapusPembeli = document.getElementById('btnHapusPembeli');
+    if (btnHapusPembeli) {
+        btnHapusPembeli.addEventListener('click', () => {
+            const buyerName = document.getElementById('buyerName');
+            if (buyerName) buyerName.value = '-';
+            const buyerAddr = document.querySelector('#tab-entitas .form-grid-2 > div:nth-child(3) textarea');
+            if (buyerAddr) buyerAddr.value = '-';
+            showToast("Data pembeli dikosongkan.", "info");
+        });
+    }
+
+    const btnSalinPengirim = document.getElementById('btnSalinPengirim');
+    if (btnSalinPengirim) {
+        btnSalinPengirim.addEventListener('click', () => {
+            const sName = document.getElementById('shipperName')?.value || '';
+            const sAddr = document.getElementById('shipperAddress')?.value || '';
+            const sellerName = document.querySelector('#tab-entitas .form-grid-2 > div:nth-child(4) input[type="text"]:not(.form-control-mono)');
+            if (sellerName) sellerName.value = sName;
+            const sellerAddr = document.querySelector('#tab-entitas .form-grid-2 > div:nth-child(4) textarea');
+            if (sellerAddr) sellerAddr.value = sAddr;
+            showToast("Data pengirim berhasil disalin ke penjual!", "success");
+        });
+    }
+
+    const btnSalinPemilik = document.getElementById('btnSalinPemilik');
+    if (btnSalinPemilik) {
+        btnSalinPemilik.addEventListener('click', () => {
+            const cName = document.getElementById('consigneeName')?.value || '';
+            const cAddr = document.getElementById('consigneeAddress')?.value || '';
+            const ownerName = document.querySelector('#tab-entitas .form-grid-2 > div:nth-child(5) input[type="text"]:not(.form-control-mono)');
+            if (ownerName) ownerName.value = cName;
+            const ownerAddr = document.querySelector('#tab-entitas .form-grid-2 > div:nth-child(5) textarea');
+            if (ownerAddr) ownerAddr.value = cAddr;
+            showToast("Data penerima berhasil disalin ke pemilik barang!", "success");
         });
     }
 
