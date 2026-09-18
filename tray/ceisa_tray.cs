@@ -1,8 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Net;
+using System.Net.NetworkInformation;
+using System.Net.Sockets;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows.Forms;
@@ -10,11 +13,21 @@ using Microsoft.Win32;
 
 namespace CeisaTray
 {
-    #region 1. Application Entry Point & Mutex
-    /// <summary>
-    /// Titik masuk aplikasi System Tray CEISA Inspector.
-    /// Dilengkapi proteksi Single-Instance Mutex agar aplikasi tidak berjalan ganda.
-    /// </summary>
+    #region 1. Enums & Application Entry Point
+    public enum OperationMode
+    {
+        Auto = 0,       // Cerdas: Standby jika ada Host Kantor, jadi Host jika sendiri
+        ForceHost = 1,  // Paksa selalu nyalakan server lokal di PC ini
+        ClientOnly = 2  // Hanya sebagai Klien (tidak pernah menyalakan server lokal)
+    }
+
+    public enum ServerRole
+    {
+        Host,
+        Client,
+        Standby
+    }
+
     static class Program
     {
         private static Mutex singleInstanceMutex = null;
@@ -40,9 +53,6 @@ namespace CeisaTray
     #endregion
 
     #region 2. Application Context & State Properties
-    /// <summary>
-    /// Context utama aplikasi tray yang mengelola lifecycle icon taskbar, polling status, dan menu kontrol.
-    /// </summary>
     public class TrayApplicationContext : ApplicationContext
     {
         // Komponen UI WinForms
@@ -52,6 +62,13 @@ namespace CeisaTray
         private ToolStripMenuItem itemStatus;
         private ToolStripMenuItem itemOpenDashboard;
         private ToolStripMenuItem itemCopyWifiUrl;
+        
+        // Submenu Mode Operasi
+        private ToolStripMenuItem itemModeMenu;
+        private ToolStripMenuItem itemModeAuto;
+        private ToolStripMenuItem itemModeHost;
+        private ToolStripMenuItem itemModeClient;
+
         private ToolStripMenuItem itemStartServer;
         private ToolStripMenuItem itemStopServer;
         private ToolStripMenuItem itemRestartServer;
@@ -75,13 +92,22 @@ namespace CeisaTray
         private string currentUptime = "";
         private bool isPollingActive = false;
 
+        // Multi-User Role & Mode State
+        private OperationMode currentMode = OperationMode.Auto;
+        private ServerRole currentRole = ServerRole.Host;
+        private string remoteServerHost = "";
+        private string activeHostIp = "127.0.0.1";
+        private SynchronizationContext syncContext;
+
         private const string REG_RUN_KEY = @"Software\Microsoft\Windows\CurrentVersion\Run";
         private const string REG_APP_NAME = "CEISA_Inspector_Tray";
 
         public TrayApplicationContext()
         {
+            syncContext = SynchronizationContext.Current ?? new WindowsFormsSynchronizationContext();
             InitDirectories();
             LoadTrayIcons();
+            LoadOperationConfig();
             BuildContextMenu();
 
             // Inisialisasi Tray Icon
@@ -90,10 +116,9 @@ namespace CeisaTray
                 Icon = iconOffline,
                 ContextMenuStrip = contextMenu,
                 Visible = true,
-                Text = "CEISA Inspector: Memeriksa..."
+                Text = "CEISA Inspector: Memeriksa Jaringan..."
             };
 
-            // Klik kiri atau dobel klik langsung meluncurkan dashboard browser
             trayIcon.DoubleClick += (s, e) => OpenDashboard();
             trayIcon.MouseClick += (s, e) =>
             {
@@ -109,26 +134,35 @@ namespace CeisaTray
             timerHealthCheck.Tick += (s, e) => PollServerStatusAsync();
             timerHealthCheck.Start();
 
-            // Pengecekan sinkron awal: jika server mati, nyalakan otomatis
-            PollServerStatusSync();
-            if (!isServerOnline)
+            // Inisialisasi peran cerdas (Host vs Client) saat startup
+            ThreadPool.QueueUserWorkItem(_ =>
             {
-                StartServer(false);
-            }
+                ExecuteSmartStartup();
+            });
 
             // Pastikan autostart Windows terdaftar
             SyncAutostartRegistry(true);
         }
 
-        /// <summary>
-        /// Menentukan lokasi root project C:\Synthetic secara dinamis.
-        /// Mendukung eksekusi baik dari folder tray/ maupun root.
-        /// </summary>
+        private void RunOnUIThread(Action action)
+        {
+            if (action == null) return;
+            if (syncContext != null)
+            {
+                syncContext.Post(_ =>
+                {
+                    try { action(); } catch {}
+                }, null);
+            }
+            else
+            {
+                try { action(); } catch {}
+            }
+        }
+
         private void InitDirectories()
         {
             appBaseDir = AppDomain.CurrentDomain.BaseDirectory.TrimEnd('\\');
-            
-            // Cek apakah server.js ada di folder lokal atau parent folder
             if (File.Exists(Path.Combine(appBaseDir, "server.js")))
             {
                 projectRootDir = appBaseDir;
@@ -144,10 +178,222 @@ namespace CeisaTray
         }
         #endregion
 
-        #region 3. Context Menu Construction
-        /// <summary>
-        /// Membangun antarmuka Context Menu klik kanan tray dengan visual profesional.
-        /// </summary>
+        #region 3. Multi-User Configuration & Subnet Probing
+        private string ConfigFilePath
+        {
+            get { return Path.Combine(projectRootDir, "tray_config.json"); }
+        }
+
+        private void LoadOperationConfig()
+        {
+            try
+            {
+                if (File.Exists(ConfigFilePath))
+                {
+                    string json = File.ReadAllText(ConfigFilePath);
+                    Match mMode = Regex.Match(json, "\"mode\"\\s*:\\s*\"([^\"]+)\"");
+                    if (mMode.Success)
+                    {
+                        string m = mMode.Groups[1].Value.ToLower();
+                        if (m == "host" || m == "forcehost") currentMode = OperationMode.ForceHost;
+                        else if (m == "client" || m == "clientonly") currentMode = OperationMode.ClientOnly;
+                        else currentMode = OperationMode.Auto;
+                    }
+
+                    Match mHost = Regex.Match(json, "\"remoteHost\"\\s*:\\s*\"([^\"]+)\"");
+                    if (mHost.Success)
+                    {
+                        remoteServerHost = mHost.Groups[1].Value;
+                    }
+                }
+            }
+            catch {}
+        }
+
+        private void SaveOperationConfig()
+        {
+            try
+            {
+                string modeStr = "auto";
+                if (currentMode == OperationMode.ForceHost) modeStr = "host";
+                else if (currentMode == OperationMode.ClientOnly) modeStr = "client";
+
+                string json = string.Format("{{\r\n  \"mode\": \"{0}\",\r\n  \"remoteHost\": \"{1}\"\r\n}}", modeStr, remoteServerHost ?? "");
+                File.WriteAllText(ConfigFilePath, json);
+            }
+            catch {}
+        }
+
+        private string GetLocalWifiIp()
+        {
+            try
+            {
+                IPAddress[] hostAddresses = Dns.GetHostAddresses(Dns.GetHostName());
+                foreach (IPAddress ip in hostAddresses)
+                {
+                    if (ip.AddressFamily == AddressFamily.InterNetwork && !IPAddress.IsLoopback(ip))
+                    {
+                        string s = ip.ToString();
+                        if (!s.StartsWith("169.254")) return s;
+                    }
+                }
+            }
+            catch {}
+            return "127.0.0.1";
+        }
+
+        private string ProbeNetworkForRemoteHost()
+        {
+            List<string> candidates = new List<string>();
+            HashSet<string> localIps = new HashSet<string>();
+            localIps.Add("127.0.0.1");
+            localIps.Add("localhost");
+
+            try
+            {
+                IPAddress[] hostAddresses = Dns.GetHostAddresses(Dns.GetHostName());
+                foreach (IPAddress ip in hostAddresses)
+                {
+                    if (ip.AddressFamily == AddressFamily.InterNetwork)
+                    {
+                        string s = ip.ToString();
+                        localIps.Add(s);
+
+                        int dotIdx = s.LastIndexOf('.');
+                        if (dotIdx > 0)
+                        {
+                            string subnet = s.Substring(0, dotIdx + 1);
+                            int[] commonHosts = new int[] { 15, 1, 2, 5, 10, 20, 50, 100 };
+                            foreach (int ch in commonHosts)
+                            {
+                                string testIp = subnet + ch;
+                                if (!localIps.Contains(testIp) && !candidates.Contains(testIp))
+                                {
+                                    candidates.Add(testIp);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch {}
+
+            if (!string.IsNullOrEmpty(remoteServerHost) && !localIps.Contains(remoteServerHost) && !candidates.Contains(remoteServerHost))
+            {
+                candidates.Insert(0, remoteServerHost);
+            }
+
+            string[] fallbackList = new string[] { "192.168.100.15", "192.168.1.15", "192.168.0.15" };
+            foreach (string fb in fallbackList)
+            {
+                if (!localIps.Contains(fb) && !candidates.Contains(fb)) candidates.Add(fb);
+            }
+
+            foreach (string cand in candidates)
+            {
+                if (localIps.Contains(cand)) continue;
+                try
+                {
+                    HttpWebRequest req = (HttpWebRequest)WebRequest.Create("http://" + cand + ":8080/api/status");
+                    req.Timeout = 400;
+                    req.ReadWriteTimeout = 400;
+                    req.Method = "GET";
+
+                    using (HttpWebResponse res = (HttpWebResponse)req.GetResponse())
+                    {
+                        if (res.StatusCode == HttpStatusCode.OK)
+                        {
+                            using (StreamReader r = new StreamReader(res.GetResponseStream()))
+                            {
+                                string text = r.ReadToEnd();
+                                if (text.Contains("\"status\"") && text.Contains("\"ok\""))
+                                {
+                                    return cand;
+                                }
+                            }
+                        }
+                    }
+                }
+                catch {}
+            }
+
+            return null;
+        }
+
+        private void ExecuteSmartStartup()
+        {
+            try
+            {
+                AppendLog("Memulai evaluasi peran server (Mode: " + currentMode + ")");
+
+                if (currentMode == OperationMode.ForceHost)
+                {
+                    currentRole = ServerRole.Host;
+                    activeHostIp = GetLocalWifiIp();
+                    PollServerStatusSync();
+                    if (!isServerOnline)
+                    {
+                        StartServer(false);
+                    }
+                    return;
+                }
+
+                if (currentMode == OperationMode.ClientOnly)
+                {
+                    currentRole = ServerRole.Client;
+                    string foundHost = ProbeNetworkForRemoteHost();
+                    if (!string.IsNullOrEmpty(foundHost))
+                    {
+                        remoteServerHost = foundHost;
+                        activeHostIp = foundHost;
+                        currentWifiUrl = "http://" + foundHost + ":8080/dashboard.html";
+                        SaveOperationConfig();
+                    }
+                    PollServerStatusAsync();
+                    return;
+                }
+
+                // Mode == Auto: Cek apakah sudah ada server di jaringan Wi-Fi
+                string detectedHost = ProbeNetworkForRemoteHost();
+                if (!string.IsNullOrEmpty(detectedHost))
+                {
+                    // Ditemukan server rekan lain! Masuk mode klien standby
+                    currentRole = ServerRole.Client;
+                    remoteServerHost = detectedHost;
+                    activeHostIp = detectedHost;
+                    currentWifiUrl = "http://" + detectedHost + ":8080/dashboard.html";
+                    SaveOperationConfig();
+
+                    AppendLog("Server kantor terdeteksi di " + detectedHost + ". Server lokal disiagakan (Standby / Mode Klien).");
+                    RunOnUIThread(() =>
+                    {
+                        trayIcon.ShowBalloonTip(3000, "CEISA Inspector: Mode Klien", "Terhubung ke Server Kantor di " + detectedHost + ".\nServer lokal tidak dijalankan untuk menghemat daya.", ToolTipIcon.Info);
+                    });
+
+                    PollServerStatusAsync();
+                }
+                else
+                {
+                    // Tidak ada server lain di LAN: Jadikan PC ini Server Utama
+                    currentRole = ServerRole.Host;
+                    activeHostIp = GetLocalWifiIp();
+                    AppendLog("Tidak ada server lain di jaringan. Menjadi Server Utama (Host).");
+
+                    PollServerStatusSync();
+                    if (!isServerOnline)
+                    {
+                        StartServer(false);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                AppendLog("Error di ExecuteSmartStartup: " + ex.Message);
+            }
+        }
+        #endregion
+
+        #region 4. Context Menu Construction
         private void BuildContextMenu()
         {
             contextMenu = new ContextMenuStrip();
@@ -163,31 +409,45 @@ namespace CeisaTray
 
             // 2. Akses Cepat Dashboard & Wi-Fi
             itemOpenDashboard = new ToolStripMenuItem("🚀 Buka Dashboard di Browser", null, (s, e) => OpenDashboard());
-            itemCopyWifiUrl = new ToolStripMenuItem("📋 Salin Link Wi-Fi (Untuk HP)", null, (s, e) => CopyWifiUrl());
+            itemCopyWifiUrl = new ToolStripMenuItem("📋 Salin Link Dashboard / Wi-Fi", null, (s, e) => CopyWifiUrl());
 
-            // 3. Kontrol Operasi Server
-            itemStartServer = new ToolStripMenuItem("▶  Mulai Server (Start)", null, (s, e) => StartServer(true));
-            itemStopServer = new ToolStripMenuItem("⏹  Hentikan Server (Stop)", null, (s, e) => StopServer(true));
-            itemRestartServer = new ToolStripMenuItem("🔄 Muat Ulang Server (Restart)", null, (s, e) => RestartServer());
+            // 3. Submenu Mode Operasi (Host / Klien / Otomatis)
+            itemModeMenu = new ToolStripMenuItem("⚙  Mode Operasi Server");
+            itemModeAuto = new ToolStripMenuItem("● Otomatis (Standby jika ada Server Kantor)", null, (s, e) => SetOperationMode(OperationMode.Auto));
+            itemModeHost = new ToolStripMenuItem("○ Paksa Jadi Server Utama (Host)", null, (s, e) => SetOperationMode(OperationMode.ForceHost));
+            itemModeClient = new ToolStripMenuItem("○ Klien Saja (Hemat Resource)", null, (s, e) => SetOperationMode(OperationMode.ClientOnly));
 
-            // 4. Utilitas & Diagnostik
+            itemModeMenu.DropDownItems.AddRange(new ToolStripItem[] {
+                itemModeAuto,
+                itemModeHost,
+                itemModeClient
+            });
+            UpdateModeMenuChecks();
+
+            // 4. Kontrol Operasi Server Lokal
+            itemStartServer = new ToolStripMenuItem("▶  Mulai Server Lokal", null, (s, e) => StartServer(true));
+            itemStopServer = new ToolStripMenuItem("⏹  Hentikan Server Lokal", null, (s, e) => StopServer(true));
+            itemRestartServer = new ToolStripMenuItem("🔄 Muat Ulang Server", null, (s, e) => RestartServer());
+
+            // 5. Utilitas & Diagnostik
             itemDetails = new ToolStripMenuItem("ℹ  Cek Status Lengkap", null, (s, e) => ShowStatusDetails());
             itemOpenFolder = new ToolStripMenuItem("📁 Buka Folder Program", null, (s, e) => OpenWorkFolder());
             itemOpenLog = new ToolStripMenuItem("📄 Lihat Catatan Log", null, (s, e) => OpenLogFile());
 
-            // 5. Autostart & Keluar
+            // 6. Autostart & Keluar
             itemAutostart = new ToolStripMenuItem("✔ Otomatis Start saat PC Dinyalakan", null, (s, e) => ToggleAutostart());
             itemAutostart.Checked = IsAutostartEnabled();
 
             itemExit = new ToolStripMenuItem("❌ Tutup Tray", null, (s, e) => ExitTray());
 
-            // Menyusun urutan item dengan separator yang rapi
             contextMenu.Items.AddRange(new ToolStripItem[] {
                 itemHeader,
                 itemStatus,
                 new ToolStripSeparator(),
                 itemOpenDashboard,
                 itemCopyWifiUrl,
+                new ToolStripSeparator(),
+                itemModeMenu,
                 new ToolStripSeparator(),
                 itemStartServer,
                 itemStopServer,
@@ -202,12 +462,48 @@ namespace CeisaTray
                 itemExit
             });
         }
+
+        private void UpdateModeMenuChecks()
+        {
+            if (itemModeAuto != null)
+            {
+                itemModeAuto.Text = (currentMode == OperationMode.Auto ? "● " : "○ ") + "Otomatis (Standby jika ada Server Kantor)";
+                itemModeHost.Text = (currentMode == OperationMode.ForceHost ? "● " : "○ ") + "Paksa Jadi Server Utama (Host)";
+                itemModeClient.Text = (currentMode == OperationMode.ClientOnly ? "● " : "○ ") + "Klien Saja (Hemat Resource)";
+            }
+        }
+
+        private void SetOperationMode(OperationMode newMode)
+        {
+            currentMode = newMode;
+            SaveOperationConfig();
+            UpdateModeMenuChecks();
+
+            AppendLog("Mode operasi diubah menjadi: " + newMode);
+
+            if (newMode == OperationMode.ForceHost)
+            {
+                currentRole = ServerRole.Host;
+                activeHostIp = GetLocalWifiIp();
+                if (!isServerOnline) StartServer(true);
+                trayIcon.ShowBalloonTip(2000, "Mode Diubah", "PC ini disetel sebagai Server Utama.", ToolTipIcon.Info);
+            }
+            else if (newMode == OperationMode.ClientOnly)
+            {
+                currentRole = ServerRole.Client;
+                if (isServerOnline) StopServer(false);
+                ExecuteSmartStartup();
+                trayIcon.ShowBalloonTip(2000, "Mode Diubah", "PC ini disetel sebagai Klien.", ToolTipIcon.Info);
+            }
+            else
+            {
+                ExecuteSmartStartup();
+                trayIcon.ShowBalloonTip(2000, "Mode Diubah", "Mode Otomatis Aktif.", ToolTipIcon.Info);
+            }
+        }
         #endregion
 
-        #region 4. Icon & Asset Management
-        /// <summary>
-        /// Memuat icon online (hijau) dan offline (merah/abu-abu).
-        /// </summary>
+        #region 5. Icon & Asset Management
         private void LoadTrayIcons()
         {
             try
@@ -247,10 +543,7 @@ namespace CeisaTray
         }
         #endregion
 
-        #region 5. Real-Time Server Monitoring & Polling
-        /// <summary>
-        /// Pengecekan asinkron berkala ke http://127.0.0.1:8080/api/status tanpa membekukan UI thread.
-        /// </summary>
+        #region 6. Real-Time Server Monitoring & Polling
         private void PollServerStatusAsync()
         {
             if (isPollingActive) return;
@@ -263,9 +556,13 @@ namespace CeisaTray
                 string url = "";
                 string uptime = "";
 
+                string targetEndpoint = (currentRole == ServerRole.Client && !string.IsNullOrEmpty(activeHostIp) && activeHostIp != "127.0.0.1")
+                    ? "http://" + activeHostIp + ":8080/api/status"
+                    : "http://127.0.0.1:8080/api/status";
+
                 try
                 {
-                    HttpWebRequest request = (HttpWebRequest)WebRequest.Create("http://127.0.0.1:8080/api/status");
+                    HttpWebRequest request = (HttpWebRequest)WebRequest.Create(targetEndpoint);
                     request.Timeout = 1200;
                     request.Method = "GET";
 
@@ -295,25 +592,23 @@ namespace CeisaTray
                     online = false;
                 }
 
-                if (trayIcon != null && contextMenu != null && !contextMenu.IsDisposed)
+                // Jika mode Auto dan host remote kantor mati, coba re-evaluasi agar tidak disconnect
+                if (!online && currentRole == ServerRole.Client && currentMode == OperationMode.Auto)
                 {
-                    try
+                    string foundHost = ProbeNetworkForRemoteHost();
+                    if (string.IsNullOrEmpty(foundHost))
                     {
-                        contextMenu.BeginInvoke(new Action(() =>
-                        {
-                            ApplyStatusToUI(online, pid, url, uptime);
-                            isPollingActive = false;
-                        }));
-                    }
-                    catch
-                    {
-                        isPollingActive = false;
+                        AppendLog("Host kantor terputus. Mengaktifkan server lokal secara otomatis...");
+                        currentRole = ServerRole.Host;
+                        StartServer(false);
                     }
                 }
-                else
+
+                RunOnUIThread(() =>
                 {
-                    isPollingActive = false;
-                }
+                    ApplyStatusToUI(online, pid, url, uptime);
+                });
+                isPollingActive = false;
             });
         }
 
@@ -345,7 +640,10 @@ namespace CeisaTray
                             Match mUptime = Regex.Match(json, "\"uptime\"\\s*:\\s*(\\d+)");
                             if (mUptime.Success) uptime = mUptime.Groups[1].Value + "s";
 
-                            ApplyStatusToUI(true, pid, url, uptime);
+                            RunOnUIThread(() =>
+                            {
+                                ApplyStatusToUI(true, pid, url, uptime);
+                            });
                             return;
                         }
                     }
@@ -353,7 +651,10 @@ namespace CeisaTray
             }
             catch {}
 
-            ApplyStatusToUI(false, -1, "", "");
+            RunOnUIThread(() =>
+            {
+                ApplyStatusToUI(false, -1, "", "");
+            });
         }
 
         private void ApplyStatusToUI(bool online, int pid, string url, string uptime)
@@ -366,16 +667,33 @@ namespace CeisaTray
             if (online)
             {
                 trayIcon.Icon = iconOnline;
-                string tip = "CEISA Inspector: AKTIF (Port 8080)";
-                if (pid > 0) tip = "CEISA Inspector: AKTIF (PID: " + pid + ")";
-                trayIcon.Text = tip.Length > 63 ? tip.Substring(0, 63) : tip;
 
-                itemStatus.Text = "● Status: AKTIF (PID: " + (pid > 0 ? pid.ToString() : "OK") + ")";
-                itemStatus.ForeColor = Color.DarkGreen;
+                if (currentRole == ServerRole.Client)
+                {
+                    string tip = "CEISA Klien: Terhubung ke " + activeHostIp;
+                    trayIcon.Text = tip.Length > 63 ? tip.Substring(0, 63) : tip;
 
-                itemStartServer.Enabled = false;
-                itemStopServer.Enabled = true;
-                itemRestartServer.Enabled = true;
+                    itemStatus.Text = "● Status: KLIEN (Server: " + activeHostIp + ")";
+                    itemStatus.ForeColor = Color.DodgerBlue;
+
+                    itemStartServer.Enabled = true;
+                    itemStopServer.Enabled = false;
+                    itemRestartServer.Enabled = false;
+                }
+                else
+                {
+                    string tip = "CEISA Inspector: AKTIF (Port 8080)";
+                    if (pid > 0) tip = "CEISA Host: AKTIF (PID: " + pid + ")";
+                    trayIcon.Text = tip.Length > 63 ? tip.Substring(0, 63) : tip;
+
+                    itemStatus.Text = "● Status: SERVER UTAMA (PID: " + (pid > 0 ? pid.ToString() : "OK") + ")";
+                    itemStatus.ForeColor = Color.DarkGreen;
+
+                    itemStartServer.Enabled = false;
+                    itemStopServer.Enabled = true;
+                    itemRestartServer.Enabled = true;
+                }
+
                 itemOpenDashboard.Enabled = true;
                 itemCopyWifiUrl.Enabled = true;
             }
@@ -396,13 +714,13 @@ namespace CeisaTray
         }
         #endregion
 
-        #region 6. Server Control Actions (Start / Stop / Restart)
+        #region 7. Server Control Actions (Start / Stop / Restart)
         private void StartServer(bool notifyUser)
         {
-            if (isServerOnline)
+            if (isServerOnline && currentRole == ServerRole.Host)
             {
                 if (notifyUser)
-                    trayIcon.ShowBalloonTip(2000, "CEISA Inspector", "Server sudah aktif di port 8080.", ToolTipIcon.Info);
+                    trayIcon.ShowBalloonTip(2000, "CEISA Inspector", "Server lokal sudah aktif di port 8080.", ToolTipIcon.Info);
                 return;
             }
 
@@ -421,9 +739,13 @@ namespace CeisaTray
                 Process proc = Process.Start(psi);
                 if (proc != null)
                 {
-                    AppendLog("CEISA Server dinyalakan via Tray (PID: " + proc.Id + ")");
+                    currentRole = ServerRole.Host;
+                    activeHostIp = GetLocalWifiIp();
+                    currentWifiUrl = "http://" + activeHostIp + ":8080/dashboard.html";
+
+                    AppendLog("CEISA Server lokal dinyalakan via Tray (PID: " + proc.Id + ")");
                     if (notifyUser)
-                        trayIcon.ShowBalloonTip(2500, "CEISA Inspector", "Server berhasil dinyalakan (Port 8080).", ToolTipIcon.Info);
+                        trayIcon.ShowBalloonTip(2500, "CEISA Inspector", "Server lokal berhasil dinyalakan (Port 8080).", ToolTipIcon.Info);
                 }
 
                 ThreadPool.QueueUserWorkItem(_ =>
@@ -501,17 +823,26 @@ namespace CeisaTray
         }
         #endregion
 
-        #region 7. UI Handlers (Browser, Clipboard, Folder, Log)
+        #region 8. UI Handlers (Browser, Clipboard, Folder, Log)
         private void OpenDashboard()
         {
             try
             {
-                if (!isServerOnline)
+                string targetUrl = currentWifiUrl;
+                if (string.IsNullOrEmpty(targetUrl))
+                {
+                    targetUrl = (currentRole == ServerRole.Client && !string.IsNullOrEmpty(activeHostIp))
+                        ? "http://" + activeHostIp + ":8080/dashboard.html"
+                        : "http://localhost:8080/dashboard.html";
+                }
+
+                if (!isServerOnline && currentRole == ServerRole.Host)
                 {
                     StartServer(false);
                     Thread.Sleep(800);
                 }
-                Process.Start("http://localhost:8080/dashboard.html");
+
+                Process.Start(targetUrl);
             }
             catch (Exception ex)
             {
@@ -523,11 +854,14 @@ namespace CeisaTray
         {
             try
             {
-                if (!string.IsNullOrEmpty(currentWifiUrl))
+                string urlToCopy = currentWifiUrl;
+                if (string.IsNullOrEmpty(urlToCopy))
                 {
-                    Clipboard.SetText(currentWifiUrl);
-                    trayIcon.ShowBalloonTip(3000, "Link Wi-Fi Disalin!", currentWifiUrl + "\n\nTempel link ini di browser HP yang terhubung ke Wi-Fi.", ToolTipIcon.Info);
+                    urlToCopy = "http://" + activeHostIp + ":8080/dashboard.html";
                 }
+
+                Clipboard.SetText(urlToCopy);
+                trayIcon.ShowBalloonTip(3000, "Link Wi-Fi Disalin!", urlToCopy + "\n\nTempel link ini di browser HP / PC rekan yang terhubung ke Wi-Fi.", ToolTipIcon.Info);
             }
             catch {}
         }
@@ -535,19 +869,25 @@ namespace CeisaTray
         private void ShowStatusDetails()
         {
             string msg = "";
+            string roleStr = (currentRole == ServerRole.Host) ? "Server Utama (Host)" : "Klien (Tersambung ke Host)";
+            string modeStr = currentMode.ToString();
+
             if (isServerOnline)
             {
-                msg = "Status: AKTIF (Berjalan)\n" +
-                      "Port: 8080\n" +
-                      "PID Proses: " + (currentServerPid > 0 ? currentServerPid.ToString() : "-") + "\n" +
+                msg = "Peran PC: " + roleStr + "\n" +
+                      "Mode Operasi: " + modeStr + "\n" +
+                      "Target Server: " + activeHostIp + ":8080\n" +
+                      "PID Server: " + (currentServerPid > 0 ? currentServerPid.ToString() : "-") + "\n" +
                       "Durasi Uptime: " + currentUptime + "\n\n" +
-                      "URL PC: http://localhost:8080/dashboard.html\n" +
-                      "URL Wi-Fi HP: " + currentWifiUrl;
+                      "URL Dashboard: " + currentWifiUrl;
                 trayIcon.ShowBalloonTip(5000, "Status CEISA Inspector", msg, ToolTipIcon.Info);
             }
             else
             {
-                msg = "Status: TIDAK AKTIF (Mati)\n\nKlik 'Mulai Server' pada menu tray untuk menyalakan.";
+                msg = "Peran PC: " + roleStr + "\n" +
+                      "Mode Operasi: " + modeStr + "\n" +
+                      "Status: Menunggu koneksi / Server Mati\n\n" +
+                      "Klik 'Mulai Server Lokal' jika ingin menjadikan PC ini sebagai Host.";
                 trayIcon.ShowBalloonTip(4000, "Status CEISA Inspector", msg, ToolTipIcon.Warning);
             }
         }
@@ -576,7 +916,7 @@ namespace CeisaTray
         }
         #endregion
 
-        #region 8. Windows Autostart & Registry Integration
+        #region 9. Windows Autostart & Registry Integration
         private bool IsAutostartEnabled()
         {
             try
@@ -629,7 +969,7 @@ namespace CeisaTray
         }
         #endregion
 
-        #region 9. Logging & Lifecycle Management
+        #region 10. Logging & Lifecycle Management
         private void AppendLog(string message)
         {
             try

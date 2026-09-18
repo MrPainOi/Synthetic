@@ -20,6 +20,39 @@ function pruneScanCache3Days(cache) {
     return (cache && typeof cache === "object") ? cache : {};
 }
 
+// Helper: Sanitize registration number items (strictly clean strings, eliminate [object Object])
+function sanitizeRegistrationItem(item) {
+    if (!item) return null;
+    let str = "";
+    if (typeof item === "string") {
+        str = item.trim();
+    } else if (typeof item === "object") {
+        str = String(item.nomor_daftar || item.registrationNumber || item.nomor_dokumen || item.id || "").trim();
+    } else {
+        str = String(item).trim();
+    }
+    if (!str || str === "[object Object]" || str.includes("[object") || str.startsWith("PEB-USER-")) return null;
+    return str;
+}
+
+// Helper: Merge lists without duplicate entries and strictly containing sanitized registration strings
+function mergeDocumentLists(existingList, incomingList) {
+    const listA = Array.isArray(existingList) ? existingList : [];
+    const listB = Array.isArray(incomingList) ? incomingList : [];
+    
+    const set = new Set();
+    const result = [];
+
+    for (const raw of listA.concat(listB)) {
+        const clean = sanitizeRegistrationItem(raw);
+        if (clean && !set.has(clean)) {
+            set.add(clean);
+            result.push(clean);
+        }
+    }
+    return result;
+}
+
 // In-Memory & File Database Initialization
 function loadDB() {
     try {
@@ -30,6 +63,16 @@ function loadDB() {
                 if (parsed.cache) parsed.cache = pruneScanCache3Days(parsed.cache);
                 if (!parsed.completedByDate) parsed.completedByDate = {};
                 if (!parsed.pibpebByDate) parsed.pibpebByDate = {};
+
+                parsed.completed = (parsed.completed || []).map(sanitizeRegistrationItem).filter(Boolean);
+                parsed.pibpeb = (parsed.pibpeb || []).map(sanitizeRegistrationItem).filter(Boolean);
+
+                for (const [d, list] of Object.entries(parsed.completedByDate)) {
+                    parsed.completedByDate[d] = (list || []).map(sanitizeRegistrationItem).filter(Boolean);
+                }
+                for (const [d, list] of Object.entries(parsed.pibpebByDate)) {
+                    parsed.pibpebByDate[d] = (list || []).map(sanitizeRegistrationItem).filter(Boolean);
+                }
 
                 const todayKey = new Date().toISOString().split('T')[0];
                 if (Array.isArray(parsed.completed) && parsed.completed.length > 0) {
@@ -165,12 +208,30 @@ const server = http.createServer((req, res) => {
         res.writeHead(200, { "Content-Type": "application/json" });
         res.end(JSON.stringify({
             status: "ok",
+            app: "ceisa_inspector",
+            role: "host",
             message: "CEISA Inspector Server Aktif",
             pid: process.pid,
             port: PORT,
+            hostname: os.hostname(),
             wifiIp: getLocalIP(),
             wifiUrl: `http://${getLocalIP()}:${PORT}/dashboard.html`,
-            uptime: Math.floor(process.uptime())
+            uptime: Math.floor(process.uptime()),
+            updatedAt: db.updatedAt || Date.now(),
+            docsCount: Object.values(db.completedByDate || {}).reduce((acc, curr) => acc + (Array.isArray(curr) ? curr.length : 0), 0)
+        }));
+        return;
+    }
+
+    // API GET Peers (Host discovery & network coordination)
+    if (pathname === "/api/peers" && req.method === "GET") {
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({
+            server: "CEISA Inspector Host",
+            hostname: os.hostname(),
+            wifiIp: getLocalIP(),
+            port: PORT,
+            updatedAt: db.updatedAt || Date.now()
         }));
         return;
     }
@@ -182,7 +243,7 @@ const server = http.createServer((req, res) => {
         return;
     }
 
-    // API POST Sync
+    // API POST Sync (Safe Multi-User & Multi-Server Merge)
     if (pathname === "/api/sync" && req.method === "POST") {
         let body = "";
         req.on("data", chunk => (body += chunk));
@@ -204,20 +265,31 @@ const server = http.createServer((req, res) => {
                     if (!db.completedByDate) db.completedByDate = {};
                     if (!db.pibpebByDate) db.pibpebByDate = {};
 
+                    const forceOverwrite = Boolean(incoming.forceOverwrite);
+
                     if (Array.isArray(incoming.completed)) {
-                        db.completedByDate[dateKey] = incoming.completed;
-                        db.completed = incoming.completed;
+                        const cleanIncoming = incoming.completed.map(sanitizeRegistrationItem).filter(Boolean);
+                        db.completedByDate[dateKey] = forceOverwrite 
+                            ? cleanIncoming 
+                            : mergeDocumentLists(db.completedByDate[dateKey] || [], cleanIncoming);
+                        db.completed = db.completedByDate[dateKey];
                     }
 
                     if (Array.isArray(incoming.pibpeb)) {
-                        db.pibpebByDate[dateKey] = incoming.pibpeb;
-                        db.pibpeb = incoming.pibpeb;
+                        const cleanIncoming = incoming.pibpeb.map(sanitizeRegistrationItem).filter(Boolean);
+                        db.pibpebByDate[dateKey] = forceOverwrite 
+                            ? cleanIncoming 
+                            : mergeDocumentLists(db.pibpebByDate[dateKey] || [], cleanIncoming);
+                        db.pibpeb = db.pibpebByDate[dateKey];
                     }
 
                     if (incoming.completedByDate && typeof incoming.completedByDate === "object") {
                         for (const [d, list] of Object.entries(incoming.completedByDate)) {
                             if (Array.isArray(list)) {
-                                db.completedByDate[d] = list;
+                                const cleanList = list.map(sanitizeRegistrationItem).filter(Boolean);
+                                db.completedByDate[d] = forceOverwrite 
+                                    ? cleanList 
+                                    : mergeDocumentLists(db.completedByDate[d] || [], cleanList);
                             }
                         }
                     }
@@ -225,7 +297,10 @@ const server = http.createServer((req, res) => {
                     if (incoming.pibpebByDate && typeof incoming.pibpebByDate === "object") {
                         for (const [d, list] of Object.entries(incoming.pibpebByDate)) {
                             if (Array.isArray(list)) {
-                                db.pibpebByDate[d] = list;
+                                const cleanList = list.map(sanitizeRegistrationItem).filter(Boolean);
+                                db.pibpebByDate[d] = forceOverwrite 
+                                    ? cleanList 
+                                    : mergeDocumentLists(db.pibpebByDate[d] || [], cleanList);
                             }
                         }
                     }

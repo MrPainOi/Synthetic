@@ -254,13 +254,27 @@ async function loadDashboardData() {
         "ceisa_scan_cache"
     ]);
 
-    const completed = Array.isArray(data[`ceisa_completed_numbers_${chosenDate}`])
+    function cleanNumberList(list) {
+        if (!Array.isArray(list)) return [];
+        return list.map(item => {
+            if (typeof item === "string") return item.trim();
+            if (item && typeof item === "object") {
+                return (item.nomor_daftar || item.registrationNumber || item.nomor_dokumen || item.id || "").trim();
+            }
+            return String(item || "").trim();
+        }).filter(s => s && s !== "[object Object]" && !s.includes("[object") && !s.startsWith("PEB-USER-"));
+    }
+
+    const rawCompleted = Array.isArray(data[`ceisa_completed_numbers_${chosenDate}`])
         ? data[`ceisa_completed_numbers_${chosenDate}`]
         : (Array.isArray(data.ceisa_completed_numbers) && chosenDate === todayISO() ? data.ceisa_completed_numbers : []);
 
-    const pibPeb = Array.isArray(data[`ceisa_pibpeb_numbers_${chosenDate}`])
+    const rawPibPeb = Array.isArray(data[`ceisa_pibpeb_numbers_${chosenDate}`])
         ? data[`ceisa_pibpeb_numbers_${chosenDate}`]
         : (Array.isArray(data.ceisa_pibpeb_numbers) && chosenDate === todayISO() ? data.ceisa_pibpeb_numbers : []);
+
+    const completed = cleanNumberList(rawCompleted);
+    const pibPeb = cleanNumberList(rawPibPeb);
 
     const completedSet = new Set();
     completed.forEach(x => {

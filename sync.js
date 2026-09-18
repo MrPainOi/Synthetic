@@ -63,29 +63,59 @@ async function storageRemove(key) {
 // GET & SET LOCAL WI-FI SERVER URL
 // ------------------------------------------------------------
 async function discoverWifiServer() {
-    const candidateUrls = [
-        "http://192.168.100.15:8080",
-        `http://localhost:${DEFAULT_WIFI_PORT}`
-    ];
-
-    const saved = await storageGet("ceisa_wifi_server_url");
-    if (saved.ceisa_wifi_server_url) {
-        let clean = saved.ceisa_wifi_server_url.trim().replace(/\/+$/, "");
-        if (!clean.startsWith("http")) clean = `http://${clean}`;
-        if (!candidateUrls.includes(clean)) {
-            candidateUrls.unshift(clean);
+    const saved = await storageGet(["ceisa_wifi_server_url", "ceisa_operation_mode"]);
+    const mode = saved.ceisa_operation_mode || "auto"; // "auto", "host", "client"
+    
+    let originCandidate = null;
+    if (typeof window !== "undefined" && window.location && window.location.hostname) {
+        if (window.location.protocol.startsWith("http") && window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1") {
+            originCandidate = `${window.location.protocol}//${window.location.hostname}:${window.location.port || DEFAULT_WIFI_PORT}`;
         }
     }
 
+    const candidateUrls = [];
+    if (originCandidate) candidateUrls.push(originCandidate);
+
+    if (saved.ceisa_wifi_server_url) {
+        let clean = saved.ceisa_wifi_server_url.trim().replace(/\/+$/, "");
+        if (!clean.startsWith("http")) clean = `http://${clean}`;
+        if (!candidateUrls.includes(clean)) candidateUrls.push(clean);
+    }
+
+    // Common office subnet probes (e.g. 192.168.100.x, 192.168.1.x, 192.168.0.x)
+    const subnetPrefixes = ["192.168.100.", "192.168.1.", "192.168.0."];
+    const ipMatch = (saved.ceisa_wifi_server_url || originCandidate || "").match(/(\d+\.\d+\.\d+\.)/);
+    if (ipMatch && !subnetPrefixes.includes(ipMatch[1])) {
+        subnetPrefixes.unshift(ipMatch[1]);
+    }
+
+    for (const prefix of subnetPrefixes) {
+        for (const hostNum of [15, 1, 2, 10, 50, 100]) {
+            const u = `http://${prefix}${hostNum}:${DEFAULT_WIFI_PORT}`;
+            if (!candidateUrls.includes(u)) candidateUrls.push(u);
+        }
+    }
+
+    const localhostUrl = `http://localhost:${DEFAULT_WIFI_PORT}`;
+    if (mode === "host") {
+        candidateUrls.unshift(localhostUrl);
+    } else {
+        candidateUrls.push(localhostUrl);
+    }
+
+    // Fast probing across candidate URLs
     for (const url of candidateUrls) {
         try {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 1200);
-            const res = await fetch(`${url}/api/sync`, { method: "GET", signal: controller.signal });
+            const timeoutId = setTimeout(() => controller.abort(), 600);
+            const res = await fetch(`${url}/api/status`, { method: "GET", signal: controller.signal });
             clearTimeout(timeoutId);
             if (res.ok) {
-                await storageSet({ ceisa_wifi_server_url: url });
-                return url;
+                const info = await res.json().catch(() => null);
+                if (info && (info.status === "ok" || info.app === "ceisa_inspector")) {
+                    await storageSet({ ceisa_wifi_server_url: url });
+                    return url;
+                }
             }
         } catch (_) {}
     }
@@ -94,7 +124,7 @@ async function discoverWifiServer() {
 }
 
 async function getWifiServerUrl() {
-    const data = await storageGet("ceisa_wifi_server_url");
+    const data = await storageGet(["ceisa_wifi_server_url", "ceisa_operation_mode"]);
     if (data.ceisa_wifi_server_url) {
         let url = data.ceisa_wifi_server_url.trim().replace(/\/+$/, "");
         if (!url.startsWith("http")) url = `http://${url}`;
@@ -201,28 +231,34 @@ async function syncWithWifiServer() {
             const activeDateData = await storageGet("ceisa_last_scan_date");
             const activeDate = activeDateData.ceisa_last_scan_date || new Date().toISOString().split('T')[0];
 
+            function cleanNumberArray(list) {
+                if (!Array.isArray(list)) return [];
+                return list.map(item => {
+                    if (typeof item === "string") return item.trim();
+                    if (item && typeof item === "object") {
+                        return (item.nomor_daftar || item.registrationNumber || item.nomor_dokumen || item.id || "").trim();
+                    }
+                    return String(item || "").trim();
+                }).filter(s => s && s !== "[object Object]" && !s.includes("[object") && !s.startsWith("PEB-USER-"));
+            }
+
             const storagePayload = {
                 ceisa_scan_cache: mergedCache,
                 ceisa_last_wifi_sync: Date.now()
             };
 
             for (const [d, list] of Object.entries(serverCompletedByDate)) {
-                storagePayload[`ceisa_completed_numbers_${d}`] = list;
+                storagePayload[`ceisa_completed_numbers_${d}`] = cleanNumberArray(list);
             }
             for (const [d, list] of Object.entries(serverPibPebByDate)) {
-                storagePayload[`ceisa_pibpeb_numbers_${d}`] = list;
+                storagePayload[`ceisa_pibpeb_numbers_${d}`] = cleanNumberArray(list);
             }
 
             if (serverCompletedByDate[activeDate]) {
-                storagePayload.ceisa_completed_numbers = serverCompletedByDate[activeDate];
+                storagePayload.ceisa_completed_numbers = cleanNumberArray(serverCompletedByDate[activeDate]);
             }
             if (serverPibPebByDate[activeDate]) {
-                storagePayload.ceisa_pibpeb_numbers = serverPibPebByDate[activeDate];
-            }
-
-            await storageSet(storagePayload);
-            if (serverPibPebByDate[activeDate]) {
-                storagePayload.ceisa_pibpeb_numbers = serverPibPebByDate[activeDate];
+                storagePayload.ceisa_pibpeb_numbers = cleanNumberArray(serverPibPebByDate[activeDate]);
             }
 
             await storageSet(storagePayload);
