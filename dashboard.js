@@ -346,6 +346,9 @@ async function loadDashboardData() {
 }
 
 async function saveCompletedNumbers() {
+    const datePicker = document.getElementById("scanDate");
+    const chosenDate = datePicker ? datePicker.value || todayISO() : todayISO();
+
     const input = document.getElementById("completedInput").value || "";
     const rawMatches = input.match(/\b\d{6}\b/g) || [];
 
@@ -359,21 +362,28 @@ async function saveCompletedNumbers() {
         }
     }
 
-    await storageSet({
+    const payload = {
         ceisa_completed_numbers: uniqueList
-    });
+    };
+    payload[`ceisa_completed_numbers_${chosenDate}`] = uniqueList;
+    await storageSet(payload);
 
-    const currentData = await storageGet(["ceisa_pibpeb_numbers", "ceisa_scan_cache"]);
+    const currentData = await storageGet([`ceisa_pibpeb_numbers_${chosenDate}`, "ceisa_pibpeb_numbers", "ceisa_scan_cache"]);
+    const activePibPeb = Array.isArray(currentData[`ceisa_pibpeb_numbers_${chosenDate}`])
+        ? currentData[`ceisa_pibpeb_numbers_${chosenDate}`]
+        : (currentData.ceisa_pibpeb_numbers || []);
+
     if (typeof pushExactStateToWifiServer === "function") {
         await pushExactStateToWifiServer(
             uniqueList,
-            currentData.ceisa_pibpeb_numbers || [],
-            currentData.ceisa_scan_cache || {}
+            activePibPeb,
+            currentData.ceisa_scan_cache || {},
+            chosenDate
         );
     }
 
     showToast("Nomor Selesai (Hijau) disimpan & tersinkronisasi!");
-    loadDashboardData();
+    await loadDashboardData();
 
     // Broadcast REFRESH_COLOR to tabs
     try {
@@ -387,6 +397,9 @@ async function saveCompletedNumbers() {
 }
 
 async function savePibPebNumbers() {
+    const datePicker = document.getElementById("scanDate");
+    const chosenDate = datePicker ? datePicker.value || todayISO() : todayISO();
+
     const input = document.getElementById("pibPebInput").value || "";
     const rawMatches = input.match(/\b\d{6}\b/g) || [];
 
@@ -400,21 +413,28 @@ async function savePibPebNumbers() {
         }
     }
 
-    await storageSet({
+    const payload = {
         ceisa_pibpeb_numbers: uniqueList
-    });
+    };
+    payload[`ceisa_pibpeb_numbers_${chosenDate}`] = uniqueList;
+    await storageSet(payload);
 
-    const currentData = await storageGet(["ceisa_completed_numbers", "ceisa_scan_cache"]);
+    const currentData = await storageGet([`ceisa_completed_numbers_${chosenDate}`, "ceisa_completed_numbers", "ceisa_scan_cache"]);
+    const activeCompleted = Array.isArray(currentData[`ceisa_completed_numbers_${chosenDate}`])
+        ? currentData[`ceisa_completed_numbers_${chosenDate}`]
+        : (currentData.ceisa_completed_numbers || []);
+
     if (typeof pushExactStateToWifiServer === "function") {
         await pushExactStateToWifiServer(
-            currentData.ceisa_completed_numbers || [],
+            activeCompleted,
             uniqueList,
-            currentData.ceisa_scan_cache || {}
+            currentData.ceisa_scan_cache || {},
+            chosenDate
         );
     }
 
     showToast("Nomor Selesai PIB/PEB disimpan & tersinkronisasi!");
-    loadDashboardData();
+    await loadDashboardData();
 
     // Broadcast REFRESH_COLOR to tabs
     try {

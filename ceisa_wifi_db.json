@@ -1,18 +1,13 @@
 {
   "completed": [
-    "171323",
-    "102623",
-    "102632",
-    "171780",
-    "102749",
-    "171966",
-    "102776",
-    "102803"
+    "103006",
+    "103000",
+    "103002",
+    "103010",
+    "172398",
+    "103027"
   ],
-  "pibpeb": [
-    "171780",
-    "171323"
-  ],
+  "pibpeb": [],
   "cache": {
     "100021": {
       "companyName": "PT. HENG GUAN BATAM INDUSTRIES",
@@ -503,6 +498,56 @@
       "rowDate": "2026-06-12",
       "status": "",
       "timestamp": 1789459097321
+    },
+    "103000": {
+      "companyName": "PT. TDK ELECTRONICS INDONESIA",
+      "documentNumber": "102996/KPU.2/2026",
+      "documentType": "NPPB",
+      "location": "IDKSP - SEKUPANG",
+      "registrationNumber": "103000",
+      "rowDate": "2026-09-19",
+      "status": "orange",
+      "timestamp": 1789788414019
+    },
+    "103002": {
+      "companyName": "PT. HENG GUAN BATAM INDUSTRIES",
+      "documentNumber": "102998/KPU.2/2026",
+      "documentType": "NPPB",
+      "location": "IDKSP - SEKUPANG",
+      "registrationNumber": "103002",
+      "rowDate": "2026-09-19",
+      "status": "orange",
+      "timestamp": 1789788480475
+    },
+    "103006": {
+      "companyName": "PT. RPC INDONESIA",
+      "documentNumber": "103002/KPU.2/2026",
+      "documentType": "NPPB",
+      "location": "IDKSP - SEKUPANG",
+      "registrationNumber": "103006",
+      "rowDate": "2026-09-19",
+      "status": "orange",
+      "timestamp": 1789788396138
+    },
+    "103010": {
+      "companyName": "",
+      "documentNumber": "103006/KPU.2/2026",
+      "documentType": "NPPB",
+      "location": "",
+      "registrationNumber": "103010",
+      "rowDate": "2026-09-19",
+      "status": "",
+      "timestamp": 1789788778920
+    },
+    "103027": {
+      "companyName": "",
+      "documentNumber": "103023/KPU.2/2026",
+      "documentType": "NPPB",
+      "location": "",
+      "registrationNumber": "103027",
+      "rowDate": "2026-09-19",
+      "status": "",
+      "timestamp": 1789789330330
     },
     "103299": {
       "companyName": "",
@@ -5795,14 +5840,104 @@
       "timestamp": 1789720865379
     },
     "171966": {
-      "companyName": "",
+      "companyName": "PT. HENG GUAN BATAM INDUSTRIES",
       "documentNumber": "171924/KPU.2/2026",
       "documentType": "SPPB",
-      "location": "",
+      "location": "SEWU",
       "registrationNumber": "171966",
       "rowDate": "2026-09-18",
+      "status": "green",
+      "timestamp": 1789786640046
+    },
+    "172013": {
+      "companyName": "",
+      "documentNumber": "171971/KPU.2/2026",
+      "documentType": "SPPB",
+      "location": "SEWU",
+      "registrationNumber": "172013",
+      "rowDate": "2026-09-18",
+      "status": "red",
+      "timestamp": 1789786627223
+    },
+    "172063": {
+      "companyName": "PT. VALEO AC INDONESIA",
+      "documentNumber": "172022/KPU.2/2026",
+      "documentType": "SPPB",
+      "location": "SEWU",
+      "registrationNumber": "172063",
+      "rowDate": "2026-09-18",
+      "status": "orange",
+      "timestamp": 1789786632056
+    },
+    "172067": {
+      "companyName": "PT. TDK ELECTRONICS INDONESIA",
+      "documentNumber": "172026/KPU.2/2026",
+      "documentType": "SPPB",
+      "location": "SEWU",
+      "registrationNumber": "172067",
+      "rowDate": "2026-09-18",
+      "status": "orange",
+      "timestamp": 1789786637067
+    },
+    "172074": {
+      "companyName": "PT. TUNAS MITRA JAYA",
+      "documentNumber": "172033/KPU.2/2026",
+      "documentType": "SPPB",
+      "location": "SEWU",
+      "registrationNumber": "172074",
+      "rowDate": "2026-09-18",
+      "status": "orange",
+      "timestamp": 1789786634084
+    },
+    "172081": {
+      "companyName": "PT. VALEO AC INDONESIA",
+      "documentNumber": "172040/KPU.2/2026",
+      "documentType": "SPPB",
+      "location": "SEWU",
+      "registrationNumber": "172081",
+      "rowDate": "2026-09-18",
+      "status": "orange",
+      "timestamp": 1789786629351
+    },
+    "172203": {
+      "companyName": "PT. TDK ELECTRONICS INDONESIA",
+      "documentNumber": "172161/KPU.2/2026",
+      "documentType": "SPPB",
+      "location": "SEWU",
+      "registrationNumber": "172203",
+      "rowDate": "2026-09-18",
+      "status": "orange",
+      "timestamp": 1789786622130
+    },
+    "172206": {
+      "companyName": "PT. TDK ELECTRONICS INDONESIA",
+      "documentNumber": "172164/KPU.2/2026",
+      "documentType": "SPPB",
+      "location": "SEWU",
+      "registrationNumber": "172206",
+      "rowDate": "2026-09-18",
+      "status": "orange",
+      "timestamp": 1789786618235
+    },
+    "172212": {
+      "companyName": "PT. CICOR PANATEC",
+      "documentNumber": "172170/KPU.2/2026",
+      "documentType": "SPPB",
+      "location": "SEWU",
+      "registrationNumber": "172212",
+      "rowDate": "2026-09-18",
+      "status": "orange",
+      "timestamp": 1789786625089
+    },
+    "172398": {
+      "companyName": "",
+      "documentNumber": "172367/KPU.2/2026",
+      "documentType": "SPPB",
+      "location": "",
+      "registrationNumber": "172398",
+      "rowDate": "2026-09-19",
       "status": "",
-      "timestamp": 1789723717245
+      "timestamp": 1789789215183
     },
     "185656": {
       "companyName": "",
@@ -11875,7 +12010,7 @@
       "timestamp": 1789611968708
     }
   },
-  "updatedAt": 1789725609380,
+  "updatedAt": 1789790254529,
   "completedByDate": {
     "2026-08-05": [
       "083930",
@@ -12543,7 +12678,22 @@
       "102749",
       "171966",
       "102776",
-      "102803"
+      "102803",
+      "172081",
+      "172063",
+      "172067",
+      "172074",
+      "172206",
+      "172203",
+      "172212"
+    ],
+    "2026-09-19": [
+      "103006",
+      "103000",
+      "103002",
+      "103010",
+      "172398",
+      "103027"
     ]
   },
   "pibpebByDate": {
@@ -13062,6 +13212,7 @@
     "2026-09-18": [
       "171780",
       "171323"
-    ]
+    ],
+    "2026-09-19": []
   }
 }

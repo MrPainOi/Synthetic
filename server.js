@@ -265,31 +265,22 @@ const server = http.createServer((req, res) => {
                     if (!db.completedByDate) db.completedByDate = {};
                     if (!db.pibpebByDate) db.pibpebByDate = {};
 
-                    const forceOverwrite = Boolean(incoming.forceOverwrite);
-
                     if (Array.isArray(incoming.completed)) {
                         const cleanIncoming = incoming.completed.map(sanitizeRegistrationItem).filter(Boolean);
-                        db.completedByDate[dateKey] = forceOverwrite 
-                            ? cleanIncoming 
-                            : mergeDocumentLists(db.completedByDate[dateKey] || [], cleanIncoming);
-                        db.completed = db.completedByDate[dateKey];
+                        db.completedByDate[dateKey] = cleanIncoming;
+                        db.completed = cleanIncoming;
                     }
 
                     if (Array.isArray(incoming.pibpeb)) {
                         const cleanIncoming = incoming.pibpeb.map(sanitizeRegistrationItem).filter(Boolean);
-                        db.pibpebByDate[dateKey] = forceOverwrite 
-                            ? cleanIncoming 
-                            : mergeDocumentLists(db.pibpebByDate[dateKey] || [], cleanIncoming);
-                        db.pibpeb = db.pibpebByDate[dateKey];
+                        db.pibpebByDate[dateKey] = cleanIncoming;
+                        db.pibpeb = cleanIncoming;
                     }
 
                     if (incoming.completedByDate && typeof incoming.completedByDate === "object") {
                         for (const [d, list] of Object.entries(incoming.completedByDate)) {
                             if (Array.isArray(list)) {
-                                const cleanList = list.map(sanitizeRegistrationItem).filter(Boolean);
-                                db.completedByDate[d] = forceOverwrite 
-                                    ? cleanList 
-                                    : mergeDocumentLists(db.completedByDate[d] || [], cleanList);
+                                db.completedByDate[d] = list.map(sanitizeRegistrationItem).filter(Boolean);
                             }
                         }
                     }
@@ -297,10 +288,7 @@ const server = http.createServer((req, res) => {
                     if (incoming.pibpebByDate && typeof incoming.pibpebByDate === "object") {
                         for (const [d, list] of Object.entries(incoming.pibpebByDate)) {
                             if (Array.isArray(list)) {
-                                const cleanList = list.map(sanitizeRegistrationItem).filter(Boolean);
-                                db.pibpebByDate[d] = forceOverwrite 
-                                    ? cleanList 
-                                    : mergeDocumentLists(db.pibpebByDate[d] || [], cleanList);
+                                db.pibpebByDate[d] = list.map(sanitizeRegistrationItem).filter(Boolean);
                             }
                         }
                     }

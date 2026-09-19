@@ -126,12 +126,17 @@ async function saveCompleted() {
 
     completedNumbers.value = unique.join("\n");
 
-    const currentData = await storageGet(["ceisa_pibpeb_numbers", "ceisa_scan_cache"]);
+    const currentData = await storageGet([`ceisa_pibpeb_numbers_${date}`, "ceisa_pibpeb_numbers", "ceisa_scan_cache"]);
+    const activePibPeb = Array.isArray(currentData[`ceisa_pibpeb_numbers_${date}`])
+        ? currentData[`ceisa_pibpeb_numbers_${date}`]
+        : (currentData.ceisa_pibpeb_numbers || []);
+
     if (typeof pushExactStateToWifiServer === "function") {
         await pushExactStateToWifiServer(
             unique,
-            currentData.ceisa_pibpeb_numbers || [],
-            currentData.ceisa_scan_cache || {}
+            activePibPeb,
+            currentData.ceisa_scan_cache || {},
+            date
         );
     }
 
@@ -186,12 +191,17 @@ async function savePibPeb() {
 
     pibPebNumbers.value = unique.join("\n");
 
-    const currentData = await storageGet(["ceisa_completed_numbers", "ceisa_scan_cache"]);
+    const currentData = await storageGet([`ceisa_completed_numbers_${date}`, "ceisa_completed_numbers", "ceisa_scan_cache"]);
+    const activeCompleted = Array.isArray(currentData[`ceisa_completed_numbers_${date}`])
+        ? currentData[`ceisa_completed_numbers_${date}`]
+        : (currentData.ceisa_completed_numbers || []);
+
     if (typeof pushExactStateToWifiServer === "function") {
         await pushExactStateToWifiServer(
-            currentData.ceisa_completed_numbers || [],
+            activeCompleted,
             unique,
-            currentData.ceisa_scan_cache || {}
+            currentData.ceisa_scan_cache || {},
+            date
         );
     }
 

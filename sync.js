@@ -158,27 +158,38 @@ async function setWifiServerUrl(url) {
 // ------------------------------------------------------------
 // PUSH EXACT MIRROR STATE TO WI-FI SERVER (Additions & Deletions)
 // ------------------------------------------------------------
-async function pushExactStateToWifiServer(completed, pibpeb, cache) {
+async function pushExactStateToWifiServer(completed, pibpeb, cache, targetDate) {
     try {
         const baseUrl = await getWifiServerUrl();
         if (!baseUrl) return false;
 
-        const dateData = await storageGet("ceisa_last_scan_date");
-        const date = dateData.ceisa_last_scan_date || new Date().toISOString().split('T')[0];
+        let date = targetDate;
+        if (!date) {
+            const dateData = await storageGet("ceisa_last_scan_date");
+            date = dateData.ceisa_last_scan_date || new Date().toISOString().split('T')[0];
+        }
+
+        const cleanCompleted = Array.isArray(completed)
+            ? completed.map(s => String(s || "").trim()).filter(s => /^\d{6}$/.test(s))
+            : [];
+        const cleanPibPeb = Array.isArray(pibpeb)
+            ? pibpeb.map(s => String(s || "").trim()).filter(s => /^\d{6}$/.test(s))
+            : [];
 
         const payload = {
             isSave: true,
+            forceOverwrite: true,
             date: date,
-            completed: completed || [],
-            pibpeb: pibpeb || [],
+            completed: cleanCompleted,
+            pibpeb: cleanPibPeb,
             cache: cache || {}
         };
 
         payload.completedByDate = {};
-        payload.completedByDate[date] = completed || [];
+        payload.completedByDate[date] = cleanCompleted;
 
         payload.pibpebByDate = {};
-        payload.pibpebByDate[date] = pibpeb || [];
+        payload.pibpebByDate[date] = cleanPibPeb;
 
         await fetch(`${baseUrl}/api/sync`, {
             method: "POST",
