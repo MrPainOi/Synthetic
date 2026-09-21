@@ -1,7 +1,8 @@
 {
   "completed": [
     "173305",
-    "173356"
+    "173356",
+    "173368"
   ],
   "pibpeb": [],
   "cache": {
@@ -6004,6 +6005,16 @@
       "rowDate": "2026-09-21",
       "status": "",
       "timestamp": 1789972423098
+    },
+    "173368": {
+      "companyName": "",
+      "documentNumber": "173338/KPU.2/2026",
+      "documentType": "SPPB",
+      "location": "",
+      "registrationNumber": "173368",
+      "rowDate": "2026-09-21",
+      "status": "",
+      "timestamp": 1789972861534
     },
     "185656": {
       "companyName": "",
@@ -12076,7 +12087,7 @@
       "timestamp": 1789611968708
     }
   },
-  "updatedAt": 1789972751510,
+  "updatedAt": 1789972956904,
   "completedByDate": {
     "2026-08-05": [
       "083930",
@@ -12766,7 +12777,8 @@
     ],
     "2026-09-21": [
       "173305",
-      "173356"
+      "173356",
+      "173368"
     ]
   },
   "pibpebByDate": {
