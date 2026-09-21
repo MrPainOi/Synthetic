@@ -31,6 +31,18 @@
 
     let scanCache = {};
 
+    // Anti-flicker: lock to prevent concurrent recolor executions
+    let _recolorInProgress = false;
+
+    // MutationObserver instance (assigned below after function declarations)
+    let observer = null;
+
+    // Storage-change debounce timer
+    let _storageRecolorTimer = null;
+
+    // MutationObserver debounce timer
+    let recolorTimer = null;
+
 
     async function getActiveScanDate() {
         const data = await chrome.storage.local.get("ceisa_last_scan_date");
@@ -53,13 +65,17 @@
             "ceisa_completed_numbers"
         ]);
 
-        const list = Array.isArray(data[`ceisa_completed_numbers_${activeDate}`])
+        const dateList = Array.isArray(data[`ceisa_completed_numbers_${activeDate}`])
             ? data[`ceisa_completed_numbers_${activeDate}`]
-            : (Array.isArray(data.ceisa_completed_numbers) ? data.ceisa_completed_numbers : []);
+            : [];
+        const globalList = Array.isArray(data.ceisa_completed_numbers)
+            ? data.ceisa_completed_numbers
+            : [];
+        const list = dateList.length > 0 ? dateList : globalList;
 
         completedNumbers = new Set(
             list
-                .map(x => String(x).trim())
+                .map(x => String(x).trim().padStart(6, "0"))
                 .filter(x => /^\d{6}$/.test(x))
         );
     }
@@ -71,13 +87,17 @@
             "ceisa_pibpeb_numbers"
         ]);
 
-        const list = Array.isArray(data[`ceisa_pibpeb_numbers_${activeDate}`])
+        const dateList = Array.isArray(data[`ceisa_pibpeb_numbers_${activeDate}`])
             ? data[`ceisa_pibpeb_numbers_${activeDate}`]
-            : (Array.isArray(data.ceisa_pibpeb_numbers) ? data.ceisa_pibpeb_numbers : []);
+            : [];
+        const globalList = Array.isArray(data.ceisa_pibpeb_numbers)
+            ? data.ceisa_pibpeb_numbers
+            : [];
+        const list = dateList.length > 0 ? dateList : globalList;
 
         pibPebNumbers = new Set(
             list
-                .map(x => String(x).trim())
+                .map(x => String(x).trim().padStart(6, "0"))
                 .filter(x => /^\d{6}$/.test(x))
         );
     }
@@ -505,36 +525,7 @@
     // COMPLETED NUMBERS
     // ========================================================
 
-    async function loadCompletedNumbers() {
-
-        const data =
-            await chrome.storage.local.get(
-                "ceisa_completed_numbers"
-            );
-
-
-        const value =
-            Array.isArray(
-                data.ceisa_completed_numbers
-            )
-                ? data.ceisa_completed_numbers
-                : [];
-
-
-        completedNumbers =
-            new Set(
-
-                value
-                    .map(x =>
-                        String(x).trim()
-                    )
-                    .filter(x =>
-                        /^\d{6}$/.test(x)
-                    )
-
-            );
-
-    }
+    // (duplicate loadCompletedNumbers removed — date-aware version is defined above)
 
 
     // ========================================================
@@ -756,6 +747,7 @@
                 existing.style.removeProperty("color");
                 existing.style.removeProperty("padding");
                 existing.style.removeProperty("border-radius");
+                existing.style.removeProperty("font-weight");
             }
             return true;
         }
@@ -1474,11 +1466,14 @@
                 message.type === "REFRESH_COLOR"
             ) {
 
-                loadCompletedNumbers()
-                    .then(
-                        () =>
-                            recolorExistingRows()
-                    );
+                Promise.all([
+                    loadCompletedNumbers(),
+                    loadPibPebNumbers(),
+                    loadScanCache()
+                ]).then(
+                    () =>
+                        recolorExistingRows()
+                );
 
                 return;
 
@@ -1528,85 +1523,44 @@
     // ========================================================
 
     function recolorExistingRows() {
-        autoSyncDateFromCeisaPortal();
-        const rows =
-            getRows();
+        // Skip if already running (prevents stacked calls from causing flicker)
+        if (_recolorInProgress) return;
+        _recolorInProgress = true;
 
-        let updated = false;
+        // Temporarily disconnect MutationObserver so DOM coloring
+        // doesn't trigger another recolor cycle
+        if (observer) observer.disconnect();
 
-        for (const item of rows) {
+        try {
+            const rows = getRows();
+            let updated = false;
 
-            const reg =
-                item.registrationNumber;
+            for (const item of rows) {
+                const reg = item.registrationNumber;
+                const cached =
+                    scanCache[reg] ||
+                    scanCache[reg.padStart(6, "0")] ||
+                    scanCache[reg.replace(/^0+/, "")];
 
-            const cached =
-                scanCache[reg];
+                const color = determineRowColor(reg, item.row, cached);
 
-            const color =
-                determineRowColor(reg, item.row, cached);
+                colorRegistrationNumber(item.row, reg, color || "");
 
-            colorRegistrationNumber(
-
-                item.row,
-
-                reg,
-
-                color
-
-            );
-
-            if (cached) {
-
-                if (!cached.documentType && item.documentType) {
-
+                if (cached && !cached.documentType && item.documentType) {
                     cached.documentType = item.documentType;
-
                     cached.documentNumber = item.documentNumber;
-
                     updated = true;
-
                 }
-
-            } else {
-
-                scanCache[reg] = {
-
-                    registrationNumber:
-                        reg,
-
-                    documentType:
-                        item.documentType,
-
-                    documentNumber:
-                        item.documentNumber,
-
-                    status:
-                        color || (completedNumbers.has(reg) ? "green" : ""),
-
-                    companyName: "",
-
-                    location: "",
-
-                    rowDate:
-                        item.rowDate,
-
-                    timestamp:
-                        Date.now()
-
-                };
-
-                updated = true;
-
             }
 
+            if (updated) {
+                saveScanCache();
+            }
+        } finally {
+            _recolorInProgress = false;
+            // Re-attach observer after coloring is done
+            if (observer) observer.observe(document.documentElement, { childList: true, subtree: true });
         }
-
-        if (updated) {
-
-            saveScanCache();
-
-        }
-
     }
 
 
@@ -2180,6 +2134,10 @@
 
         await saveScanCache();
 
+        if (typeof pushSingleCacheItemToSupabase === "function") {
+            pushSingleCacheItemToSupabase(scanCache[registrationNumber]).catch(() => {});
+        }
+
 
         stats.processed++;
 
@@ -2519,22 +2477,20 @@
     // MUTATION OBSERVER
     // ========================================================
 
-    let recolorTimer = null;
-
-
-    const observer =
+    // MutationObserver: Recolor when page DOM changes (e.g. new rows loaded by React)
+    // Using a long debounce (600ms) to avoid firing mid-scan when content.js
+    // itself is modifying span tags — recolorExistingRows also disconnects/reconnects
+    // the observer to prevent self-triggering.
+    observer =
         new MutationObserver(() => {
-
+            // Skip if we're inside a recolor (observer is disconnected then anyway)
             if (recolorTimer) {
-                return;
+                clearTimeout(recolorTimer);
             }
-
-
-            recolorTimer =
-                setTimeout(() => {
-                    recolorTimer = null;
-                    recolorExistingRows();
-                }, 200);
+            recolorTimer = setTimeout(() => {
+                recolorTimer = null;
+                recolorExistingRows();
+            }, 600);
         });
 
 
@@ -2551,6 +2507,8 @@
     // STORAGE CHANGES
     // ========================================================
 
+    // Debounce timer for storage changes to prevent rapid-fire recolors when
+    // multiple storage keys are written simultaneously (e.g. by pushExactStateToSupabase)
     chrome.storage.onChanged.addListener(async changes => {
         if (changes.ceisa_last_scan_date && changes.ceisa_last_scan_date.newValue) {
             scanDate = changes.ceisa_last_scan_date.newValue;
@@ -2563,32 +2521,27 @@
             k.includes("ceisa_last_scan_date")
         );
 
-        if (hasRelevantChange) {
+        if (!hasRelevantChange) return;
+
+        // Debounce: wait for all related storage writes to settle before recoloring
+        if (_storageRecolorTimer) clearTimeout(_storageRecolorTimer);
+        _storageRecolorTimer = setTimeout(async () => {
+            _storageRecolorTimer = null;
             await Promise.all([
                 loadCompletedNumbers(),
                 loadPibPebNumbers(),
                 loadScanCache()
             ]);
             recolorExistingRows();
-        }
+        }, 150);
     });
 
 
-    // Fast 1-second background recolor loop & periodic Wi-Fi sync
-    setInterval(async () => {
+    // Periodic background recolor (every 5s) to catch dynamically loaded CEISA rows
+    // Not for color accuracy — that's handled by storage.onChanged and REFRESH_COLOR.
+    setInterval(() => {
         recolorExistingRows();
-        if (typeof syncWithWifiServer === "function") {
-            const synced = await syncWithWifiServer();
-            if (synced) {
-                await Promise.all([
-                    loadCompletedNumbers(),
-                    loadPibPebNumbers(),
-                    loadScanCache()
-                ]);
-                recolorExistingRows();
-            }
-        }
-    }, 1000);
+    }, 5000);
 
     // ========================================================
     // INITIAL

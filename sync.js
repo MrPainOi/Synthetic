@@ -3,11 +3,19 @@
 // Real-time Cloud Synchronization (Additions, Deletions & Offline Fallback)
 // ============================================================
 
-const SUPABASE_URL = "https://grvwcvcpxemqyjprbdtr.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdydndjdmNweGVtcXlqcHJiZHRyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk5MTU4MjcsImV4cCI6MjEwNTQ5MTgyN30.sm_cp0G9Xta95vPj3urguZ5tLGlJeQLRXklANTdCwE4";
+// Konfigurasi diambil dari config.js (file yang di-gitignore).
+// Jika config.js tidak ada (misal: clone baru), buat dari config.example.js
+const SUPABASE_URL = (typeof CEISA_CONFIG !== "undefined" && CEISA_CONFIG.SUPABASE_URL)
+    ? CEISA_CONFIG.SUPABASE_URL
+    : "";
+const SUPABASE_ANON_KEY = (typeof CEISA_CONFIG !== "undefined" && CEISA_CONFIG.SUPABASE_ANON_KEY)
+    ? CEISA_CONFIG.SUPABASE_ANON_KEY
+    : "";
 
 let supabaseSyncInterval = null;
 let isSupabaseSyncing = false;
+let lastLocalSaveTimestamp = 0;
+let isLocalPushInProgress = false;
 
 function getSupabaseHeaders(extraHeaders = {}) {
     return {
@@ -100,14 +108,35 @@ function cleanNumberArray(list) {
     return result;
 }
 
+function areArraysEqual(a, b) {
+    if (a === b) return true;
+    if (!Array.isArray(a) || !Array.isArray(b)) return false;
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+        if (a[i] !== b[i]) return false;
+    }
+    return true;
+}
+
 // Broadcast REFRESH_COLOR to all active CEISA tabs
 async function broadcastRefreshColor() {
     try {
         if (typeof chrome !== "undefined" && chrome.tabs && chrome.tabs.query) {
-            const tabs = await chrome.tabs.query({ url: "https://portal.beacukai.go.id/*" });
-            tabs.forEach(tab => {
-                chrome.tabs.sendMessage(tab.id, { type: "REFRESH_COLOR" }).catch(() => {});
-            });
+            const tabs = await chrome.tabs.query({ url: ["*://portal.beacukai.go.id/*", "*://*.beacukai.go.id/*"] });
+            if (tabs && tabs.length > 0) {
+                tabs.forEach(tab => {
+                    if (tab.id) {
+                        chrome.tabs.sendMessage(tab.id, { type: "REFRESH_COLOR" }).catch(() => {});
+                    }
+                });
+            } else {
+                const activeTabs = await chrome.tabs.query({ active: true });
+                activeTabs.forEach(tab => {
+                    if (tab.id) {
+                        chrome.tabs.sendMessage(tab.id, { type: "REFRESH_COLOR" }).catch(() => {});
+                    }
+                });
+            }
         }
     } catch (_) {}
 }
@@ -116,6 +145,10 @@ async function broadcastRefreshColor() {
 // PUSH EXACT MIRROR STATE TO SUPABASE CLOUD
 // ------------------------------------------------------------
 async function pushExactStateToSupabase(completed, pibpeb, cache, targetDate) {
+    const now = Date.now();
+    lastLocalSaveTimestamp = now;
+    isLocalPushInProgress = true;
+
     try {
         let date = targetDate;
         if (!date) {
@@ -132,18 +165,23 @@ async function pushExactStateToSupabase(completed, pibpeb, cache, targetDate) {
             ceisa_completed_numbers: cleanCompleted,
             ceisa_pibpeb_numbers: cleanPibPeb,
             ceisa_scan_cache: cleanCache,
-            ceisa_last_supabase_sync: Date.now()
+            ceisa_last_supabase_sync: now,
+            ceisa_last_local_save_time: now
         };
         localPayload[`ceisa_completed_numbers_${date}`] = cleanCompleted;
         localPayload[`ceisa_pibpeb_numbers_${date}`] = cleanPibPeb;
+        localPayload[`ceisa_last_save_${date}`] = now;
         await storageSet(localPayload);
+
+        // Immediate broadcast to ensure instantaneous color change with 0 latency
+        await broadcastRefreshColor();
 
         // 2. Upsert to Supabase ceisa_sync_state
         const syncRow = {
             date: date,
             completed_numbers: cleanCompleted,
             pibpeb_numbers: cleanPibPeb,
-            updated_at: new Date().toISOString()
+            updated_at: new Date(now).toISOString()
         };
 
         const res = await fetch(`${SUPABASE_URL}/rest/v1/ceisa_sync_state`, {
@@ -154,13 +192,15 @@ async function pushExactStateToSupabase(completed, pibpeb, cache, targetDate) {
             body: JSON.stringify([syncRow])
         });
 
+        isLocalPushInProgress = false;
+
         if (res.ok) {
             await storageSet({ ceisa_supabase_status: "connected" });
         } else {
             console.warn("Supabase sync state warning:", res.status, await res.text().catch(() => ""));
         }
 
-        // 3. If cache has items, upsert to ceisa_scan_cache
+        // 3. Upsert cache in background without blocking UI
         const cacheEntries = Object.values(cleanCache);
         if (cacheEntries.length > 0) {
             const cacheRows = cacheEntries.map(item => {
@@ -182,24 +222,60 @@ async function pushExactStateToSupabase(completed, pibpeb, cache, targetDate) {
             }).filter(Boolean);
 
             if (cacheRows.length > 0) {
-                // Upsert in batches of 50
-                for (let i = 0; i < cacheRows.length; i += 50) {
-                    const batch = cacheRows.slice(i, i + 50);
-                    await fetch(`${SUPABASE_URL}/rest/v1/ceisa_scan_cache`, {
-                        method: "POST",
-                        headers: getSupabaseHeaders({
-                            "Prefer": "resolution=merge-duplicates"
-                        }),
-                        body: JSON.stringify(batch)
-                    }).catch(() => {});
-                }
+                (async () => {
+                    for (let i = 0; i < cacheRows.length; i += 50) {
+                        const batch = cacheRows.slice(i, i + 50);
+                        await fetch(`${SUPABASE_URL}/rest/v1/ceisa_scan_cache`, {
+                            method: "POST",
+                            headers: getSupabaseHeaders({
+                                "Prefer": "resolution=merge-duplicates"
+                            }),
+                            body: JSON.stringify(batch)
+                        }).catch(() => {});
+                    }
+                })();
             }
         }
 
-        await broadcastRefreshColor();
         return true;
     } catch (err) {
+        isLocalPushInProgress = false;
         console.warn("Gagal menyimpan ke Supabase:", err.message);
+        return false;
+    }
+}
+
+// ------------------------------------------------------------
+// INSTANT PUSH SINGLE CACHE ITEM TO SUPABASE
+// ------------------------------------------------------------
+async function pushSingleCacheItemToSupabase(item) {
+    if (!item) return false;
+    const regNo = sanitizeRegistrationItem(item.registrationNumber);
+    if (!regNo || !item.status) return false;
+
+    const row = {
+        registration_number: regNo,
+        document_number: item.documentNumber || null,
+        document_type: item.documentType || null,
+        company_name: item.companyName || null,
+        location: item.location || null,
+        status: item.status,
+        row_date: (item.rowDate && /^\d{4}-\d{2}-\d{2}$/.test(item.rowDate)) ? item.rowDate : null,
+        timestamp: typeof item.timestamp === "number" ? item.timestamp : Date.now(),
+        raw_data: item,
+        updated_at: new Date().toISOString()
+    };
+
+    try {
+        await fetch(`${SUPABASE_URL}/rest/v1/ceisa_scan_cache`, {
+            method: "POST",
+            headers: getSupabaseHeaders({
+                "Prefer": "resolution=merge-duplicates"
+            }),
+            body: JSON.stringify([row])
+        });
+        return true;
+    } catch (_) {
         return false;
     }
 }
@@ -208,7 +284,7 @@ async function pushExactStateToSupabase(completed, pibpeb, cache, targetDate) {
 // SYNC WITH SUPABASE CLOUD (FETCH & MERGE)
 // ------------------------------------------------------------
 async function syncWithSupabase() {
-    if (isSupabaseSyncing) return null;
+    if (isSupabaseSyncing || isLocalPushInProgress) return null;
     isSupabaseSyncing = true;
 
     try {
@@ -222,7 +298,7 @@ async function syncWithSupabase() {
                 headers: getSupabaseHeaders(),
                 signal: controller.signal
             }),
-            fetch(`${SUPABASE_URL}/rest/v1/ceisa_scan_cache?select=*`, {
+            fetch(`${SUPABASE_URL}/rest/v1/ceisa_scan_cache?select=*&status=not.is.null&order=timestamp.desc.nullslast&limit=1000`, {
                 method: "GET",
                 headers: getSupabaseHeaders(),
                 signal: controller.signal
@@ -240,23 +316,51 @@ async function syncWithSupabase() {
         const syncData = await syncRes.json();
         const cacheData = cacheRes.ok ? await cacheRes.json() : [];
 
-        // Build server state maps
+        // Active date handling
+        const activeDateData = await storageGet("ceisa_last_scan_date");
+        const activeDate = activeDateData.ceisa_last_scan_date || new Date().toISOString().split('T')[0];
+
+        // Fetch local save timestamps for anti-flicker protection
+        const localTimeKeys = ["ceisa_last_local_save_time", `ceisa_last_save_${activeDate}`];
+        if (Array.isArray(syncData)) {
+            syncData.forEach(r => {
+                if (r && r.date) localTimeKeys.push(`ceisa_last_save_${r.date}`);
+            });
+        }
+        const localTimeData = await storageGet(localTimeKeys);
+
+        // Build server state maps (respecting local saves that just happened)
         const serverCompletedByDate = {};
         const serverPibPebByDate = {};
 
         if (Array.isArray(syncData)) {
             for (const row of syncData) {
                 if (!row || !row.date) continue;
-                serverCompletedByDate[row.date] = cleanNumberArray(row.completed_numbers);
-                serverPibPebByDate[row.date] = cleanNumberArray(row.pibpeb_numbers);
+                const d = row.date;
+                const serverTime = row.updated_at ? new Date(row.updated_at).getTime() : 0;
+                const localDateSaveTime = Math.max(
+                    lastLocalSaveTimestamp,
+                    Number(localTimeData.ceisa_last_local_save_time || 0),
+                    Number(localTimeData[`ceisa_last_save_${d}`] || 0)
+                );
+                const timeSinceSave = Date.now() - localDateSaveTime;
+
+                // Anti-flicker: If local client saved recently (< 6s) and server is not newer,
+                // NEVER overwrite fresh local numbers with stale server data!
+                if (timeSinceSave < 6000 && serverTime <= localDateSaveTime) {
+                    continue;
+                }
+
+                serverCompletedByDate[d] = cleanNumberArray(row.completed_numbers);
+                serverPibPebByDate[d] = cleanNumberArray(row.pibpeb_numbers);
             }
         }
 
-        // Build server scan cache map
+        // Build server scan cache map (only items with valid status)
         const serverCache = {};
         if (Array.isArray(cacheData)) {
             for (const doc of cacheData) {
-                if (!doc || !doc.registration_number) continue;
+                if (!doc || !doc.registration_number || !doc.status) continue;
                 serverCache[doc.registration_number] = doc.raw_data || {
                     registrationNumber: doc.registration_number,
                     documentNumber: doc.document_number,
@@ -270,55 +374,94 @@ async function syncWithSupabase() {
             }
         }
 
-        // Active date handling
-        const activeDateData = await storageGet("ceisa_last_scan_date");
-        const activeDate = activeDateData.ceisa_last_scan_date || new Date().toISOString().split('T')[0];
-
-        // Merge any local-only cache to cloud if newly discovered
+        // Merge localCache and serverCache safely (local valid scan never gets erased by server)
         const local = await storageGet(["ceisa_scan_cache"]);
         const localCache = (local.ceisa_scan_cache && typeof local.ceisa_scan_cache === "object") ? local.ceisa_scan_cache : {};
+        const mergedCache = { ...serverCache };
         const unsyncedCacheRows = [];
 
         for (const [k, v] of Object.entries(localCache)) {
-            if (!serverCache[k] && v) {
-                serverCache[k] = v;
-                const regNo = sanitizeRegistrationItem(v.registrationNumber || k);
-                if (regNo) {
-                    unsyncedCacheRows.push({
-                        registration_number: regNo,
-                        document_number: v.documentNumber || null,
-                        document_type: v.documentType || null,
-                        company_name: v.companyName || null,
-                        location: v.location || null,
-                        status: v.status || null,
-                        row_date: (v.rowDate && /^\d{4}-\d{2}-\d{2}$/.test(v.rowDate)) ? v.rowDate : null,
-                        timestamp: typeof v.timestamp === "number" ? v.timestamp : Date.now(),
-                        raw_data: v,
-                        updated_at: new Date().toISOString()
-                    });
+            if (!v) continue;
+            const sItem = mergedCache[k];
+            const localHasStatus = Boolean(v.status && v.status !== "");
+            const serverHasStatus = Boolean(sItem && sItem.status && sItem.status !== "");
+            const localTs = Number(v.timestamp || 0);
+            const serverTs = Number(sItem?.timestamp || 0);
+
+            // Local wins if server doesn't have it, or server has no status while local does, or local is newer with valid status
+            if (!sItem || (!serverHasStatus && localHasStatus) || (localHasStatus && localTs >= serverTs)) {
+                mergedCache[k] = v;
+                if (localHasStatus) {
+                    const regNo = sanitizeRegistrationItem(v.registrationNumber || k);
+                    if (regNo) {
+                        unsyncedCacheRows.push({
+                            registration_number: regNo,
+                            document_number: v.documentNumber || null,
+                            document_type: v.documentType || null,
+                            company_name: v.companyName || null,
+                            location: v.location || null,
+                            status: v.status,
+                            row_date: (v.rowDate && /^\d{4}-\d{2}-\d{2}$/.test(v.rowDate)) ? v.rowDate : null,
+                            timestamp: localTs || Date.now(),
+                            raw_data: v,
+                            updated_at: new Date().toISOString()
+                        });
+                    }
                 }
             }
         }
 
-        // Prepare local storage payload
+        // Check against current local storage to only update and broadcast on ACTUAL changes
+        const currentStored = await storageGet([
+            "ceisa_completed_numbers",
+            "ceisa_pibpeb_numbers",
+            `ceisa_completed_numbers_${activeDate}`,
+            `ceisa_pibpeb_numbers_${activeDate}`
+        ]);
+
+        let hasNumberChanges = false;
         const storagePayload = {
-            ceisa_scan_cache: serverCache,
+            ceisa_scan_cache: mergedCache,
             ceisa_last_supabase_sync: Date.now(),
             ceisa_supabase_status: "connected"
         };
 
         for (const [d, list] of Object.entries(serverCompletedByDate)) {
-            storagePayload[`ceisa_completed_numbers_${d}`] = list;
+            const currentList = Array.isArray(currentStored[`ceisa_completed_numbers_${d}`])
+                ? currentStored[`ceisa_completed_numbers_${d}`]
+                : [];
+            if (!areArraysEqual(currentList, list)) {
+                storagePayload[`ceisa_completed_numbers_${d}`] = list;
+                hasNumberChanges = true;
+            }
         }
         for (const [d, list] of Object.entries(serverPibPebByDate)) {
-            storagePayload[`ceisa_pibpeb_numbers_${d}`] = list;
+            const currentList = Array.isArray(currentStored[`ceisa_pibpeb_numbers_${d}`])
+                ? currentStored[`ceisa_pibpeb_numbers_${d}`]
+                : [];
+            if (!areArraysEqual(currentList, list)) {
+                storagePayload[`ceisa_pibpeb_numbers_${d}`] = list;
+                hasNumberChanges = true;
+            }
         }
 
-        if (serverCompletedByDate[activeDate]) {
-            storagePayload.ceisa_completed_numbers = serverCompletedByDate[activeDate];
+        if (serverCompletedByDate[activeDate] !== undefined) {
+            const currentList = Array.isArray(currentStored.ceisa_completed_numbers)
+                ? currentStored.ceisa_completed_numbers
+                : [];
+            if (!areArraysEqual(currentList, serverCompletedByDate[activeDate])) {
+                storagePayload.ceisa_completed_numbers = serverCompletedByDate[activeDate];
+                hasNumberChanges = true;
+            }
         }
-        if (serverPibPebByDate[activeDate]) {
-            storagePayload.ceisa_pibpeb_numbers = serverPibPebByDate[activeDate];
+        if (serverPibPebByDate[activeDate] !== undefined) {
+            const currentList = Array.isArray(currentStored.ceisa_pibpeb_numbers)
+                ? currentStored.ceisa_pibpeb_numbers
+                : [];
+            if (!areArraysEqual(currentList, serverPibPebByDate[activeDate])) {
+                storagePayload.ceisa_pibpeb_numbers = serverPibPebByDate[activeDate];
+                hasNumberChanges = true;
+            }
         }
 
         await storageSet(storagePayload);
@@ -334,7 +477,10 @@ async function syncWithSupabase() {
             }).catch(() => {});
         }
 
-        await broadcastRefreshColor();
+        // Only broadcast REFRESH_COLOR if numbers actually changed or new cache arrived
+        if (hasNumberChanges || unsyncedCacheRows.length > 0) {
+            await broadcastRefreshColor();
+        }
 
         isSupabaseSyncing = false;
         return true;

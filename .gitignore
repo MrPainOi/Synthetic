@@ -8,6 +8,10 @@ node_modules/
 *.env
 !.env.example
 
+# Konfigurasi extension dengan credentials (gunakan config.example.js sebagai template)
+config.js
+!config.example.js
+
 # Temporary & Download directories
 temp/
 tmp/

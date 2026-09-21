@@ -70,12 +70,6 @@ function initDashboard() {
         });
     }
 
-    async function saveAllDataDashboard() {
-        await saveCompletedNumbers();
-        await savePibPebNumbers();
-        showToast("💾 Seluruh data berhasil disimpan & disinkronkan ke Supabase Cloud!");
-    }
-
     if (saveAllBtn) saveAllBtn.addEventListener("click", saveAllDataDashboard);
     if (saveCompletedBtn) saveCompletedBtn.addEventListener("click", saveAllDataDashboard);
     if (savePibPebBtn) savePibPebBtn.addEventListener("click", saveAllDataDashboard);
@@ -288,6 +282,12 @@ async function loadDashboardData() {
                 return (item.nomor_daftar || item.registrationNumber || item.nomor_dokumen || item.id || "").trim();
             }
             return String(item || "").trim();
+        }).map(s => {
+            const clean = s.replace(/\D/g, "");
+            if (clean.length >= 1 && clean.length <= 6) {
+                return clean.padStart(6, "0");
+            }
+            return s;
         }).filter(s => s && s !== "[object Object]" && !s.includes("[object") && !s.startsWith("PEB-USER-"));
     }
 
@@ -371,107 +371,102 @@ async function loadDashboardData() {
     }
 }
 
-async function saveCompletedNumbers() {
+function parseRegistrationNumbersFromText(text) {
+    if (!text) return [];
+    const rawTokens = String(text).split(/[\r\n,;]+/);
+    const result = [];
+    const seen = new Set();
+
+    for (const rawToken of rawTokens) {
+        const line = rawToken.trim();
+        if (!line) continue;
+
+        const parts = line.split(/\s+/);
+        for (const part of parts) {
+            const trimmed = part.trim();
+            if (!trimmed) continue;
+
+            const digits = trimmed.replace(/\D/g, "");
+            if (digits.length >= 1 && digits.length <= 6) {
+                const padded = digits.padStart(6, "0");
+                if (!seen.has(padded)) {
+                    seen.add(padded);
+                    result.push(padded);
+                }
+            } else if (digits.length > 6) {
+                const matches = trimmed.match(/\b\d{6}\b/g) || digits.match(/\d{6}/g);
+                if (matches) {
+                    for (const m of matches) {
+                        const padded = m.padStart(6, "0");
+                        if (!seen.has(padded)) {
+                            seen.add(padded);
+                            result.push(padded);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return result;
+}
+
+async function saveAllDataDashboard() {
     const datePicker = document.getElementById("scanDate");
     const chosenDate = datePicker ? datePicker.value || todayISO() : todayISO();
 
-    const input = document.getElementById("completedInput").value || "";
-    const rawMatches = input.match(/\b\d{6}\b/g) || [];
+    const completedInput = document.getElementById("completedInput");
+    const pibPebInput = document.getElementById("pibPebInput");
 
-    const uniqueList = [];
-    const seen = new Set();
-    for (const code of rawMatches) {
-        const cleaned = code.trim();
-        if (!seen.has(cleaned)) {
-            seen.add(cleaned);
-            uniqueList.push(cleaned);
-        }
-    }
+    // Read both inputs synchronously up front before ANY async calls!
+    const rawCompleted = completedInput ? completedInput.value : "";
+    const rawPibPeb = pibPebInput ? pibPebInput.value : "";
+
+    const uniqueCompleted = parseRegistrationNumbersFromText(rawCompleted);
+    const uniquePibPeb = parseRegistrationNumbersFromText(rawPibPeb);
+
+    // Update UI immediately with formatted 6-digit values
+    if (completedInput) completedInput.value = uniqueCompleted.join("\n");
+    if (pibPebInput) pibPebInput.value = uniquePibPeb.join("\n");
 
     const payload = {
-        ceisa_completed_numbers: uniqueList
+        ceisa_completed_numbers: uniqueCompleted,
+        ceisa_pibpeb_numbers: uniquePibPeb
     };
-    payload[`ceisa_completed_numbers_${chosenDate}`] = uniqueList;
+    payload[`ceisa_completed_numbers_${chosenDate}`] = uniqueCompleted;
+    payload[`ceisa_pibpeb_numbers_${chosenDate}`] = uniquePibPeb;
     await storageSet(payload);
 
-    const currentData = await storageGet([`ceisa_pibpeb_numbers_${chosenDate}`, "ceisa_pibpeb_numbers", "ceisa_scan_cache"]);
-    const activePibPeb = Array.isArray(currentData[`ceisa_pibpeb_numbers_${chosenDate}`])
-        ? currentData[`ceisa_pibpeb_numbers_${chosenDate}`]
-        : (currentData.ceisa_pibpeb_numbers || []);
+    const currentData = await storageGet(["ceisa_scan_cache"]);
+    const cache = (currentData.ceisa_scan_cache && typeof currentData.ceisa_scan_cache === "object")
+        ? currentData.ceisa_scan_cache
+        : {};
 
-    if (typeof pushExactStateToWifiServer === "function") {
+    if (typeof pushExactStateToSupabase === "function") {
+        await pushExactStateToSupabase(
+            uniqueCompleted,
+            uniquePibPeb,
+            cache,
+            chosenDate
+        );
+    } else if (typeof pushExactStateToWifiServer === "function") {
         await pushExactStateToWifiServer(
-            uniqueList,
-            activePibPeb,
-            currentData.ceisa_scan_cache || {},
+            uniqueCompleted,
+            uniquePibPeb,
+            cache,
             chosenDate
         );
     }
 
-    showToast("Nomor Selesai (Hijau) disimpan & tersinkronisasi!");
-    await loadDashboardData();
-
-    // Broadcast REFRESH_COLOR to tabs
-    try {
-        if (typeof chrome !== "undefined" && chrome.tabs && chrome.tabs.query) {
-            const tabs = await chrome.tabs.query({ url: "https://portal.beacukai.go.id/*" });
-            tabs.forEach(tab => {
-                chrome.tabs.sendMessage(tab.id, { type: "REFRESH_COLOR" });
-            });
-        }
-    } catch (_) {}
-}
-
-async function savePibPebNumbers() {
-    const datePicker = document.getElementById("scanDate");
-    const chosenDate = datePicker ? datePicker.value || todayISO() : todayISO();
-
-    const input = document.getElementById("pibPebInput").value || "";
-    const rawMatches = input.match(/\b\d{6}\b/g) || [];
-
-    const uniqueList = [];
-    const seen = new Set();
-    for (const code of rawMatches) {
-        const cleaned = code.trim();
-        if (!seen.has(cleaned)) {
-            seen.add(cleaned);
-            uniqueList.push(cleaned);
-        }
+    if (typeof broadcastRefreshColor === "function") {
+        await broadcastRefreshColor();
     }
 
-    const payload = {
-        ceisa_pibpeb_numbers: uniqueList
-    };
-    payload[`ceisa_pibpeb_numbers_${chosenDate}`] = uniqueList;
-    await storageSet(payload);
-
-    const currentData = await storageGet([`ceisa_completed_numbers_${chosenDate}`, "ceisa_completed_numbers", "ceisa_scan_cache"]);
-    const activeCompleted = Array.isArray(currentData[`ceisa_completed_numbers_${chosenDate}`])
-        ? currentData[`ceisa_completed_numbers_${chosenDate}`]
-        : (currentData.ceisa_completed_numbers || []);
-
-    if (typeof pushExactStateToWifiServer === "function") {
-        await pushExactStateToWifiServer(
-            activeCompleted,
-            uniqueList,
-            currentData.ceisa_scan_cache || {},
-            chosenDate
-        );
-    }
-
-    showToast("Nomor Selesai PIB/PEB disimpan & tersinkronisasi!");
+    showToast("💾 Seluruh data berhasil disimpan & disinkronkan ke Supabase Cloud!");
     await loadDashboardData();
-
-    // Broadcast REFRESH_COLOR to tabs
-    try {
-        if (typeof chrome !== "undefined" && chrome.tabs && chrome.tabs.query) {
-            const tabs = await chrome.tabs.query({ url: "https://portal.beacukai.go.id/*" });
-            tabs.forEach(tab => {
-                chrome.tabs.sendMessage(tab.id, { type: "REFRESH_COLOR" });
-            });
-        }
-    } catch (_) {}
 }
+
+const saveCompletedNumbers = saveAllDataDashboard;
+const savePibPebNumbers = saveAllDataDashboard;
 
 function copyText(textareaId, toastMsg) {
     const textarea = document.getElementById(textareaId);

@@ -93,11 +93,57 @@ function cleanNumberList(list) {
             return (item.nomor_daftar || item.registrationNumber || item.nomor_dokumen || item.id || "").trim();
         }
         return String(item || "").trim();
+    }).map(s => {
+        const clean = s.replace(/\D/g, "");
+        if (clean.length >= 1 && clean.length <= 6) {
+            return clean.padStart(6, "0");
+        }
+        return s;
     }).filter(s => s && s !== "[object Object]" && !s.includes("[object") && !s.startsWith("PEB-USER-"));
+}
+
+function parseRegistrationNumbersFromText(text) {
+    if (!text) return [];
+    const rawTokens = String(text).split(/[\r\n,;]+/);
+    const result = [];
+    const seen = new Set();
+
+    for (const rawToken of rawTokens) {
+        const line = rawToken.trim();
+        if (!line) continue;
+
+        const parts = line.split(/\s+/);
+        for (const part of parts) {
+            const trimmed = part.trim();
+            if (!trimmed) continue;
+
+            const digits = trimmed.replace(/\D/g, "");
+            if (digits.length >= 1 && digits.length <= 6) {
+                const padded = digits.padStart(6, "0");
+                if (!seen.has(padded)) {
+                    seen.add(padded);
+                    result.push(padded);
+                }
+            } else if (digits.length > 6) {
+                const matches = trimmed.match(/\b\d{6}\b/g) || digits.match(/\d{6}/g);
+                if (matches) {
+                    for (const m of matches) {
+                        const padded = m.padStart(6, "0");
+                        if (!seen.has(padded)) {
+                            seen.add(padded);
+                            result.push(padded);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return result;
 }
 
 async function loadCompleted(chosenDate) {
     if (!completedNumbers) return;
+    if (document.activeElement === completedNumbers) return;
     const date = chosenDate || (dateInput ? dateInput.value : todayISO());
     const data = await storageGet([`ceisa_completed_numbers_${date}`, "ceisa_completed_numbers"]);
     const raw = Array.isArray(data[`ceisa_completed_numbers_${date}`])
@@ -107,62 +153,9 @@ async function loadCompleted(chosenDate) {
     completedNumbers.value = numbers.join("\n");
 }
 
-async function saveCompleted() {
-    if (!completedNumbers) return;
-    const date = dateInput ? dateInput.value || todayISO() : todayISO();
-    const values = completedNumbers.value
-        .split(/[\s,;]+/)
-        .map(value => value.trim())
-        .filter(value => /^\d{6}$/.test(value));
-
-    const unique = [...new Set(values)];
-
-    const payload = {
-        ceisa_completed_numbers: unique
-    };
-    payload[`ceisa_completed_numbers_${date}`] = unique;
-
-    await storageSet(payload);
-
-    completedNumbers.value = unique.join("\n");
-
-    const currentData = await storageGet([`ceisa_pibpeb_numbers_${date}`, "ceisa_pibpeb_numbers", "ceisa_scan_cache"]);
-    const activePibPeb = Array.isArray(currentData[`ceisa_pibpeb_numbers_${date}`])
-        ? currentData[`ceisa_pibpeb_numbers_${date}`]
-        : (currentData.ceisa_pibpeb_numbers || []);
-
-    if (typeof pushExactStateToWifiServer === "function") {
-        await pushExactStateToWifiServer(
-            unique,
-            activePibPeb,
-            currentData.ceisa_scan_cache || {},
-            date
-        );
-    }
-
-    try {
-        const tabs = await chrome.tabs.query({
-            active: true,
-            currentWindow: true
-        });
-
-        if (tabs[0]?.id) {
-            await chrome.tabs.sendMessage(tabs[0].id, {
-                type: "REFRESH_COLOR"
-            });
-        }
-    } catch (_) {}
-
-    setStatus("TERSIMPAN");
-    setTimeout(() => {
-        if (statusText && statusText.textContent === "TERSIMPAN") {
-            setStatus("SIAP");
-        }
-    }, 1200);
-}
-
 async function loadPibPeb(chosenDate) {
     if (!pibPebNumbers) return;
+    if (document.activeElement === pibPebNumbers) return;
     const date = chosenDate || (dateInput ? dateInput.value : todayISO());
     const data = await storageGet([`ceisa_pibpeb_numbers_${date}`, "ceisa_pibpeb_numbers"]);
     const raw = Array.isArray(data[`ceisa_pibpeb_numbers_${date}`])
@@ -172,59 +165,64 @@ async function loadPibPeb(chosenDate) {
     pibPebNumbers.value = numbers.join("\n");
 }
 
-async function savePibPeb() {
-    if (!pibPebNumbers) return;
+async function saveAllData() {
     const date = dateInput ? dateInput.value || todayISO() : todayISO();
-    const values = pibPebNumbers.value
-        .split(/[\s,;]+/)
-        .map(value => value.trim())
-        .filter(value => /^\d{6}$/.test(value));
 
-    const unique = [...new Set(values)];
+    // Read both textareas synchronously up front before ANY async operations
+    const rawCompleted = completedNumbers ? completedNumbers.value : "";
+    const rawPibPeb = pibPebNumbers ? pibPebNumbers.value : "";
+
+    const cleanCompleted = parseRegistrationNumbersFromText(rawCompleted);
+    const cleanPibPeb = parseRegistrationNumbersFromText(rawPibPeb);
+
+    // Update UI immediately with formatted 6-digit values
+    if (completedNumbers) completedNumbers.value = cleanCompleted.join("\n");
+    if (pibPebNumbers) pibPebNumbers.value = cleanPibPeb.join("\n");
 
     const payload = {
-        ceisa_pibpeb_numbers: unique
+        ceisa_completed_numbers: cleanCompleted,
+        ceisa_pibpeb_numbers: cleanPibPeb
     };
-    payload[`ceisa_pibpeb_numbers_${date}`] = unique;
+    payload[`ceisa_completed_numbers_${date}`] = cleanCompleted;
+    payload[`ceisa_pibpeb_numbers_${date}`] = cleanPibPeb;
 
     await storageSet(payload);
 
-    pibPebNumbers.value = unique.join("\n");
+    const currentData = await storageGet(["ceisa_scan_cache"]);
+    const cache = (currentData.ceisa_scan_cache && typeof currentData.ceisa_scan_cache === "object")
+        ? currentData.ceisa_scan_cache
+        : {};
 
-    const currentData = await storageGet([`ceisa_completed_numbers_${date}`, "ceisa_completed_numbers", "ceisa_scan_cache"]);
-    const activeCompleted = Array.isArray(currentData[`ceisa_completed_numbers_${date}`])
-        ? currentData[`ceisa_completed_numbers_${date}`]
-        : (currentData.ceisa_completed_numbers || []);
-
-    if (typeof pushExactStateToWifiServer === "function") {
+    if (typeof pushExactStateToSupabase === "function") {
+        await pushExactStateToSupabase(
+            cleanCompleted,
+            cleanPibPeb,
+            cache,
+            date
+        );
+    } else if (typeof pushExactStateToWifiServer === "function") {
         await pushExactStateToWifiServer(
-            activeCompleted,
-            unique,
-            currentData.ceisa_scan_cache || {},
+            cleanCompleted,
+            cleanPibPeb,
+            cache,
             date
         );
     }
 
-    try {
-        const tabs = await chrome.tabs.query({
-            active: true,
-            currentWindow: true
-        });
-
-        if (tabs[0]?.id) {
-            await chrome.tabs.sendMessage(tabs[0].id, {
-                type: "REFRESH_COLOR"
-            });
-        }
-    } catch (_) {}
+    if (typeof broadcastRefreshColor === "function") {
+        await broadcastRefreshColor();
+    }
 
     setStatus("TERSIMPAN");
     setTimeout(() => {
-        if (statusText && statusText.textContent === "TERSIMPAN") {
+        if (statusText && (statusText.textContent === "TERSIMPAN" || statusText.textContent === "DATA TERSIMPAN!")) {
             setStatus("SIAP");
         }
-    }, 1200);
+    }, 1500);
 }
+
+const saveCompleted = saveAllData;
+const savePibPeb = saveAllData;
 
 // ============================================================
 // INITIALIZATION & EVENT LISTENERS
@@ -284,6 +282,9 @@ document.addEventListener("DOMContentLoaded", async () => {
             if (changes.ceisa_scan_stats) {
                 updateStats(changes.ceisa_scan_stats.newValue);
             }
+            if (changes.ceisa_scan_status) {
+                setStatus(String(changes.ceisa_scan_status.newValue || "SIAP").toUpperCase());
+            }
         }
     });
 });
@@ -301,17 +302,6 @@ if (openDashboardButton) {
     openDashboardButton.onclick = () => {
         chrome.tabs.create({ url: chrome.runtime.getURL("dashboard.html") });
     };
-}
-
-async function saveAllData() {
-    await saveCompleted();
-    await savePibPeb();
-    setStatus("DATA TERSIMPAN!");
-    setTimeout(() => {
-        if (statusText && statusText.textContent === "DATA TERSIMPAN!") {
-            setStatus("SIAP");
-        }
-    }, 1500);
 }
 
 if (saveAllDataButton) {
@@ -415,20 +405,7 @@ if (stopButton) {
     };
 }
 
-if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.onChanged) {
-    chrome.storage.onChanged.addListener(changes => {
-        if (changes.ceisa_scan_status) {
-            setStatus(changes.ceisa_scan_status.newValue?.toUpperCase() || "SIAP");
-        }
-        if (changes.ceisa_scan_stats) {
-            updateStats(changes.ceisa_scan_stats.newValue);
-        }
-        if (changes.ceisa_completed_numbers || changes.ceisa_pibpeb_numbers) {
-            loadCompleted();
-            loadPibPeb();
-        }
-    });
-}
+
 
 if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onMessage) {
     chrome.runtime.onMessage.addListener(message => {

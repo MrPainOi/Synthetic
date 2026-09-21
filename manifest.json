@@ -34,6 +34,7 @@
                 "https://portal.beacukai.go.id/*"
             ],
             "js": [
+                "config.js",
                 "sync.js",
                 "content.js"
             ],
