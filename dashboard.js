@@ -47,10 +47,33 @@ function initDashboard() {
         });
     }
 
+    function updateSyncBadge() {
+        const badge = document.getElementById("wifiSyncStatus");
+        if (!badge) return;
+        storageGet(["ceisa_supabase_status"]).then(data => {
+            if (data.ceisa_supabase_status === "connected") {
+                badge.textContent = "⚡ Supabase Cloud: Terhubung";
+                badge.style.background = "rgba(16, 185, 129, 0.15)";
+                badge.style.color = "#10b981";
+                badge.style.borderColor = "rgba(16, 185, 129, 0.3)";
+            } else if (data.ceisa_supabase_status === "offline") {
+                badge.textContent = "⚠️ Cloud Sync: Offline";
+                badge.style.background = "rgba(239, 68, 68, 0.15)";
+                badge.style.color = "#ef4444";
+                badge.style.borderColor = "rgba(239, 68, 68, 0.3)";
+            } else {
+                badge.textContent = "⚡ Supabase Cloud: Aktif";
+                badge.style.background = "rgba(16, 185, 129, 0.15)";
+                badge.style.color = "#10b981";
+                badge.style.borderColor = "rgba(16, 185, 129, 0.3)";
+            }
+        });
+    }
+
     async function saveAllDataDashboard() {
         await saveCompletedNumbers();
         await savePibPebNumbers();
-        showToast("💾 Seluruh data berhasil disimpan ke Server & Wi-Fi!");
+        showToast("💾 Seluruh data berhasil disimpan & disinkronkan ke Supabase Cloud!");
     }
 
     if (saveAllBtn) saveAllBtn.addEventListener("click", saveAllDataDashboard);
@@ -63,16 +86,19 @@ function initDashboard() {
 
     if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.onChanged) {
         chrome.storage.onChanged.addListener((changes, area) => {
-            if (area === "local" && (changes.ceisa_scan_cache || changes.ceisa_completed_numbers || changes.ceisa_pibpeb_numbers)) {
+            if (area === "local" && (changes.ceisa_scan_cache || changes.ceisa_completed_numbers || changes.ceisa_pibpeb_numbers || changes.ceisa_supabase_status)) {
                 loadDashboardData();
+                updateSyncBadge();
             }
         });
     }
 
     window.addEventListener("ceisa_storage_changed", () => {
         loadDashboardData();
+        updateSyncBadge();
     });
 
+    updateSyncBadge();
     loadDashboardData();
 }
 

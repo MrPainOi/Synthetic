@@ -16,7 +16,7 @@
 
     "host_permissions": [
         "https://portal.beacukai.go.id/*",
-        "https://*.firebasedatabase.app/*"
+        "https://*.supabase.co/*"
     ],
 
     "background": {

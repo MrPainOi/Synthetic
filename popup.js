@@ -230,25 +230,30 @@ async function savePibPeb() {
 // INITIALIZATION & EVENT LISTENERS
 // ============================================================
 
-const wifiServerIpInput = document.getElementById("wifiServerIp");
-const saveWifiIpBtn = document.getElementById("saveWifiIpBtn");
 const wifiStatusBadge = document.getElementById("wifiStatusBadge");
 
 async function checkWifiStatus() {
     if (!wifiStatusBadge) return;
     try {
-        const url = await getWifiServerUrl();
-        if (wifiServerIpInput && !wifiServerIpInput.value) {
-            wifiServerIpInput.value = url.replace(/^https?:\/\//, "");
-        }
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 1500);
-        const res = await fetch(`${url}/api/sync`, { method: "GET", signal: controller.signal });
-        clearTimeout(timeoutId);
-        if (res.ok) {
+        const data = await storageGet(["ceisa_supabase_status"]);
+        if (data.ceisa_supabase_status === "connected") {
             wifiStatusBadge.textContent = "Terhubung";
             wifiStatusBadge.className = "wifi-status-on";
             return;
+        }
+        if (typeof SUPABASE_URL !== "undefined" && typeof getSupabaseHeaders === "function") {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 2000);
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/ceisa_sync_state?select=date&limit=1`, {
+                headers: getSupabaseHeaders(),
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+            if (res.ok) {
+                wifiStatusBadge.textContent = "Terhubung";
+                wifiStatusBadge.className = "wifi-status-on";
+                return;
+            }
         }
     } catch (_) {}
     wifiStatusBadge.textContent = "Offline";
@@ -282,15 +287,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
     });
 });
-
-if (saveWifiIpBtn && wifiServerIpInput) {
-    saveWifiIpBtn.onclick = async () => {
-        const inputVal = wifiServerIpInput.value.trim();
-        if (!inputVal) return;
-        await setWifiServerUrl(inputVal);
-        await checkWifiStatus();
-    };
-}
 
 if (toggleInfoBtn && infoContent) {
     toggleInfoBtn.onclick = () => {
