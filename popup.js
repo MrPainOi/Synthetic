@@ -85,6 +85,25 @@ async function loadLastDate() {
     await loadDataForDate(val);
 }
 
+function syncDateFromActiveCeisaTab() {
+    if (typeof chrome === "undefined" || !chrome.tabs) return;
+    try {
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+            if (!tabs || !tabs[0]?.id) return;
+            chrome.tabs.sendMessage(tabs[0].id, { type: "GET_CEISA_PORTAL_DATE" }, async (resp) => {
+                if (chrome.runtime.lastError) return;
+                if (resp && resp.date && dateInput && dateInput.value !== resp.date) {
+                    dateInput.value = resp.date;
+                    await storageSet({ ceisa_last_scan_date: resp.date });
+                    await loadDataForDate(resp.date);
+                    await loadCompleted(resp.date);
+                    await loadPibPeb(resp.date);
+                }
+            });
+        });
+    } catch (_) {}
+}
+
 function cleanNumberList(list) {
     if (!Array.isArray(list)) return [];
     return list.map(item => {
@@ -270,8 +289,19 @@ document.addEventListener("DOMContentLoaded", async () => {
         setStatus(String(statsData.ceisa_scan_status).toUpperCase());
     }
 
-    chrome.storage.onChanged.addListener((changes, area) => {
+    syncDateFromActiveCeisaTab();
+
+    chrome.storage.onChanged.addListener(async (changes, area) => {
         if (area === "local") {
+            if (changes.ceisa_last_scan_date && changes.ceisa_last_scan_date.newValue) {
+                const newDate = changes.ceisa_last_scan_date.newValue;
+                if (dateInput && dateInput.value !== newDate) {
+                    dateInput.value = newDate;
+                    await loadDataForDate(newDate);
+                    await loadCompleted(newDate);
+                    await loadPibPeb(newDate);
+                }
+            }
             const date = dateInput ? dateInput.value || todayISO() : todayISO();
             if (changes[`ceisa_completed_numbers_${date}`] || changes.ceisa_completed_numbers) {
                 loadCompleted(date);
@@ -408,10 +438,17 @@ if (stopButton) {
 
 
 if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onMessage) {
-    chrome.runtime.onMessage.addListener(message => {
+    chrome.runtime.onMessage.addListener(async message => {
         if (message.type === "SCAN_STATUS_UPDATE") {
             setStatus(String(message.status || "SIAP").toUpperCase());
             updateStats(message.stats);
+        } else if (message.type === "CEISA_PORTAL_DATE_CHANGED" && message.date) {
+            if (dateInput && dateInput.value !== message.date) {
+                dateInput.value = message.date;
+                await loadDataForDate(message.date);
+                await loadCompleted(message.date);
+                await loadPibPeb(message.date);
+            }
         }
     });
 }

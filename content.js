@@ -958,15 +958,23 @@
         if (!str) return null;
         const clean = String(str).trim();
 
-        if (/^\d{4}-\d{2}-\d{2}$/.test(clean)) {
-            return clean;
+        // 1. ISO format: YYYY-MM-DD
+        const isoMatches = Array.from(clean.matchAll(/\b(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})\b/g));
+        if (isoMatches.length > 0) {
+            const match = isoMatches[isoMatches.length - 1];
+            const year = match[1];
+            const month = String(match[2]).padStart(2, "0");
+            const day = String(match[3]).padStart(2, "0");
+            return `${year}-${month}-${day}`;
         }
 
-        const dmyMatch = clean.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
-        if (dmyMatch) {
-            const day = String(dmyMatch[1]).padStart(2, "0");
-            const month = String(dmyMatch[2]).padStart(2, "0");
-            const year = dmyMatch[3];
+        // 2. DMY format: DD/MM/YYYY or DD-MM-YYYY (handles date ranges e.g. "01/09/2026 - 21/09/2026")
+        const dmyMatches = Array.from(clean.matchAll(/\b(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})\b/g));
+        if (dmyMatches.length > 0) {
+            const match = dmyMatches[dmyMatches.length - 1];
+            const day = String(match[1]).padStart(2, "0");
+            const month = String(match[2]).padStart(2, "0");
+            const year = match[3];
             return `${year}-${month}-${day}`;
         }
 
@@ -976,24 +984,34 @@
     let lastDetectedPortalDate = null;
 
     function detectCeisaPortalDate() {
-        // Priority 1: Currently focused input on CEISA page
+        // Priority 1: Currently focused input on CEISA page if it contains a date
         if (document.activeElement && document.activeElement.tagName === "INPUT") {
             const val = parseDateString(document.activeElement.value);
             if (val) return val;
         }
 
-        // Priority 2: Check date filter inputs on CEISA page
-        const dateInputs = Array.from(document.querySelectorAll("input")).filter(input => {
-            const type = (input.type || "").toLowerCase();
-            const name = (input.name || "").toLowerCase();
-            const placeholder = (input.placeholder || "").toLowerCase();
-            const cls = (input.className || "").toLowerCase();
-            const id = (input.id || "").toLowerCase();
-            return type === "date" || name.includes("tanggal") || name.includes("date") ||
-                   placeholder.includes("tanggal") || placeholder.includes("date") ||
-                   cls.includes("date") || id.includes("date") || id.includes("tanggal");
-        });
+        // Priority 2: Scoped date filter inputs on CEISA page (Rule 3 compliant)
+        const DATE_INPUT_SELECTORS = [
+            'input[type="date"]',
+            'input[name*="tanggal" i]',
+            'input[name*="tgl" i]',
+            'input[name*="date" i]',
+            'input[id*="tanggal" i]',
+            'input[id*="tgl" i]',
+            'input[id*="date" i]',
+            'input[placeholder*="tanggal" i]',
+            'input[placeholder*="tgl" i]',
+            'input[placeholder*="date" i]',
+            'input[placeholder*="dd/mm/yyyy" i]',
+            'input[placeholder*="dd-mm-yyyy" i]',
+            'input[class*="datepicker" i]',
+            'input[class*="date-picker" i]',
+            'input[class*="flatpickr" i]',
+            'input.ant-picker-input > input',
+            'input.ant-calendar-picker-input'
+        ].join(", ");
 
+        const dateInputs = document.querySelectorAll(DATE_INPUT_SELECTORS);
         const dateValues = [];
         for (const input of dateInputs) {
             const val = parseDateString(input.value);
@@ -1017,6 +1035,12 @@
                 ceisa_last_scan_date: activeDate,
                 ceisa_scan_date: activeDate
             });
+            try {
+                chrome.runtime.sendMessage({
+                    type: "CEISA_PORTAL_DATE_CHANGED",
+                    date: activeDate
+                }).catch(() => {});
+            } catch (_) {}
             await Promise.all([
                 loadCompletedNumbers(),
                 loadPibPebNumbers(),
@@ -1026,7 +1050,7 @@
         }
     }
 
-    // Attach real-time input change listener to all date inputs on CEISA page
+    // Attach real-time input change & input interaction listeners to date inputs on CEISA page
     document.addEventListener("change", (e) => {
         if (e.target && e.target.tagName === "INPUT") {
             const val = parseDateString(e.target.value);
@@ -1043,6 +1067,16 @@
                 autoSyncDateFromCeisaPortal();
             }
         }
+    }, true);
+
+    // Click listener to catch calendar picker day clicks, search, or filter button triggers
+    let _portalClickSyncTimer = null;
+    document.addEventListener("click", () => {
+        if (_portalClickSyncTimer) clearTimeout(_portalClickSyncTimer);
+        _portalClickSyncTimer = setTimeout(() => {
+            _portalClickSyncTimer = null;
+            autoSyncDateFromCeisaPortal();
+        }, 300);
     }, true);
 
 
@@ -1392,7 +1426,7 @@
     // ========================================================
 
     chrome.runtime.onMessage.addListener(
-        message => {
+        (message, sender, sendResponse) => {
 
             // ------------------------------------------------
             // PDF RESULT
@@ -1477,6 +1511,16 @@
 
                 return;
 
+            }
+
+            if (
+                message.type === "GET_CEISA_PORTAL_DATE"
+            ) {
+                const detected = detectCeisaPortalDate();
+                if (typeof sendResponse === "function") {
+                    sendResponse({ date: detected || scanDate || todayISO() });
+                }
+                return false;
             }
 
         }
@@ -2489,6 +2533,7 @@
             }
             recolorTimer = setTimeout(() => {
                 recolorTimer = null;
+                autoSyncDateFromCeisaPortal();
                 recolorExistingRows();
             }, 600);
         });
@@ -2537,17 +2582,18 @@
     });
 
 
-    // Periodic background recolor (every 5s) to catch dynamically loaded CEISA rows
-    // Not for color accuracy — that's handled by storage.onChanged and REFRESH_COLOR.
+    // Periodic background auto-sync date from CEISA portal filter and recolor
     setInterval(() => {
+        autoSyncDateFromCeisaPortal();
         recolorExistingRows();
-    }, 5000);
+    }, 3000);
 
     // ========================================================
     // INITIAL
     // ========================================================
 
     async function initContentScript() {
+        await autoSyncDateFromCeisaPortal();
         await Promise.all([
             loadCompletedNumbers(),
             loadPibPebNumbers(),
