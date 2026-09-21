@@ -16,7 +16,9 @@
 
     "host_permissions": [
         "https://portal.beacukai.go.id/*",
-        "https://*.supabase.co/*"
+        "https://*.supabase.co/*",
+        "http://localhost/*",
+        "http://127.0.0.1/*"
     ],
 
     "background": {

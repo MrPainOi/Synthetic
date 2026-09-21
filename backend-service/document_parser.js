@@ -5,29 +5,59 @@ const path = require('path');
 
 const delay = ms => new Promise(res => setTimeout(res, ms));
 
-// Inisialisasi Gemini API client
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+// Helper inisialisasi Gemini API client
+function getAiClient(customKey) {
+    const key = customKey || process.env.GEMINI_API_KEY;
+    if (!key || !key.trim()) {
+        throw new Error("GEMINI_API_KEY belum diset. Silakan atur GEMINI_API_KEY di file .env atau melalui pengaturan.");
+    }
+    return new GoogleGenAI({ apiKey: key.trim() });
+}
 
-async function parseDocuments(pdfPaths) {
+async function parseDocuments(pdfPaths, onProgress = () => {}, customApiKey = null) {
     console.log(`Memproses ${pdfPaths.length} dokumen sekaligus...`);
+    onProgress({ step: 'init', message: `Memproses ${pdfPaths.length} dokumen sekaligus...`, totalFiles: pdfPaths.length });
     
     try {
+        const ai = getAiClient(customApiKey);
         const fileManager = ai.files;
         const uploadResults = [];
         const uploadedMeta = [];
         
         // Upload semua file ke Gemini
-        for (const pdfPath of pdfPaths) {
+        for (let i = 0; i < pdfPaths.length; i++) {
+            const pdfPath = pdfPaths[i];
             const fileName = path.basename(pdfPath);
             console.log(`Mengunggah: ${fileName}`);
+            onProgress({
+                step: 'upload',
+                file: fileName,
+                index: i,
+                total: pdfPaths.length,
+                status: 'running',
+                message: `Mengunggah ke AI: ${fileName}`
+            });
             const uploadResult = await fileManager.upload({
                 file: pdfPath,
                 mimeType: 'application/pdf',
             });
             uploadResults.push(uploadResult);
             uploadedMeta.push({ fileName, uri: uploadResult.uri, mimeType: uploadResult.mimeType });
+            onProgress({
+                step: 'upload',
+                file: fileName,
+                index: i,
+                total: pdfPaths.length,
+                status: 'done',
+                message: `Berhasil diunggah: ${fileName}`
+            });
         }
         console.log(`Semua file berhasil diunggah.`);
+        onProgress({
+            step: 'parsing',
+            status: 'running',
+            message: `Semua dokumen (${pdfPaths.length}) berhasil diunggah. Menghubungi Ray-OCR V.1...`
+        });
 
         const fileNamesList = uploadedMeta.map((f, i) => `${i + 1}. [File ${i + 1}]: "${f.fileName}"`).join('\n');
 
@@ -120,13 +150,23 @@ PENTING:
 
         let result;
         let attempt = 0;
-        let maxRetries = 5;
-        let modelsToTry = ['gemini-3.6-flash', 'gemini-3.6-flash', 'gemini-3.6-flash', 'gemini-3.6-flash', 'gemini-3.6-flash'];
+        let modelsToTry = [
+            'gemini-3.5-flash-lite',
+            'gemini-3.5-flash',
+            'gemini-3.8-flash',
+            'gemini-3.6-flash'
+        ];
+        let maxRetries = modelsToTry.length;
 
         while (attempt < maxRetries) {
             let modelName = modelsToTry[attempt];
             try {
                 console.log(`Mencoba ekstraksi & safecheck dengan model: ${modelName} (Percobaan ${attempt + 1}/${maxRetries})...`);
+                onProgress({
+                    step: 'ai',
+                    status: 'running',
+                    message: `Ray-OCR V.1: Menganalisis dokumen & mengekstrak data shipment...`
+                });
                 
                 // Susun array parts (menggabungkan semua file + prompt teks)
                 const requestParts = uploadResults.map(uploadRes => ({
@@ -145,13 +185,13 @@ PENTING:
                 });
                 break; // Keluar loop jika sukses
             } catch (apiErr) {
-                console.error(`  -> Gagal pada percobaan ${attempt + 1} (${modelName}):`, apiErr.message);
+                console.error(`  -> Gagal pada percobaan ${attempt + 1} (${modelName}):`, apiErr.message || apiErr);
                 attempt++;
                 if (attempt >= maxRetries) {
-                    throw new Error("Gagal mengekstrak dokumen setelah " + maxRetries + " kali percobaan karena server Google sedang sibuk.");
+                    throw new Error("Gagal mengekstrak dokumen: " + (apiErr.message || "Server Ray-OCR Engine sedang sibuk."));
                 }
-                console.log(`  -> Menunggu 10 detik sebelum mencoba lagi...`);
-                await delay(10000); // Tunggu 10 detik agar server API lebih lega
+                console.log(`  -> Menunggu 3 detik sebelum mencoba lagi...`);
+                await delay(3000);
             }
         }
         let jsonText = result.text;
@@ -323,7 +363,7 @@ PENTING:
             }
         }
         
-        // Log status safecheck di terminal
+        // Log status safecheck di terminal & onProgress
         if (parsedData.safeCheck) {
             console.log("\n=======================================================");
             console.log("             HASIL SAFECHECK DOKUMEN                   ");
@@ -345,18 +385,33 @@ PENTING:
                 parsedData.safeCheck.discrepanciesOrWarnings.forEach(w => console.warn(`   ! ${w}`));
             }
             console.log("=======================================================\n");
+
+            onProgress({
+                step: 'safecheck',
+                status: 'done',
+                message: `SafeCheck: ${parsedData.safeCheck.isRelated ? 'VALID / 1 Shipment' : 'PERINGATAN DOKUMEN'} (${parsedData.safeCheck.confidenceScore || 100}%)`,
+                safeCheck: parsedData.safeCheck
+            });
         }
 
         // Simpan hasil draft PEB
+        const draftsDir = path.join(__dirname, 'temp', 'drafts');
+        fs.mkdirSync(draftsDir, { recursive: true });
         const filename = 'Combined_Draft_' + Date.now() + '.json';
-        const draftPath = path.join(__dirname, 'temp', 'drafts', filename);
+        const draftPath = path.join(draftsDir, filename);
         fs.writeFileSync(draftPath, JSON.stringify(parsedData, null, 2));
         
         console.log(`Berhasil mengekstrak data! Tersimpan di: ${draftPath}`);
+        onProgress({
+            step: 'complete',
+            status: 'done',
+            message: `Ekstraksi dokumen selesai. Data siap dimuat ke formulir PEB.`
+        });
         return parsedData;
 
     } catch (err) {
         console.error('Error saat ekstraksi dokumen:', err.message || err);
+        throw err;
     }
 }
 
@@ -364,21 +419,35 @@ PENTING:
 if (require.main === module) {
     (async () => {
         const attachDir = path.join(__dirname, 'temp', 'attachments');
-        const files = fs.readdirSync(attachDir).filter(f => f.endsWith('.pdf'));
+        fs.mkdirSync(attachDir, { recursive: true });
+        let files = fs.readdirSync(attachDir).filter(f => f.endsWith('.pdf'));
+        let targetDir = attachDir;
+        
+        if (files.length === 0) {
+            const rootAttach = path.join(__dirname, '..', 'attachments');
+            if (fs.existsSync(rootAttach)) {
+                const rootPdfs = fs.readdirSync(rootAttach).filter(f => f.endsWith('.pdf'));
+                if (rootPdfs.length > 0) {
+                    files = rootPdfs;
+                    targetDir = rootAttach;
+                }
+            }
+        }
         
         if (files.length > 0) {
-            console.log(`Ditemukan ${files.length} dokumen PDF di folder temp/attachments.`);
-            // Gabungkan path lengkap
-            const pdfPaths = files.map(file => path.join(attachDir, file));
+            console.log(`Ditemukan ${files.length} dokumen PDF di folder ${targetDir}.`);
+            const pdfPaths = files.map(file => path.join(targetDir, file));
             
             // Proses SEMUA file sekaligus sebagai satu shipment
-            await parseDocuments(pdfPaths);
+            await parseDocuments(pdfPaths, (p) => {
+                if (p.status === 'done') console.log(`  -> ${p.message}`);
+            });
             console.log("---------------------------------------------------");
             console.log("Proses ekstraksi multi-dokumen selesai.");
         } else {
-            console.log("Tidak ada file PDF di folder temp/attachments untuk dites.");
+            console.log("Tidak ada file PDF di folder temp/attachments atau attachments/ untuk dites.");
         }
     })();
 }
 
-module.exports = { parseDocuments };
+module.exports = { parseDocuments, getAiClient };

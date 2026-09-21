@@ -356,6 +356,17 @@ function handleStepperNext() {
     }
 }
 
+// HELPER GUESS DOCUMENT TYPE (GLOBAL SCOPE)
+function guessDocType(filename) {
+    if (!filename) return 'DOKUMEN PABEAN';
+    const lower = filename.toLowerCase();
+    if (lower.includes('inv') || lower.includes('faktur') || lower.includes('commercial')) return 'INVOICE';
+    if (lower.includes('pack') || lower.includes('pl.') || lower.includes('pl_') || lower.includes('list')) return 'PACKING LIST';
+    if (lower.includes('bl') || lower.includes('b/l') || lower.includes('lading') || lower.includes('waybill') || lower.includes('bapsin')) return 'BILL OF LADING';
+    if (lower.includes('coo') || lower.includes('cert') || lower.includes('origin')) return 'CERTIFICATE';
+    return 'DOKUMEN PABEAN';
+}
+
 // LOAD PEB DRAFT DATA
 function loadDraftData(data, shouldSave = true) {
     if (!data) return;
@@ -385,17 +396,52 @@ function loadDraftData(data, shouldSave = true) {
     setVal('blNumber', data.blNumber);
     setVal('blDate', data.blDate);
 
-    // Resolve Document Filenames for Table 1 Links
+    // Resolve Document Filenames for Table 1 Links (Otomatis terhubung dengan file yang diunggah)
     window._currentDocMap = window._currentDocMap || {};
     const docList = data.safeCheck?.documentList || [];
+
+    // Prioritaskan file yang diunggah dalam sesi ini
+    const uploadedFiles = window._lastUploadedFiles || [];
+    const primaryFile = window._lastUploadedFile || uploadedFiles[0] || null;
+    const primaryBlob = window._lastUploadedBlobUrl || (primaryFile ? window._docFileMap[primaryFile.name] : null);
+
+    let invFileName = null;
+    let plFileName = null;
+    let blFileName = null;
+
+    if (uploadedFiles.length > 0) {
+        uploadedFiles.forEach(f => {
+            const dt = guessDocType(f.name);
+            if (dt === 'INVOICE' && !invFileName) invFileName = f.name;
+            else if (dt === 'PACKING LIST' && !plFileName) plFileName = f.name;
+            else if (dt === 'BILL OF LADING' && !blFileName) blFileName = f.name;
+        });
+    }
+
+    // Jika 1 file (misal SB22623-10.pdf) berisi semua lampiran shipment, jadikan default untuk ketiganya
+    if (primaryFile) {
+        if (!invFileName) invFileName = primaryFile.name;
+        if (!plFileName) plFileName = primaryFile.name;
+        if (!blFileName) blFileName = primaryFile.name;
+    }
 
     const invDoc = docList.find(d => /invoice/i.test(d.documentType || '') || /inv/i.test(d.fileName || ''));
     const plDoc = docList.find(d => /packing/i.test(d.documentType || '') || /pl/i.test(d.fileName || ''));
     const blDoc = docList.find(d => /lading/i.test(d.documentType || '') || /bl/i.test(d.fileName || ''));
 
-    window._currentDocMap.INVOICE = invDoc?.fileName || (data.invoiceNumber ? `INV.${data.invoiceNumber}.pdf` : 'INV.98007744.pdf');
-    window._currentDocMap.PACKING_LIST = plDoc?.fileName || (data.packingListNumber ? `PL.${data.packingListNumber}.pdf` : 'PL.98007744.pdf');
-    window._currentDocMap.BILL_OF_LADING = blDoc?.fileName || (data.blNumber ? `BL BAPSIN0153818 PT VALEO AC-RBB47.pdf` : 'BL BAPSIN0153818 PT VALEO AC-RBB47.pdf');
+    window._currentDocMap.INVOICE = invFileName || invDoc?.fileName || (data.invoiceNumber ? `INV.${data.invoiceNumber}.pdf` : 'INV.98007744.pdf');
+    window._currentDocMap.PACKING_LIST = plFileName || plDoc?.fileName || (data.packingListNumber ? `PL.${data.packingListNumber}.pdf` : 'PL.98007744.pdf');
+    window._currentDocMap.BILL_OF_LADING = blFileName || blDoc?.fileName || (data.blNumber ? `BL BAPSIN0153818 PT VALEO AC-RBB47.pdf` : 'BL BAPSIN0153818 PT VALEO AC-RBB47.pdf');
+
+    // Otomatis mapping nama file ke blobUrl dokumen yang diunggah agar saat dibuka tidak meminta link ulang!
+    if (primaryBlob) {
+        window._docFileMap[window._currentDocMap.INVOICE] = primaryBlob;
+        window._docFileMap[window._currentDocMap.PACKING_LIST] = primaryBlob;
+        window._docFileMap[window._currentDocMap.BILL_OF_LADING] = primaryBlob;
+        if (invDoc?.fileName) window._docFileMap[invDoc.fileName] = primaryBlob;
+        if (plDoc?.fileName) window._docFileMap[plDoc.fileName] = primaryBlob;
+        if (blDoc?.fileName) window._docFileMap[blDoc.fileName] = primaryBlob;
+    }
 
     const tagInv = document.getElementById('tagFileInvoice');
     if (tagInv) tagInv.textContent = window._currentDocMap.INVOICE;
@@ -1091,21 +1137,54 @@ function openCeisaDocViewer({ docType, fileName, docNumber, docDate }) {
         iframe.src = 'about:blank';
     }
 
-    // 1. If user previously uploaded/attached this file in current session
-    if (window._docFileMap[window._activeModalFileName]) {
-        const blobUrl = window._docFileMap[window._activeModalFileName];
-        if (iframe) iframe.src = blobUrl;
+    // 1. Resolve blobUrl from memory
+    let blobUrl = window._docFileMap[window._activeModalFileName];
+
+    // Jika tidak cocok langsung, cari secara case-insensitive atau dari substring nama file
+    if (!blobUrl) {
+        const targetLower = window._activeModalFileName.toLowerCase();
+        for (const [k, v] of Object.entries(window._docFileMap)) {
+            if (k.toLowerCase() === targetLower || k.toLowerCase().includes(targetLower) || targetLower.includes(k.toLowerCase())) {
+                blobUrl = v;
+                window._activeModalFileName = k;
+                break;
+            }
+        }
+    }
+
+    // Jika masih belum ada, gunakan dokumen utama yang diunggah pengguna pada sesi ini
+    if (!blobUrl && window._lastUploadedBlobUrl) {
+        blobUrl = window._lastUploadedBlobUrl;
+        if (window._lastUploadedFile) {
+            window._activeModalFileName = window._lastUploadedFile.name;
+        }
+    }
+
+    // Jika masih belum ada, cek apakah ada file apapun di _docFileMap
+    if (!blobUrl && Object.keys(window._docFileMap).length > 0) {
+        const firstKey = Object.keys(window._docFileMap)[0];
+        blobUrl = window._docFileMap[firstKey];
+        window._activeModalFileName = firstKey;
+    }
+
+    if (blobUrl) {
+        if (titleEl) titleEl.textContent = window._activeModalFileName;
+        if (fallbackFileName) fallbackFileName.textContent = window._activeModalFileName;
+        if (iframe) {
+            iframe.style.display = 'block';
+            iframe.src = blobUrl;
+        }
         if (btnDownload) {
             btnDownload.href = blobUrl;
             btnDownload.download = window._activeModalFileName;
         }
         if (btnOpenTab) btnOpenTab.href = blobUrl;
-        setTimeout(() => { if (loading) loading.style.display = 'none'; }, 200);
+        setTimeout(() => { if (loading) loading.style.display = 'none'; }, 150);
         return;
     }
 
-    // 2. Try loading from local Wi-Fi API server (server.js on port 8080)
-    const serverUrl = `http://127.0.0.1:8080/api/documents/${encodeURIComponent(window._activeModalFileName)}`;
+    // 2. Try loading from local Document Parser server (server.js on port 5005)
+    const serverUrl = `http://localhost:5005/api/documents/${encodeURIComponent(window._activeModalFileName)}`;
     const relativeUrl = `attachments/${encodeURIComponent(window._activeModalFileName)}`;
 
     fetch(serverUrl, { method: 'HEAD' })
@@ -1290,7 +1369,6 @@ function initDocumentParserModal() {
     const modal = document.getElementById('docParserModal');
     const btnDokumenBaru = document.getElementById('btnDokumenBaru');
     const btnCloseTop = document.getElementById('btnCloseDocParserTop');
-    const btnKembali = document.getElementById('btnDocParserKembali');
     const btnStart = document.getElementById('btnDocParserStart');
     const btnUploadJson = document.getElementById('btnDocParserUploadJson');
     const jsonInput = document.getElementById('docParserJsonInput');
@@ -1305,16 +1383,70 @@ function initDocumentParserModal() {
     const progressFill = document.getElementById('docParserProgressFill');
     const stepTitle = document.getElementById('docParserStepTitle');
     const stepDesc = document.getElementById('docParserStepDesc');
+    const stepLog = document.getElementById('docParserStepLog');
+    const errorBox = document.getElementById('docParserErrorBox');
+    const errorMsg = document.getElementById('docParserErrorMsg');
+    const btnRetry = document.getElementById('btnDocParserRetry');
+    const spinner = document.getElementById('docParserSpinner');
+    const apiKeyRow = document.getElementById('docParserApiKeyRow');
+    const apiKeyInput = document.getElementById('docParserApiKeyInput');
+    const btnSaveGeminiKey = document.getElementById('btnSaveGeminiKey');
+    const modalSafeCheckContainer = document.getElementById('modalSafeCheckContainer');
+    const btnContinue = document.getElementById('btnDocParserContinue');
+    const parserMinimizedActions = document.getElementById('parserMinimizedActions');
+    const btnToggleParserLog = document.getElementById('btnToggleParserLog');
+    const btnReuploadParser = document.getElementById('btnReuploadParser');
 
     if (!modal) return;
 
     let selectedFiles = [];
+    let isScanRunning = false;
 
     function openModal() {
         modal.style.display = 'flex';
         document.body.style.overflow = 'hidden';
-        if (progressBox) progressBox.style.display = 'none';
+        resetProgress();
+    }
+
+    function closeModal() {
+        modal.style.display = 'none';
+        document.body.style.overflow = '';
+        resetProgress();
+    }
+
+    function resetProgress() {
+        if (dropzone) dropzone.classList.remove('collapsed');
+        if (filesWrapper) {
+            filesWrapper.classList.remove('collapsed');
+            if (selectedFiles.length > 0) filesWrapper.style.display = 'block';
+            else filesWrapper.style.display = 'none';
+        }
+        if (progressBox) {
+            progressBox.classList.remove('minimized');
+            progressBox.style.display = 'none';
+        }
+        if (parserMinimizedActions) parserMinimizedActions.style.display = 'none';
+        if (btnToggleParserLog) {
+            btnToggleParserLog.classList.remove('expanded');
+            const span = btnToggleParserLog.querySelector('span');
+            if (span) span.textContent = 'Riwayat Log';
+        }
+        if (stepLog) {
+            stepLog.classList.remove('expanded');
+            stepLog.innerHTML = '';
+            stepLog.style.display = '';
+        }
+        if (modalSafeCheckContainer) {
+            modalSafeCheckContainer.classList.remove('animate-slide-up');
+            modalSafeCheckContainer.style.display = 'none';
+        }
+        if (errorBox) errorBox.style.display = 'none';
+        if (apiKeyRow) apiKeyRow.style.display = 'none';
+        if (btnContinue) btnContinue.style.display = 'none';
+        if (progressFill) progressFill.style.width = '0%';
+        if (spinner) spinner.style.display = '';
         if (btnStart) {
+            btnStart.style.display = '';
             btnStart.disabled = false;
             btnStart.innerHTML = `
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
@@ -1323,36 +1455,38 @@ function initDocumentParserModal() {
                 Start / Mulai Scan
             `;
         }
+        isScanRunning = false;
     }
 
-    function closeModal() {
-        modal.style.display = 'none';
-        document.body.style.overflow = '';
-        if (progressBox) progressBox.style.display = 'none';
+    if (btnToggleParserLog) {
+        btnToggleParserLog.addEventListener('click', () => {
+            const isExp = stepLog.classList.toggle('expanded');
+            btnToggleParserLog.classList.toggle('expanded', isExp);
+            const span = btnToggleParserLog.querySelector('span');
+            if (span) span.textContent = isExp ? 'Tutup Log' : 'Riwayat Log';
+        });
     }
 
-    if (btnDokumenBaru) {
-        btnDokumenBaru.addEventListener('click', openModal);
+    if (btnReuploadParser) {
+        btnReuploadParser.addEventListener('click', () => {
+            resetProgress();
+            selectedFiles = [];
+            if (fileInput) fileInput.value = '';
+            renderFileList();
+        });
     }
-    if (btnCloseTop) {
-        btnCloseTop.addEventListener('click', closeModal);
-    }
-    if (btnKembali) {
-        btnKembali.addEventListener('click', closeModal);
-    }
+
+    if (btnDokumenBaru) btnDokumenBaru.addEventListener('click', openModal);
+    if (btnCloseTop) btnCloseTop.addEventListener('click', closeModal);
 
     // Close on backdrop click
     modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            closeModal();
-        }
+        if (e.target === modal) closeModal();
     });
 
     // Close on Escape key
     document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && modal.style.display === 'flex') {
-            closeModal();
-        }
+        if (e.key === 'Escape' && modal.style.display === 'flex') closeModal();
     });
 
     function formatFileSize(bytes) {
@@ -1365,41 +1499,31 @@ function initDocumentParserModal() {
 
     function guessDocType(filename) {
         const lower = filename.toLowerCase();
-        if (lower.includes('inv') || lower.includes('faktur') || lower.includes('commercial')) {
-            return 'INVOICE';
-        }
-        if (lower.includes('pack') || lower.includes('pl.') || lower.includes('pl_') || lower.includes('list')) {
-            return 'PACKING LIST';
-        }
-        if (lower.includes('bl') || lower.includes('b/l') || lower.includes('lading') || lower.includes('waybill') || lower.includes('bapsin')) {
-            return 'BILL OF LADING';
-        }
-        if (lower.includes('coo') || lower.includes('cert') || lower.includes('origin')) {
-            return 'CERTIFICATE';
-        }
+        if (lower.includes('inv') || lower.includes('faktur') || lower.includes('commercial')) return 'INVOICE';
+        if (lower.includes('pack') || lower.includes('pl.') || lower.includes('pl_') || lower.includes('list')) return 'PACKING LIST';
+        if (lower.includes('bl') || lower.includes('b/l') || lower.includes('lading') || lower.includes('waybill') || lower.includes('bapsin')) return 'BILL OF LADING';
+        if (lower.includes('coo') || lower.includes('cert') || lower.includes('origin')) return 'CERTIFICATE';
         return 'DOKUMEN PABEAN';
     }
 
     function renderFileList() {
+        if (btnStart) {
+            btnStart.disabled = false;
+        }
         if (!filesList || !filesWrapper || !filesCount) return;
-
         if (selectedFiles.length === 0) {
             filesWrapper.style.display = 'none';
             filesList.innerHTML = '';
             return;
         }
-
         filesWrapper.style.display = 'block';
         filesCount.textContent = `${selectedFiles.length} Dokumen Dipilih`;
         filesList.innerHTML = '';
-
         selectedFiles.forEach((file, index) => {
             const item = document.createElement('div');
             item.className = 'doc-parser-file-item';
-
             const docType = guessDocType(file.name);
             const sizeStr = formatFileSize(file.size);
-
             item.innerHTML = `
                 <div class="file-item-left">
                     <span class="file-item-icon">
@@ -1420,7 +1544,6 @@ function initDocumentParserModal() {
                     <button type="button" class="btn-remove-file" title="Hapus berkas ini" data-index="${index}">&times;</button>
                 </div>
             `;
-
             const btnRemove = item.querySelector('.btn-remove-file');
             if (btnRemove) {
                 btnRemove.addEventListener('click', (ev) => {
@@ -1429,23 +1552,33 @@ function initDocumentParserModal() {
                     renderFileList();
                 });
             }
-
             filesList.appendChild(item);
         });
     }
 
     function addFiles(fileList) {
         if (!fileList || fileList.length === 0) return;
+        window._docFileMap = window._docFileMap || {};
         for (let i = 0; i < fileList.length; i++) {
             const file = fileList[i];
             const alreadyExists = selectedFiles.some(f => f.name === file.name && f.size === file.size);
             if (!alreadyExists) {
                 selectedFiles.push(file);
                 try {
-                    window._docFileMap = window._docFileMap || {};
-                    window._docFileMap[file.name] = URL.createObjectURL(file);
+                    const bUrl = URL.createObjectURL(file);
+                    window._docFileMap[file.name] = bUrl;
+                    window._lastUploadedFile = file;
+                    window._lastUploadedBlobUrl = bUrl;
                 } catch (e) {}
             }
+        }
+        window._lastUploadedFiles = [...selectedFiles];
+        if (selectedFiles.length > 0 && !window._lastUploadedFile) {
+            window._lastUploadedFile = selectedFiles[0];
+            window._lastUploadedBlobUrl = window._docFileMap[selectedFiles[0].name];
+        }
+        if (btnStart) {
+            btnStart.disabled = false;
         }
         renderFileList();
     }
@@ -1462,7 +1595,6 @@ function initDocumentParserModal() {
             addFiles(e.target.files);
             fileInput.value = '';
         });
-
         ['dragenter', 'dragover'].forEach(eventName => {
             dropzone.addEventListener(eventName, (e) => {
                 e.preventDefault();
@@ -1470,7 +1602,6 @@ function initDocumentParserModal() {
                 dropzone.classList.add('drag-over');
             }, false);
         });
-
         ['dragleave', 'dragend', 'drop'].forEach(eventName => {
             dropzone.addEventListener(eventName, (e) => {
                 e.preventDefault();
@@ -1478,12 +1609,9 @@ function initDocumentParserModal() {
                 dropzone.classList.remove('drag-over');
             }, false);
         });
-
         dropzone.addEventListener('drop', (e) => {
             const dt = e.dataTransfer;
-            if (dt && dt.files && dt.files.length > 0) {
-                addFiles(dt.files);
-            }
+            if (dt && dt.files && dt.files.length > 0) addFiles(dt.files);
         }, false);
     }
 
@@ -1502,10 +1630,7 @@ function initDocumentParserModal() {
             if (!file) return;
             const lbl = document.getElementById('lblFileName');
             if (lbl) lbl.textContent = file.name;
-            try {
-                localStorage.setItem(STORAGE_KEY_LAST_FILENAME, file.name);
-            } catch (err) {}
-
+            try { localStorage.setItem(STORAGE_KEY_LAST_FILENAME, file.name); } catch (err) {}
             const reader = new FileReader();
             reader.onload = function (evt) {
                 try {
@@ -1522,68 +1647,394 @@ function initDocumentParserModal() {
         });
     }
 
-    // Start / Mulai Scan
-    if (btnStart) {
-        btnStart.addEventListener('click', async () => {
-            btnStart.disabled = true;
-            if (progressBox) progressBox.style.display = 'flex';
-            if (progressFill) progressFill.style.width = '12%';
-            if (stepTitle) stepTitle.textContent = "1/3 Membaca & Menganalisis Dokumen...";
-            if (stepDesc) stepDesc.textContent = "Mengekstrak teks berkas lampiran (PDF/gambar)...";
+    // --- Realtime step log helper ---
+    function appendLog(icon, text, status) {
+        if (!stepLog) return;
+        const row = document.createElement('div');
+        row.className = `step-log-row step-log-${status || 'pending'}`;
+        row.innerHTML = `<span class="step-log-icon">${icon}</span><span class="step-log-text">${text}</span>`;
+        stepLog.appendChild(row);
+        stepLog.scrollTop = stepLog.scrollHeight;
+        return row;
+    }
 
-            await new Promise(r => setTimeout(r, 600));
-            if (progressFill) progressFill.style.width = '50%';
-            if (stepTitle) stepTitle.textContent = "2/3 Ekstraksi AI & SafeCheck Validasi...";
-            if (stepDesc) stepDesc.textContent = "Memverifikasi kecocokan nomor Invoice, Packing List, dan Bill of Lading...";
+    function updateLog(row, icon, text, status) {
+        if (!row) return;
+        row.className = `step-log-row step-log-${status}`;
+        row.innerHTML = `<span class="step-log-icon">${icon}</span><span class="step-log-text">${text}</span>`;
+    }
 
-            await new Promise(r => setTimeout(r, 700));
-            if (progressFill) progressFill.style.width = '88%';
-            if (stepTitle) stepTitle.textContent = "3/3 Menyusun Formulir Pabean CEISA...";
-            if (stepDesc) stepDesc.textContent = "Mengisi data entitas, pengangkut, kontainer, dan daftar barang...";
+    function showErrorState(message) {
+        if (spinner) spinner.style.display = 'none';
+        if (progressFill) progressFill.style.width = '100%';
+        progressFill.style.background = '#ef4444';
+        if (stepTitle) stepTitle.textContent = 'Proses Gagal';
+        if (stepDesc) stepDesc.textContent = '';
+        if (errorMsg) errorMsg.textContent = message || 'Terjadi kesalahan saat memproses dokumen.';
+        if (errorBox) errorBox.style.display = 'flex';
+        if (btnStart) {
+            btnStart.disabled = false;
+            btnStart.innerHTML = `
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                    <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                </svg>
+                Start / Mulai Scan
+            `;
+        }
+        isScanRunning = false;
 
-            await new Promise(r => setTimeout(r, 550));
-            if (progressFill) progressFill.style.width = '100%';
-            if (stepTitle) stepTitle.textContent = "Selesai!";
-            if (stepDesc) stepDesc.textContent = "Data draft PEB berhasil diekstrak dan diisi ke formulir.";
-
-            await new Promise(r => setTimeout(r, 350));
-
-            // Load draft data ke form CEISA
-            const draftPayload = JSON.parse(JSON.stringify(SAMPLE_DATA));
-
-            // Jika user memilih file dokumen asli, tautkan ke daftar dokumen
-            if (selectedFiles.length > 0) {
-                const invFile = selectedFiles.find(f => guessDocType(f.name) === 'INVOICE');
-                const plFile = selectedFiles.find(f => guessDocType(f.name) === 'PACKING LIST');
-                const blFile = selectedFiles.find(f => guessDocType(f.name) === 'BILL OF LADING');
-
-                if (invFile && draftPayload.safeCheck?.documentList) {
-                    const doc = draftPayload.safeCheck.documentList.find(d => d.documentType === 'INVOICE');
-                    if (doc) doc.fileName = invFile.name;
+        // Tampilkan baris input API key jika error terkait API key
+        if (apiKeyRow) {
+            const isKeyError = message && (
+                message.includes('GEMINI_API_KEY') ||
+                message.toLowerCase().includes('api key') ||
+                message.includes('API_KEY')
+            );
+            if (isKeyError) {
+                apiKeyRow.style.display = 'flex';
+                if (apiKeyInput) {
+                    apiKeyInput.value = localStorage.getItem('CEISA_GEMINI_API_KEY') || '';
+                    apiKeyInput.focus();
                 }
-                if (plFile && draftPayload.safeCheck?.documentList) {
-                    const doc = draftPayload.safeCheck.documentList.find(d => d.documentType === 'PACKING_LIST');
-                    if (doc) doc.fileName = plFile.name;
-                }
-                if (blFile && draftPayload.safeCheck?.documentList) {
-                    const doc = draftPayload.safeCheck.documentList.find(d => d.documentType === 'BILL_OF_LADING');
-                    if (doc) doc.fileName = blFile.name;
-                }
+            } else {
+                apiKeyRow.style.display = 'none';
             }
+        }
+    }
 
-            const lbl = document.getElementById('lblFileName');
-            if (lbl) {
-                lbl.textContent = selectedFiles.length > 0 ? selectedFiles[0].name : 'Sample_Customs_Clearance_Draft.json';
+    // Handler simpan API key inline
+    if (btnSaveGeminiKey && apiKeyInput) {
+        btnSaveGeminiKey.addEventListener('click', async () => {
+            const key = apiKeyInput.value.trim();
+            if (!key) {
+                alert('Silakan ketikkan Gemini API Key Anda.');
+                return;
             }
+            btnSaveGeminiKey.disabled = true;
+            btnSaveGeminiKey.textContent = 'Menyimpan...';
             try {
-                localStorage.setItem(STORAGE_KEY_LAST_FILENAME, lbl?.textContent || 'Draft_Pabean.json');
-            } catch (e) {}
-
-            loadDraftData(draftPayload, true);
-            closeModal();
-            showToast("Dokumen berhasil dipindai & formulir CEISA telah terisi!", "success");
+                localStorage.setItem('CEISA_GEMINI_API_KEY', key);
+                await fetch('http://localhost:5005/api/config-key', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ apiKey: key })
+                });
+                if (apiKeyRow) apiKeyRow.style.display = 'none';
+                if (errorBox) errorBox.style.display = 'none';
+                runScan();
+            } catch (e) {
+                alert('Gagal menyimpan key ke server: ' + e.message);
+            } finally {
+                btnSaveGeminiKey.disabled = false;
+                btnSaveGeminiKey.textContent = 'Simpan & Ulangi';
+            }
         });
     }
+
+    async function runScan() {
+        if (isScanRunning) return;
+
+        if (!selectedFiles || selectedFiles.length === 0) {
+            showErrorState('Silakan seret atau pilih minimal 1 berkas dokumen PDF (Invoice, Packing List, atau B/L) terlebih dahulu.');
+            return;
+        }
+
+        isScanRunning = true;
+
+        // Reset UI progress
+        if (stepLog) stepLog.innerHTML = '';
+        if (errorBox) errorBox.style.display = 'none';
+        if (apiKeyRow) apiKeyRow.style.display = 'none';
+        if (progressFill) { progressFill.style.background = ''; progressFill.style.width = '5%'; }
+        if (spinner) spinner.style.display = '';
+        if (progressBox) progressBox.style.display = 'flex';
+        if (btnStart) {
+            btnStart.disabled = true;
+            btnStart.innerHTML = `
+                <span class="doc-spinner" style="width:13px; height:13px; border-width:2px; border-top-color:#fff; display:inline-block; vertical-align:middle; margin-right:4px;"></span>
+                Memproses...
+            `;
+        }
+
+        const connectRow = appendLog('⏳', 'Menghubungkan ke Node Document Parser (http://localhost:5005)...', 'running');
+
+        try {
+            const formData = new FormData();
+            selectedFiles.forEach(file => {
+                formData.append('files', file);
+            });
+
+            const customKey = localStorage.getItem('CEISA_GEMINI_API_KEY') || '';
+            const headers = {};
+            if (customKey) headers['x-gemini-key'] = customKey;
+
+            let response;
+            try {
+                response = await fetch('http://localhost:5005/api/parse-documents', {
+                    method: 'POST',
+                    headers: headers,
+                    body: formData
+                });
+            } catch (netErr) {
+                throw new Error('Gagal terhubung ke Backend Document Parser di http://localhost:5005. Pastikan server aktif dengan menjalankan "npm start" di folder backend-service.');
+            }
+
+            if (!response.ok && response.status !== 200) {
+                throw new Error(`Server Document Parser mengembalikan status HTTP ${response.status}`);
+            }
+
+            updateLog(connectRow, '✅', 'Terhubung ke Backend Document Parser', 'done');
+            if (progressFill) progressFill.style.width = '15%';
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder('utf-8');
+            let buffer = '';
+            let extractedResult = null;
+            const uploadLogMap = {};
+            let lastAiRow = null;
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const parts = buffer.split('\n\n');
+                buffer = parts.pop();
+
+                for (const part of parts) {
+                    const trimmed = part.trim();
+                    if (!trimmed.startsWith('data:')) continue;
+                    const jsonStr = trimmed.replace(/^data:\s*/, '');
+
+                    try {
+                        const evt = JSON.parse(jsonStr);
+
+                        if (evt.type === 'error') {
+                            throw new Error(evt.message || 'Ekstraksi dokumen gagal di server.');
+                        }
+
+                        if (evt.type === 'progress') {
+                            if (evt.step === 'upload') {
+                                const fileKey = evt.file || `file-${evt.index}`;
+                                if (evt.status === 'running') {
+                                    if (!uploadLogMap[fileKey]) {
+                                        uploadLogMap[fileKey] = appendLog('⏳', evt.message, 'running');
+                                    }
+                                    if (stepTitle) stepTitle.textContent = `Mengunggah: ${fileKey}...`;
+                                    if (stepDesc) stepDesc.textContent = `File ${evt.index + 1} dari ${evt.total}`;
+                                    if (progressFill) progressFill.style.width = `${15 + Math.round(((evt.index + 0.5) / evt.total) * 25)}%`;
+                                } else if (evt.status === 'done') {
+                                    if (uploadLogMap[fileKey]) {
+                                        updateLog(uploadLogMap[fileKey], '✅', evt.message, 'done');
+                                    } else {
+                                        uploadLogMap[fileKey] = appendLog('✅', evt.message, 'done');
+                                    }
+                                    if (progressFill) progressFill.style.width = `${15 + Math.round(((evt.index + 1) / evt.total) * 25)}%`;
+                                }
+                            } else if (evt.step === 'parsing') {
+                                if (stepTitle) stepTitle.textContent = 'Menyiapkan Ray-OCR V.1...';
+                                if (stepDesc) stepDesc.textContent = evt.message;
+                                if (progressFill) progressFill.style.width = '45%';
+                                appendLog('⏳', evt.message, 'running');
+                            } else if (evt.step === 'ai') {
+                                if (stepTitle) stepTitle.textContent = 'Ray-OCR V.1 Menganalisis Dokumen...';
+                                if (stepDesc) stepDesc.textContent = evt.message;
+                                if (progressFill) progressFill.style.width = '70%';
+                                if (!lastAiRow) {
+                                    lastAiRow = appendLog('🤖', evt.message, 'running');
+                                } else {
+                                    updateLog(lastAiRow, '🤖', evt.message, 'running');
+                                }
+                            } else if (evt.step === 'safecheck') {
+                                if (lastAiRow) {
+                                    updateLog(lastAiRow, '✅', 'Data pabean berhasil dianalisis oleh Ray-OCR V.1', 'done');
+                                }
+                                if (stepTitle) stepTitle.textContent = 'SafeCheck & Validasi Shipment...';
+                                if (stepDesc) stepDesc.textContent = evt.message;
+                                if (progressFill) progressFill.style.width = '88%';
+                                appendLog('🛡️', evt.message, 'done');
+                            } else if (evt.step === 'complete') {
+                                if (progressFill) progressFill.style.width = '96%';
+                                appendLog('✅', evt.message, 'done');
+                            }
+                        }
+
+                        if (evt.type === 'result') {
+                            extractedResult = evt.data;
+                        }
+                    } catch (parseErr) {
+                        if (parseErr.message && !parseErr.message.includes('JSON')) {
+                            throw parseErr;
+                        }
+                    }
+                }
+            }
+
+            if (!extractedResult) {
+                throw new Error('Tidak menerima payload data hasil ekstraksi dari Document Parser.');
+            }
+
+            if (progressFill) progressFill.style.width = '100%';
+            if (stepTitle) stepTitle.textContent = '✅ Ekstraksi & Validasi Selesai (Ray-OCR V.1)!';
+            const activeFileText = selectedFiles.length > 0 ? selectedFiles[0].name : 'Dokumen';
+            if (stepDesc) stepDesc.textContent = `${activeFileText} • SafeCheck Tervalidasi 1 Kesatuan Shipment`;
+            if (spinner) spinner.style.display = 'none';
+
+            // MINIMIZE DENGAN ANIMASI:
+            // Sembunyikan dropzone dan file list agar SafeCheck naik ke atas
+            if (dropzone) dropzone.classList.add('collapsed');
+            if (filesWrapper) filesWrapper.classList.add('collapsed');
+
+            // Minimize box loading progress menjadi status pill ringkas
+            if (progressBox) progressBox.classList.add('minimized');
+            if (parserMinimizedActions) parserMinimizedActions.style.display = 'flex';
+            if (stepLog) stepLog.classList.remove('expanded');
+
+            // Update label nama file aktif di header PEB
+            const lbl = document.getElementById('lblFileName');
+            if (lbl && selectedFiles.length > 0) {
+                lbl.textContent = selectedFiles[0].name;
+                try { localStorage.setItem(STORAGE_KEY_LAST_FILENAME, selectedFiles[0].name); } catch (e) {}
+            }
+
+            // LOAD DATA HASIL EKSTRAKSI ASLI KE FORMULIR PEB (latar belakang)
+            loadDraftData(extractedResult, true);
+
+            // TAMPILKAN DAN NAIKKAN HASIL SAFECHECK KE ATAS DENGAN ANIMASI SLIDE UP
+            renderModalSafeCheck(extractedResult.safeCheck);
+
+            // Sembunyikan tombol Start, tampilkan tombol Lanjutkan ke Formulir PEB
+            if (btnStart) btnStart.style.display = 'none';
+            if (btnContinue) btnContinue.style.display = 'inline-flex';
+
+        } catch (err) {
+            showErrorState(err?.message || 'Gagal memproses dokumen.');
+        } finally {
+            isScanRunning = false;
+        }
+    }
+
+    // Fungsi Render SafeCheck khusus di dalam popup modal
+    function renderModalSafeCheck(safeCheck) {
+        if (!modalSafeCheckContainer) return;
+        if (!safeCheck) {
+            modalSafeCheckContainer.style.display = 'none';
+            return;
+        }
+
+        const isRelated = safeCheck.isRelated !== false;
+        const score = safeCheck.confidenceScore !== undefined ? safeCheck.confidenceScore : 100;
+        const banner = document.getElementById('modalSafeCheckBanner');
+        const statusBadge = document.getElementById('modalSafeCheckStatusBadge');
+        const scoreVal = document.getElementById('modalSafeCheckScore');
+        const title = document.getElementById('modalSafeCheckTitle');
+        const summary = document.getElementById('modalSafeCheckSummary');
+        const matchedList = document.getElementById('modalSafeCheckMatchedList');
+        const warningsBox = document.getElementById('modalSafeCheckWarningsBox');
+        const warningsList = document.getElementById('modalSafeCheckWarningsList');
+
+        if (scoreVal) scoreVal.textContent = score + '%';
+        if (summary) summary.textContent = safeCheck.summary || 'Semua dokumen saling berhubungan dan merupakan satu kesatuan shipment yang sama.';
+
+        if (banner && statusBadge && title) {
+            if (isRelated) {
+                banner.className = 'safecheck-banner';
+                statusBadge.className = 'badge-safe-valid';
+                statusBadge.textContent = 'Tervalidasi: 1 Shipment';
+                title.textContent = 'Semua Dokumen Cocok & Terverifikasi 1 Kesatuan Pengiriman';
+            } else {
+                banner.className = 'safecheck-banner safecheck-banner-warning';
+                statusBadge.className = 'badge-safe-warning';
+                statusBadge.textContent = 'Peringatan: Dokumen Asing / Selisih';
+                title.textContent = 'Perhatian: Ditemukan Ketidaksesuaian Antar-Dokumen';
+            }
+        }
+
+        if (matchedList) {
+            matchedList.innerHTML = '';
+            const matched = safeCheck.matchedIdentifiers || [];
+            if (matched.length > 0) {
+                matched.forEach(m => {
+                    const li = document.createElement('li');
+                    li.style.display = 'flex';
+                    li.style.alignItems = 'flex-start';
+                    li.style.gap = '8px';
+                    li.style.marginBottom = '6px';
+                    li.style.fontSize = '12px';
+                    li.style.color = '#334155';
+                    li.innerHTML = `<span style="color: #16a34a; font-weight: 700; flex-shrink: 0; font-size: 13px;">✓</span><span>${escapeHtml(m)}</span>`;
+                    matchedList.appendChild(li);
+                });
+            } else {
+                matchedList.innerHTML = `<li style="color: #64748b; font-size: 12px;">Tidak ada parameter identifikasi khusus.</li>`;
+            }
+        }
+
+        if (warningsBox && warningsList) {
+            const warnings = safeCheck.discrepanciesOrWarnings || [];
+            if (warnings && warnings.length > 0) {
+                warningsBox.style.display = 'block';
+                warningsList.innerHTML = '';
+                warnings.forEach(w => {
+                    const li = document.createElement('li');
+                    li.style.display = 'flex';
+                    li.style.alignItems = 'flex-start';
+                    li.style.gap = '8px';
+                    li.style.marginBottom = '6px';
+                    li.style.fontSize = '12px';
+                    li.style.color = '#dc2626';
+                    li.innerHTML = `<span style="color: #dc2626; font-weight: 700; flex-shrink: 0;">⚠</span><span>${escapeHtml(w)}</span>`;
+                    warningsList.appendChild(li);
+                });
+            } else {
+                warningsBox.style.display = 'none';
+            }
+        }
+
+        modalSafeCheckContainer.classList.remove('animate-slide-up');
+        void modalSafeCheckContainer.offsetWidth;
+        modalSafeCheckContainer.classList.add('animate-slide-up');
+        modalSafeCheckContainer.style.display = 'block';
+
+        const modalBody = modal.querySelector('.doc-parser-modal-body');
+        if (modalBody) {
+            modalBody.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    }
+
+    // Handler tombol Lanjutkan ke Formulir PEB
+    if (btnContinue) {
+        btnContinue.addEventListener('click', () => {
+            closeModal();
+            switchPortalModule('peb');
+            switchCeisaTab('tab-dokumen');
+
+            const safeCheckBody = document.getElementById('safeCheckBody');
+            const btnToggleSafeCheck = document.getElementById('btnToggleSafeCheck');
+            const safeCheckHeader = document.getElementById('safeCheckHeader');
+            if (safeCheckBody) {
+                safeCheckBody.classList.remove('collapsed');
+                safeCheckBody.style.display = 'block';
+            }
+            if (btnToggleSafeCheck) {
+                btnToggleSafeCheck.classList.add('expanded');
+                btnToggleSafeCheck.setAttribute('aria-expanded', 'true');
+            }
+            if (safeCheckHeader) safeCheckHeader.classList.add('expanded');
+
+            setTimeout(() => {
+                const safeCheckSection = document.getElementById('safeCheckSection');
+                if (safeCheckSection) safeCheckSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 150);
+            showToast("Draft PEB siap ditinjau!", "success");
+        });
+    }
+
+    // Start / Mulai Scan
+    if (btnStart) btnStart.addEventListener('click', runScan);
+
+    // Retry
+    if (btnRetry) btnRetry.addEventListener('click', runScan);
 }
 
 // ====================================================================
@@ -1719,6 +2170,33 @@ document.addEventListener('DOMContentLoaded', () => {
             if (safeCheckHeader) safeCheckHeader.classList.remove('expanded');
         }
     }
+
+    // Wire delete (trash) buttons in Dokumen Lampiran table
+    document.querySelectorAll('.btn-doc-delete').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const rowId = this.getAttribute('data-row-id');
+            if (!rowId) return;
+            const row = document.getElementById(rowId);
+            if (row) {
+                row.style.transition = 'opacity 0.2s';
+                row.style.opacity = '0';
+                setTimeout(() => {
+                    row.remove();
+                    // Update row numbers
+                    const tbody = document.querySelector('#tab-dokumen .ceisa-table tbody');
+                    if (tbody) {
+                        Array.from(tbody.querySelectorAll('tr')).forEach((tr, idx) => {
+                            const numCell = tr.querySelector('td:first-child');
+                            if (numCell) numCell.textContent = idx + 1;
+                        });
+                        // Update pagination total
+                        const totalSpan = document.querySelector('.ceisa-table-pagination > span');
+                        if (totalSpan) totalSpan.textContent = `Total ${tbody.querySelectorAll('tr').length}`;
+                    }
+                }, 200);
+            }
+        });
+    });
 
     if (btnToggleSafeCheck) {
         btnToggleSafeCheck.addEventListener('click', (e) => {

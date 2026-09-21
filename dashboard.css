@@ -2712,14 +2712,92 @@ textarea.form-control {
 }
 
 /* PROGRESS BOX */
+/* PROGRESS BOX & MINIMIZED STATE */
 .doc-parser-progress-box {
     background: #f0fdf4;
     border: 1px solid #bbf7d0;
-    border-radius: 6px;
+    border-radius: 8px;
     padding: 14px 16px;
     display: flex;
     flex-direction: column;
     gap: 10px;
+    transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.doc-parser-progress-box.minimized {
+    padding: 10px 14px;
+    background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+    border: 1px solid #86efac;
+    box-shadow: 0 2px 8px rgba(22, 163, 74, 0.08);
+    gap: 6px;
+    animation: shrinkPulse 0.3s ease-out;
+}
+
+@keyframes shrinkPulse {
+    0% { transform: scale(1.015); }
+    100% { transform: scale(1); }
+}
+
+.doc-parser-progress-box.minimized .doc-parser-progress-bar-track {
+    display: none;
+}
+
+.doc-parser-progress-box.minimized .doc-parser-step-log {
+    display: none;
+    margin-top: 6px;
+    border-top: 1px solid #dcfce7;
+    padding-top: 8px;
+    max-height: 140px;
+}
+
+.doc-parser-progress-box.minimized .doc-parser-step-log.expanded {
+    display: flex;
+}
+
+/* Collapsible Dropzone & Queue */
+.doc-parser-dropzone.collapsed,
+.doc-parser-files-wrapper.collapsed {
+    display: none !important;
+}
+
+/* Action buttons inside minimized progress header */
+.parser-minimized-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-toggle-parser-log,
+.btn-reupload-parser {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: #475569;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+    outline: none;
+}
+
+.btn-toggle-parser-log:hover,
+.btn-reupload-parser:hover {
+    background: #f8fafc;
+    color: #0f172a;
+    border-color: #94a3b8;
+}
+
+.btn-toggle-parser-log .log-chevron {
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-toggle-parser-log.expanded .log-chevron {
+    transform: rotate(180deg);
 }
 
 .doc-parser-spinner-row {
@@ -2755,6 +2833,35 @@ textarea.form-control {
     background: #16a34a;
     border-radius: 999px;
     transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* SAFECHECK MODAL CARD ANIMATION */
+.modal-safecheck-card {
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #ffffff;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+    margin-top: 2px;
+}
+
+@keyframes safecheckSlideUp {
+    0% {
+        opacity: 0;
+        transform: translateY(28px) scale(0.97);
+    }
+    65% {
+        opacity: 0.95;
+        transform: translateY(-2px) scale(1.004);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.modal-safecheck-card.animate-slide-up {
+    animation: safecheckSlideUp 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 /* MODAL FOOTER */
@@ -2847,3 +2954,81 @@ textarea.form-control {
     border-color: #93c5fd;
     color: #1d4ed8;
 }
+
+/* ── STEP LOG (realtime parser steps) ── */
+.doc-parser-step-log {
+    max-height: 130px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 6px 2px 2px;
+}
+
+.step-log-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 11.5px;
+    line-height: 1.4;
+    animation: stepFadeIn 0.2s ease;
+}
+
+@keyframes stepFadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.step-log-icon {
+    flex-shrink: 0;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.step-log-text {
+    color: #334155;
+}
+
+.step-log-running .step-log-text { color: #0369a1; }
+.step-log-done    .step-log-text { color: #166534; }
+.step-log-error   .step-log-text { color: #b91c1c; }
+
+/* ── ERROR / RETRY BOX ── */
+.doc-parser-error-box {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 6px;
+    padding: 10px 14px;
+    margin-top: 4px;
+    font-size: 12px;
+    color: #991b1b;
+    flex-wrap: wrap;
+}
+
+.doc-parser-error-box span {
+    flex: 1;
+    min-width: 0;
+}
+
+.btn-parser-retry {
+    background: #ef4444;
+    color: #ffffff;
+    border: 1px solid #dc2626;
+    font-size: 11.5px;
+    font-weight: 700;
+    padding: 5px 13px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.btn-parser-retry:hover {
+    background: #dc2626;
+    border-color: #b91c1c;
+    transform: translateY(-1px);
+}

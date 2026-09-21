@@ -4,6 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "start": "node server.js",
+    "parser": "node document_parser.js",
+    "fetcher": "node email_fetcher.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -12,8 +15,11 @@
   "type": "commonjs",
   "dependencies": {
     "@google/genai": "^2.21.0",
+    "cors": "^2.8.6",
     "dotenv": "^17.4.2",
+    "express": "^5.2.1",
     "imap-simple": "^5.1.0",
-    "mailparser": "^3.9.20"
+    "mailparser": "^3.9.20",
+    "multer": "^2.4.0"
   }
 }
