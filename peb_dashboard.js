@@ -1284,6 +1284,309 @@ const SAMPLE_DATA = {
 };
 
 // ====================================================================
+// DOCUMENT PARSER MODAL (HALAMAN AWAL DOKUMEN BARU)
+// ====================================================================
+function initDocumentParserModal() {
+    const modal = document.getElementById('docParserModal');
+    const btnDokumenBaru = document.getElementById('btnDokumenBaru');
+    const btnCloseTop = document.getElementById('btnCloseDocParserTop');
+    const btnKembali = document.getElementById('btnDocParserKembali');
+    const btnStart = document.getElementById('btnDocParserStart');
+    const btnUploadJson = document.getElementById('btnDocParserUploadJson');
+    const jsonInput = document.getElementById('docParserJsonInput');
+    const dropzone = document.getElementById('docParserDropzone');
+    const fileInput = document.getElementById('docParserFileInput');
+    const btnBrowse = document.getElementById('btnBrowseDocParser');
+    const filesWrapper = document.getElementById('docParserFilesWrapper');
+    const filesList = document.getElementById('docParserFilesList');
+    const filesCount = document.getElementById('docParserFilesCount');
+    const btnClearFiles = document.getElementById('btnClearDocParserFiles');
+    const progressBox = document.getElementById('docParserProgressBox');
+    const progressFill = document.getElementById('docParserProgressFill');
+    const stepTitle = document.getElementById('docParserStepTitle');
+    const stepDesc = document.getElementById('docParserStepDesc');
+
+    if (!modal) return;
+
+    let selectedFiles = [];
+
+    function openModal() {
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+        if (progressBox) progressBox.style.display = 'none';
+        if (btnStart) {
+            btnStart.disabled = false;
+            btnStart.innerHTML = `
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+                    <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                </svg>
+                Start / Mulai Scan
+            `;
+        }
+    }
+
+    function closeModal() {
+        modal.style.display = 'none';
+        document.body.style.overflow = '';
+        if (progressBox) progressBox.style.display = 'none';
+    }
+
+    if (btnDokumenBaru) {
+        btnDokumenBaru.addEventListener('click', openModal);
+    }
+    if (btnCloseTop) {
+        btnCloseTop.addEventListener('click', closeModal);
+    }
+    if (btnKembali) {
+        btnKembali.addEventListener('click', closeModal);
+    }
+
+    // Close on backdrop click
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            closeModal();
+        }
+    });
+
+    // Close on Escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modal.style.display === 'flex') {
+            closeModal();
+        }
+    });
+
+    function formatFileSize(bytes) {
+        if (!bytes || bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    }
+
+    function guessDocType(filename) {
+        const lower = filename.toLowerCase();
+        if (lower.includes('inv') || lower.includes('faktur') || lower.includes('commercial')) {
+            return 'INVOICE';
+        }
+        if (lower.includes('pack') || lower.includes('pl.') || lower.includes('pl_') || lower.includes('list')) {
+            return 'PACKING LIST';
+        }
+        if (lower.includes('bl') || lower.includes('b/l') || lower.includes('lading') || lower.includes('waybill') || lower.includes('bapsin')) {
+            return 'BILL OF LADING';
+        }
+        if (lower.includes('coo') || lower.includes('cert') || lower.includes('origin')) {
+            return 'CERTIFICATE';
+        }
+        return 'DOKUMEN PABEAN';
+    }
+
+    function renderFileList() {
+        if (!filesList || !filesWrapper || !filesCount) return;
+
+        if (selectedFiles.length === 0) {
+            filesWrapper.style.display = 'none';
+            filesList.innerHTML = '';
+            return;
+        }
+
+        filesWrapper.style.display = 'block';
+        filesCount.textContent = `${selectedFiles.length} Dokumen Dipilih`;
+        filesList.innerHTML = '';
+
+        selectedFiles.forEach((file, index) => {
+            const item = document.createElement('div');
+            item.className = 'doc-parser-file-item';
+
+            const docType = guessDocType(file.name);
+            const sizeStr = formatFileSize(file.size);
+
+            item.innerHTML = `
+                <div class="file-item-left">
+                    <span class="file-item-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="16" y1="13" x2="8" y2="13"></line>
+                            <line x1="16" y1="17" x2="8" y2="17"></line>
+                        </svg>
+                    </span>
+                    <div class="file-item-details">
+                        <span class="file-item-name" title="${file.name}">${file.name}</span>
+                        <span class="file-item-size">${sizeStr}</span>
+                    </div>
+                </div>
+                <div class="file-item-right">
+                    <span class="file-item-tag">${docType}</span>
+                    <button type="button" class="btn-remove-file" title="Hapus berkas ini" data-index="${index}">&times;</button>
+                </div>
+            `;
+
+            const btnRemove = item.querySelector('.btn-remove-file');
+            if (btnRemove) {
+                btnRemove.addEventListener('click', (ev) => {
+                    ev.stopPropagation();
+                    selectedFiles.splice(index, 1);
+                    renderFileList();
+                });
+            }
+
+            filesList.appendChild(item);
+        });
+    }
+
+    function addFiles(fileList) {
+        if (!fileList || fileList.length === 0) return;
+        for (let i = 0; i < fileList.length; i++) {
+            const file = fileList[i];
+            const alreadyExists = selectedFiles.some(f => f.name === file.name && f.size === file.size);
+            if (!alreadyExists) {
+                selectedFiles.push(file);
+                try {
+                    window._docFileMap = window._docFileMap || {};
+                    window._docFileMap[file.name] = URL.createObjectURL(file);
+                } catch (e) {}
+            }
+        }
+        renderFileList();
+    }
+
+    if (dropzone && fileInput) {
+        dropzone.addEventListener('click', () => fileInput.click());
+        if (btnBrowse) {
+            btnBrowse.addEventListener('click', (e) => {
+                e.stopPropagation();
+                fileInput.click();
+            });
+        }
+        fileInput.addEventListener('change', (e) => {
+            addFiles(e.target.files);
+            fileInput.value = '';
+        });
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropzone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                dropzone.classList.add('drag-over');
+            }, false);
+        });
+
+        ['dragleave', 'dragend', 'drop'].forEach(eventName => {
+            dropzone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                dropzone.classList.remove('drag-over');
+            }, false);
+        });
+
+        dropzone.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            if (dt && dt.files && dt.files.length > 0) {
+                addFiles(dt.files);
+            }
+        }, false);
+    }
+
+    if (btnClearFiles) {
+        btnClearFiles.addEventListener('click', () => {
+            selectedFiles = [];
+            renderFileList();
+        });
+    }
+
+    // Unggah JSON langsung dari modal
+    if (btnUploadJson && jsonInput) {
+        btnUploadJson.addEventListener('click', () => jsonInput.click());
+        jsonInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const lbl = document.getElementById('lblFileName');
+            if (lbl) lbl.textContent = file.name;
+            try {
+                localStorage.setItem(STORAGE_KEY_LAST_FILENAME, file.name);
+            } catch (err) {}
+
+            const reader = new FileReader();
+            reader.onload = function (evt) {
+                try {
+                    const parsed = JSON.parse(evt.target.result);
+                    loadDraftData(parsed, true);
+                    closeModal();
+                    showToast(`Berkas JSON '${file.name}' berhasil dimuat ke formulir!`, "success");
+                } catch (err) {
+                    alert("Format berkas JSON tidak valid: " + err.message);
+                }
+            };
+            reader.readAsText(file);
+            jsonInput.value = '';
+        });
+    }
+
+    // Start / Mulai Scan
+    if (btnStart) {
+        btnStart.addEventListener('click', async () => {
+            btnStart.disabled = true;
+            if (progressBox) progressBox.style.display = 'flex';
+            if (progressFill) progressFill.style.width = '12%';
+            if (stepTitle) stepTitle.textContent = "1/3 Membaca & Menganalisis Dokumen...";
+            if (stepDesc) stepDesc.textContent = "Mengekstrak teks berkas lampiran (PDF/gambar)...";
+
+            await new Promise(r => setTimeout(r, 600));
+            if (progressFill) progressFill.style.width = '50%';
+            if (stepTitle) stepTitle.textContent = "2/3 Ekstraksi AI & SafeCheck Validasi...";
+            if (stepDesc) stepDesc.textContent = "Memverifikasi kecocokan nomor Invoice, Packing List, dan Bill of Lading...";
+
+            await new Promise(r => setTimeout(r, 700));
+            if (progressFill) progressFill.style.width = '88%';
+            if (stepTitle) stepTitle.textContent = "3/3 Menyusun Formulir Pabean CEISA...";
+            if (stepDesc) stepDesc.textContent = "Mengisi data entitas, pengangkut, kontainer, dan daftar barang...";
+
+            await new Promise(r => setTimeout(r, 550));
+            if (progressFill) progressFill.style.width = '100%';
+            if (stepTitle) stepTitle.textContent = "Selesai!";
+            if (stepDesc) stepDesc.textContent = "Data draft PEB berhasil diekstrak dan diisi ke formulir.";
+
+            await new Promise(r => setTimeout(r, 350));
+
+            // Load draft data ke form CEISA
+            const draftPayload = JSON.parse(JSON.stringify(SAMPLE_DATA));
+
+            // Jika user memilih file dokumen asli, tautkan ke daftar dokumen
+            if (selectedFiles.length > 0) {
+                const invFile = selectedFiles.find(f => guessDocType(f.name) === 'INVOICE');
+                const plFile = selectedFiles.find(f => guessDocType(f.name) === 'PACKING LIST');
+                const blFile = selectedFiles.find(f => guessDocType(f.name) === 'BILL OF LADING');
+
+                if (invFile && draftPayload.safeCheck?.documentList) {
+                    const doc = draftPayload.safeCheck.documentList.find(d => d.documentType === 'INVOICE');
+                    if (doc) doc.fileName = invFile.name;
+                }
+                if (plFile && draftPayload.safeCheck?.documentList) {
+                    const doc = draftPayload.safeCheck.documentList.find(d => d.documentType === 'PACKING_LIST');
+                    if (doc) doc.fileName = plFile.name;
+                }
+                if (blFile && draftPayload.safeCheck?.documentList) {
+                    const doc = draftPayload.safeCheck.documentList.find(d => d.documentType === 'BILL_OF_LADING');
+                    if (doc) doc.fileName = blFile.name;
+                }
+            }
+
+            const lbl = document.getElementById('lblFileName');
+            if (lbl) {
+                lbl.textContent = selectedFiles.length > 0 ? selectedFiles[0].name : 'Sample_Customs_Clearance_Draft.json';
+            }
+            try {
+                localStorage.setItem(STORAGE_KEY_LAST_FILENAME, lbl?.textContent || 'Draft_Pabean.json');
+            } catch (e) {}
+
+            loadDraftData(draftPayload, true);
+            closeModal();
+            showToast("Dokumen berhasil dipindai & formulir CEISA telah terisi!", "success");
+        });
+    }
+}
+
+// ====================================================================
 // INITIALIZATION ON DOM CONTENT LOADED (CSP COMPLIANT EVENT WIRING)
 // ====================================================================
 document.addEventListener('DOMContentLoaded', () => {
@@ -1340,18 +1643,8 @@ document.addEventListener('DOMContentLoaded', () => {
         btnUpload.addEventListener('click', () => headerInput.click());
     }
 
-    const btnSample = document.getElementById('btnHeaderSample');
-    if (btnSample) {
-        btnSample.addEventListener('click', () => {
-            const lbl = document.getElementById('lblFileName');
-            if (lbl) lbl.textContent = 'Sample_Customs_Clearance_Draft.json';
-            try {
-                localStorage.setItem(STORAGE_KEY_LAST_FILENAME, 'Sample_Customs_Clearance_Draft.json');
-            } catch (e) {}
-            loadDraftData(SAMPLE_DATA, true);
-            showToast("Sampel data pengapalan berhasil dimuat!", "info");
-        });
-    }
+    // 3.1 Dokumen Baru & Document Parser Modal
+    initDocumentParserModal();
 
     const btnPrint = document.getElementById('btnHeaderPrint');
     if (btnPrint) {
