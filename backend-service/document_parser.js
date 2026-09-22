@@ -118,6 +118,7 @@ Kembalikan HANYA format JSON murni tanpa markdown/backticks (\`\`\`json):
   "totalNetWeightKGM": "Total berat bersih (tulis persis)",
   "items": [
     {
+      "hsCode": "Pos Tarif / HS Code barang 8 sampai 10 digit (misal: '8504.40.90' atau '8512.40.00' jika tertera di dokumen pengapalan seperti Invoice, Packing List, atau B/L. Kosongkan jika tidak ada)",
       "uraianJenisBarang": "Nama atau deskripsi komoditas barang SAJA (WAJIB HAPUS dan JANGAN sertakan part number maupun customer part no seperti (575000 / W000103691). Contoh: VS TMEAO FBP AIO with Logo 350mm 14\")",
       "jumlahDanSatuanBarang": "Misal: 3,975 PC",
       "kemasan": "Jumlah dan jenis kemasan barang ini. KHUSUS dokumen VALEO & SINAR ASIA: nilainya SAMA SEMUA untuk seluruh baris barang, yaitu diambil dari Total Kemasan / Total Pallet Packing List / Invoice (misal: '816 BOX' untuk Valeo, atau '22 PALLET' / '22 PL' untuk Sinar Asia). JANGAN beda-beda!",

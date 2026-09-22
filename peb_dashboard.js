@@ -162,7 +162,8 @@ function collectFormData() {
     const items = [];
 
     rows.forEach(r => {
-        if (r.querySelector('td[colspan="8"]')) return;
+        if (r.querySelector('td[colspan]')) return;
+        const hsCode = r.querySelector('.item-hscode')?.value.trim() || '';
         const desc = r.querySelector('.item-desc')?.value.trim();
         const qtyVal = r.querySelector('.item-qty-val')?.value.trim();
         const qtyUnit = r.querySelector('.item-qty-unit')?.value || 'PCE';
@@ -172,8 +173,10 @@ function collectFormData() {
         const gross = r.querySelector('.item-gross')?.value.trim();
         const amt = r.querySelector('.item-amt')?.value.trim();
 
-        if (desc || qtyVal) {
+        if (desc || qtyVal || hsCode) {
             items.push({
+                hsCode: hsCode,
+                posTarif: hsCode,
                 uraianJenisBarang: desc,
                 jumlahDanSatuanBarang: qtyVal ? `${qtyVal} ${qtyUnit}` : '',
                 kemasan: packVal ? `${packVal} ${packType}` : '',
@@ -963,7 +966,7 @@ function renderItemsTable(items) {
     tbody.innerHTML = '';
 
     if (!items || items.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 24px;">Belum ada rincian barang.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--text-muted); padding: 24px;">Belum ada rincian barang.</td></tr>`;
         updateLiveKPIs();
         return;
     }
@@ -1074,6 +1077,9 @@ function appendItemRow(item = {}, rowNum = null) {
     tr.innerHTML = `
         <td style="text-align: center; font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--text-muted); vertical-align: top; padding-top: 10px;" class="row-num-cell">${index}</td>
         <td style="vertical-align: top;">
+            <input type="text" class="table-input-mono item-hscode" value="${escapeHtml(item.hsCode || item.posTarif || '')}" placeholder="Pos Tarif..." maxlength="15" title="Pos Tarif / HS Code">
+        </td>
+        <td style="vertical-align: top;">
             <textarea class="table-input-text item-desc" rows="2" placeholder="Uraian jenis barang...">${escapeHtml(item.uraianJenisBarang || '')}</textarea>
         </td>
         <td style="vertical-align: top;">
@@ -1162,8 +1168,8 @@ function appendItemRow(item = {}, rowNum = null) {
 function addNewItemRow() {
     const tbody = document.getElementById('itemsTableBody');
     if (!tbody) return;
-    if (tbody.querySelector('td[colspan="8"]')) tbody.innerHTML = '';
-    appendItemRow({ uraianJenisBarang: '', jumlahDanSatuanBarang: '', kemasan: '', beratBersih: '', beratKotor: '', amount: '' });
+    if (tbody.querySelector('td[colspan]')) tbody.innerHTML = '';
+    appendItemRow({ hsCode: '', uraianJenisBarang: '', jumlahDanSatuanBarang: '', kemasan: '', beratBersih: '', beratKotor: '', amount: '' });
     updateLiveKPIs();
     triggerAutoSave();
     showToast("Baris barang baru ditambahkan.", "info");
@@ -1250,7 +1256,7 @@ function updateLiveKPIs() {
     const packValues = [];
 
     rows.forEach(r => {
-        if (r.querySelector('td[colspan="8"]')) return;
+        if (r.querySelector('td[colspan]')) return;
         count++;
         const q = parseNum(r.querySelector('.item-qty-val')?.value);
         const u = r.querySelector('.item-qty-unit')?.value;
@@ -1698,6 +1704,7 @@ const SAMPLE_DATA = {
     "totalNetWeightKGM": "1,345.60 KG",
     "items": [
         {
+            "hsCode": "8512.40.00",
             "uraianJenisBarang": "FG AC Delco US Gold Hybrid 21\" 525mm",
             "jumlahDanSatuanBarang": "960 PCS",
             "kemasan": "816 BX",
@@ -1706,6 +1713,7 @@ const SAMPLE_DATA = {
             "amount": "1,929.60"
         },
         {
+            "hsCode": "8512.40.00",
             "uraianJenisBarang": "FG AC Delco US Silver SVB 21\" 525mm",
             "jumlahDanSatuanBarang": "960 PCS",
             "kemasan": "816 BX",
@@ -1714,6 +1722,7 @@ const SAMPLE_DATA = {
             "amount": "1,545.60"
         },
         {
+            "hsCode": "8512.40.00",
             "uraianJenisBarang": "FG AC Delco US Silver SVB 26\" 650mm",
             "jumlahDanSatuanBarang": "800 PCS",
             "kemasan": "816 BX",
@@ -1722,6 +1731,7 @@ const SAMPLE_DATA = {
             "amount": "1,520.00"
         },
         {
+            "hsCode": "8512.40.00",
             "uraianJenisBarang": "FG AC Delco US Silver SVB 18\" 450mm",
             "jumlahDanSatuanBarang": "5,440 PCS",
             "kemasan": "816 BX",
