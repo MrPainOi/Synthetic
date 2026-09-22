@@ -623,7 +623,7 @@
                                             <th></th>
                                         </tr>
                                     </thead>
-                                    <tbody>
+                                    <tbody id="ceisaDocTableBody">
                                         <tr id="row-bl">
                                             <td
                                                 style="text-align: center; font-family: var(--font-mono); font-weight: 600;">
@@ -755,7 +755,7 @@
                                 </table>
                             </div>
                             <div class="ceisa-table-pagination">
-                                <span>Total 3</span>
+                                <span id="ceisaDocTableTotal">Total 3</span>
                                 <div class="ceisa-page-ctrls">
                                     <button type="button" class="ceisa-page-btn" disabled>&lt;</button>
                                     <button type="button" class="ceisa-page-btn active">1</button>
@@ -1776,53 +1776,55 @@
                     </div>
 
                     <!-- HASIL AUDIT & VALIDASI KETERKAITAN DOKUMEN (SAFETY CHECK DI DALAM MODAL) -->
-                    <div class="modal-safecheck-card" id="modalSafeCheckContainer" style="display: none; border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden; background: #ffffff; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); margin-top: 10px;">
-                        <div style="background: #f8fafc; padding: 10px 14px; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between;">
-                            <span style="font-weight: 700; font-size: 13px; color: #1e293b; display: flex; align-items: center; gap: 6px;">
+                    <div class="modal-safecheck-card" id="modalSafeCheckContainer" style="display: none;">
+                        <div class="modal-safecheck-header">
+                            <span class="modal-safecheck-header-title">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.2">
                                     <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
                                 </svg>
-                                Hasil Audit &amp; Validasi Keterkaitan Dokumen (Safety Check)
+                                Hasil Audit &amp; Validasi Keterkaitan Dokumen (SafeCheck)
                             </span>
                             <span id="modalSafeCheckStatusBadge" class="badge-safe-valid">Tervalidasi: 1 Shipment</span>
                         </div>
-                        <div style="padding: 14px;">
-                            <!-- Banner Status -->
-                            <div id="modalSafeCheckBanner" class="safecheck-banner" style="margin-bottom: 14px;">
-                                <div class="safecheck-banner-icon">
-                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                        <div class="modal-safecheck-body">
+                            <!-- Banner Status & Skor -->
+                            <div id="modalSafeCheckBanner" class="modal-safecheck-banner">
+                                <div class="modal-safecheck-banner-icon">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
                                         <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
                                         <polyline points="22 4 12 14.01 9 11.01"></polyline>
                                     </svg>
                                 </div>
-                                <div class="safecheck-banner-content">
-                                    <div class="safecheck-banner-title" id="modalSafeCheckTitle">Semua Dokumen Cocok &amp; Terverifikasi 1 Kesatuan Pengiriman</div>
-                                    <div class="safecheck-banner-desc" id="modalSafeCheckSummary">
+                                <div class="modal-safecheck-banner-content">
+                                    <div class="modal-safecheck-banner-title" id="modalSafeCheckTitle">Semua Dokumen Cocok &amp; Terverifikasi 1 Kesatuan Pengiriman</div>
+                                    <div class="modal-safecheck-banner-desc" id="modalSafeCheckSummary">
                                         Semua dokumen saling berhubungan dan merupakan satu kesatuan shipment yang sama.
                                     </div>
                                 </div>
-                                <div class="safecheck-score-box">
-                                    <div class="safecheck-score-val" id="modalSafeCheckScore">100%</div>
-                                    <div class="safecheck-score-label">Tingkat Keyakinan</div>
+                                <div class="modal-safecheck-score-box">
+                                    <div class="modal-safecheck-score-val" id="modalSafeCheckScore">100%</div>
+                                    <div class="modal-safecheck-score-label">Keyakinan</div>
                                 </div>
                             </div>
 
-                            <!-- Parameter yang Cocok -->
-                            <div>
-                                <label class="form-label" style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 12px; color: #334155;">
-                                    Indikator Keselarasan Antar-Dokumen (Matched Identifiers):
+                            <!-- Parameter yang Cocok (Grid 2-Kolom Compact) -->
+                            <div class="modal-safecheck-section">
+                                <label class="modal-safecheck-label">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                    Indikator Keselarasan Antar-Dokumen:
                                 </label>
-                                <ul id="modalSafeCheckMatchedList" class="safecheck-list" style="margin: 0; padding: 0; list-style: none;">
+                                <ul id="modalSafeCheckMatchedList" class="modal-safecheck-list">
                                     <!-- Populated via JS -->
                                 </ul>
                             </div>
 
                             <!-- Temuan Selisih (Bila Ada) -->
-                            <div id="modalSafeCheckWarningsBox" style="margin-top: 12px; display: none;">
-                                <label class="form-label" style="display: block; margin-bottom: 6px; color: #dc2626; font-weight: 600; font-size: 12px;">
+                            <div id="modalSafeCheckWarningsBox" class="modal-safecheck-warnings-box" style="display: none;">
+                                <label class="modal-safecheck-label-warning">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
                                     Temuan Ketidaksesuaian / Peringatan:
                                 </label>
-                                <ul id="modalSafeCheckWarningsList" class="safecheck-warnings-list" style="margin: 0; padding: 0; list-style: none;">
+                                <ul id="modalSafeCheckWarningsList" class="modal-safecheck-warnings-list">
                                     <!-- Populated via JS -->
                                 </ul>
                             </div>

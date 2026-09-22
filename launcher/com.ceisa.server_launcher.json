@@ -1,0 +1,9 @@
+{
+  "name": "com.ceisa.server_launcher",
+  "description": "CEISA Document Parser Backend Server Launcher",
+  "path": "launcher.bat",
+  "type": "stdio",
+  "allowed_origins": [
+    "chrome-extension://geogeopfnkjopjgpfdnfnikfpecdodhe/"
+  ]
+}

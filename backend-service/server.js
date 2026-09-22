@@ -32,16 +32,55 @@ const upload = multer({ storage });
 // Serve static attachments
 app.use('/api/documents', express.static(uploadDir));
 app.get('/api/documents/:filename', (req, res) => {
-    const target = decodeURIComponent(req.params.filename).toLowerCase();
+    const rawTarget = decodeURIComponent(req.params.filename || '');
+    const docTypeReq = decodeURIComponent(req.query.docType || '').toLowerCase();
+    const target = rawTarget.toLowerCase();
+    const cleanTarget = target.replace(/^\d{10,14}_/, '').replace(/[^a-z0-9]/g, '');
+
     try {
         const files = fs.readdirSync(uploadDir);
-        const match = files.find(f => f.toLowerCase().includes(target) || target.includes(f.toLowerCase()));
+        if (files.length === 0) return res.status(404).send('Document not found');
+
+        // 1. Direct or normalized match by filename
+        let match = files.find(f => {
+            const fLow = f.toLowerCase();
+            const fClean = fLow.replace(/^\d{10,14}_/, '').replace(/[^a-z0-9]/g, '');
+            return fLow === target || 
+                   fClean === cleanTarget || 
+                   (cleanTarget.length > 3 && (fClean.includes(cleanTarget) || cleanTarget.includes(fClean)));
+        });
         if (match) {
             return res.sendFile(path.join(uploadDir, match));
         }
-        if (files.length > 0) {
-            // Default ke file upload terbaru
-            return res.sendFile(path.join(uploadDir, files[files.length - 1]));
+
+        // 2. Match by Document Type (B/L vs INVOICE vs PACKING LIST)
+        const isBL = /lading|bl|bill|waybill|705|bapsin/i.test(docTypeReq) || /bl|lading|waybill|bapsin/i.test(target);
+        const isINV = /invoice|faktur|380/i.test(docTypeReq) || /inv|invoice|faktur/i.test(target);
+        const isPL = /packing|kemasan|217/i.test(docTypeReq) || /pl|pack|packing/i.test(target);
+
+        if (isBL) {
+            const blMatch = files.slice().reverse().find(f => {
+                const fl = f.toLowerCase();
+                return fl.includes('bl') || fl.includes('lading') || fl.includes('waybill') || fl.includes('bapsin') || fl.includes('ocean');
+            });
+            if (blMatch) return res.sendFile(path.join(uploadDir, blMatch));
+        } else if (isINV) {
+            const invMatch = files.slice().reverse().find(f => {
+                const fl = f.toLowerCase();
+                return fl.includes('inv') || fl.includes('faktur') || fl.includes('commercial');
+            });
+            if (invMatch) return res.sendFile(path.join(uploadDir, invMatch));
+        } else if (isPL) {
+            const plMatch = files.slice().reverse().find(f => {
+                const fl = f.toLowerCase();
+                return fl.includes('pack') || fl.includes('pl') || fl.includes('list');
+            });
+            if (plMatch) return res.sendFile(path.join(uploadDir, plMatch));
+        }
+
+        // 3. Hanya jika total file di folder uploadDir hanya ada 1 (berkas shipment gabungan)
+        if (files.length === 1) {
+            return res.sendFile(path.join(uploadDir, files[0]));
         }
     } catch (e) {}
     res.status(404).send('Document not found');
@@ -116,8 +155,11 @@ app.post('/api/parse-documents', upload.array('files'), async (req, res) => {
         return res.end();
     }
 
-    const filePaths = uploadedFiles.map(f => f.path);
-    console.log(`\n[API] Menerima ${filePaths.length} dokumen untuk diproses:`);
+    const fileItems = uploadedFiles.map(f => ({
+        path: f.path,
+        originalName: f.originalname
+    }));
+    console.log(`\n[API] Menerima ${fileItems.length} dokumen untuk diproses:`);
     uploadedFiles.forEach(f => console.log(`  - ${f.originalname} (${f.size} bytes)`));
 
     try {
@@ -125,7 +167,7 @@ app.post('/api/parse-documents', upload.array('files'), async (req, res) => {
             sendEvent({ type: 'progress', ...prog });
         };
 
-        const parsedData = await parseDocuments(filePaths, onProgress, customKey);
+        const parsedData = await parseDocuments(fileItems, onProgress, customKey);
 
         if (!parsedData) {
             throw new Error('Hasil ekstraksi kosong atau gagal diproses oleh AI.');

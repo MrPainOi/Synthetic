@@ -226,4 +226,37 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         return true;
     }
 
+
+    // --------------------------------------------------------
+    // Kontrol Backend Server via Native Messaging
+    // --------------------------------------------------------
+
+    if (message.type === "START_BACKEND_SERVER") {
+        try {
+            chrome.runtime.sendNativeMessage(
+                "com.ceisa.server_launcher",
+                { action: "start" },
+                (response) => {
+                    if (chrome.runtime.lastError) {
+                        sendResponse({
+                            ok: false,
+                            error: chrome.runtime.lastError.message
+                        });
+                    } else {
+                        sendResponse({
+                            ok: true,
+                            data: response
+                        });
+                    }
+                }
+            );
+        } catch (err) {
+            sendResponse({
+                ok: false,
+                error: err.message
+            });
+        }
+        return true;
+    }
+
 });

@@ -2389,8 +2389,8 @@ textarea.form-control {
 .doc-parser-modal-container {
     background: #ffffff;
     width: 100%;
-    max-width: 820px;
-    max-height: 90vh;
+    max-width: 740px;
+    max-height: 92vh;
     border-radius: var(--radius-md);
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.45);
     border: 1px solid rgba(255, 255, 255, 0.2);
@@ -2414,9 +2414,9 @@ textarea.form-control {
 .doc-parser-modal-header {
     background: linear-gradient(135deg, #0a2540 0%, #0f3460 100%);
     color: #ffffff;
-    padding: 18px 22px;
+    padding: 14px 20px;
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
     gap: 16px;
     border-bottom: 2px solid #2563eb;
@@ -2427,7 +2427,7 @@ textarea.form-control {
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-bottom: 6px;
+    margin-bottom: 4px;
 }
 
 .doc-parser-badge {
@@ -2451,29 +2451,45 @@ textarea.form-control {
 }
 
 .doc-parser-title {
-    font-size: 17px;
+    font-size: 16px;
     font-weight: 700;
     color: #ffffff;
-    margin: 0 0 4px 0;
-    line-height: 1.2;
+    margin: 0 0 2px 0;
+    line-height: 1.25;
 }
 
 .doc-parser-subtitle {
-    font-size: 12.5px;
+    font-size: 12px;
     color: #94a3b8;
     margin: 0;
-    line-height: 1.4;
+    line-height: 1.35;
     max-width: 680px;
 }
-
 .doc-parser-modal-body {
-    padding: 22px;
+    padding: 16px 20px;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 12px;
     flex: 1;
     background: #f8fafc;
+}
+
+.doc-parser-modal-body::-webkit-scrollbar {
+    width: 7px;
+}
+
+.doc-parser-modal-body::-webkit-scrollbar-track {
+    background: #f1f5f9;
+}
+
+.doc-parser-modal-body::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+
+.doc-parser-modal-body::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
 }
 
 /* DROPZONE AREA */
@@ -2835,13 +2851,17 @@ textarea.form-control {
     transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* SAFECHECK MODAL CARD ANIMATION */
+/* ======================================================================
+   SAFECHECK MODAL CARD & COMPACT RESPONSIVE LAYOUT (17" MONITOR READY)
+   ====================================================================== */
 .modal-safecheck-card {
     border: 1px solid #cbd5e1;
     border-radius: 8px;
     overflow: hidden;
     background: #ffffff;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+    display: flex;
+    flex-direction: column;
     margin-top: 2px;
 }
 
@@ -2862,6 +2882,259 @@ textarea.form-control {
 
 .modal-safecheck-card.animate-slide-up {
     animation: safecheckSlideUp 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.modal-safecheck-header {
+    background: #f8fafc;
+    padding: 9px 14px;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.modal-safecheck-header-title {
+    font-weight: 700;
+    font-size: 13px;
+    color: #0f172a;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.modal-safecheck-body {
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Banner SafeCheck di Modal */
+.modal-safecheck-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid #bbf7d0;
+    background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+    color: #14532d;
+    box-sizing: border-box;
+    width: 100%;
+}
+
+.modal-safecheck-banner.safecheck-banner-warning {
+    border-color: #fecaca;
+    background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+    color: #991b1b;
+}
+
+.modal-safecheck-banner-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: rgba(34, 197, 94, 0.15);
+    color: #16a34a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.safecheck-banner-warning .modal-safecheck-banner-icon {
+    background: rgba(239, 68, 68, 0.15);
+    color: #dc2626;
+}
+
+.modal-safecheck-banner-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.modal-safecheck-banner-title {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 2px;
+    line-height: 1.3;
+}
+
+.safecheck-banner-warning .modal-safecheck-banner-title {
+    color: #991b1b;
+}
+
+.modal-safecheck-banner-desc {
+    font-size: 12px;
+    line-height: 1.4;
+    color: #334155;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.modal-safecheck-score-box {
+    background: #ffffff;
+    border: 1px solid rgba(22, 163, 74, 0.3);
+    border-radius: 8px;
+    padding: 5px 14px;
+    text-align: center;
+    flex-shrink: 0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.safecheck-banner-warning .modal-safecheck-score-box {
+    border-color: rgba(220, 38, 38, 0.3);
+}
+
+.modal-safecheck-score-val {
+    font-family: var(--font-mono);
+    font-size: 20px;
+    font-weight: 800;
+    color: #16a34a;
+    line-height: 1;
+}
+
+.safecheck-banner-warning .modal-safecheck-score-val {
+    color: #dc2626;
+}
+
+.modal-safecheck-score-label {
+    font-size: 10px;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    margin-top: 2px;
+    white-space: nowrap;
+}
+
+/* Matched Identifiers Grid (2 Columns on landscape / 17" monitors) */
+.modal-safecheck-section {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.modal-safecheck-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #334155;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    margin: 0;
+}
+
+.modal-safecheck-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+    gap: 6px 10px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.modal-safecheck-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 12px;
+    color: #0f172a;
+    line-height: 1.35;
+    transition: all 0.15s ease;
+}
+
+.modal-safecheck-item:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+}
+
+.modal-safecheck-check-icon {
+    width: 17px;
+    height: 17px;
+    border-radius: 50%;
+    background: #dcfce7;
+    color: #16a34a;
+    font-weight: 800;
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.modal-safecheck-item-text {
+    flex: 1;
+    font-weight: 500;
+    word-break: break-word;
+}
+
+.modal-safecheck-empty {
+    color: #64748b;
+    font-size: 12px;
+    padding: 6px 0;
+    grid-column: 1 / -1;
+}
+
+/* Warnings Box */
+.modal-safecheck-warnings-box {
+    margin-top: 2px;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 6px;
+    padding: 8px 12px;
+}
+
+.modal-safecheck-label-warning {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #dc2626;
+    margin: 0 0 5px 0;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.modal-safecheck-warnings-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.modal-safecheck-warning-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    font-size: 11.5px;
+    color: #991b1b;
+    line-height: 1.35;
+}
+
+.modal-safecheck-warn-icon {
+    color: #dc2626;
+    font-weight: 800;
+    flex-shrink: 0;
+}
+
+.modal-safecheck-warning-text {
+    flex: 1;
+    word-break: break-word;
 }
 
 /* MODAL FOOTER */
@@ -3031,4 +3304,154 @@ textarea.form-control {
     background: #dc2626;
     border-color: #b91c1c;
     transform: translateY(-1px);
+}
+
+/* ======================================================================
+   RESPONSIVE SCALING KHUSUS MONITOR 17" (1280x1024, 1366x768, 1440x900)
+   Menjamin teks tajam, terbaca jelas di skala 100% tanpa perlu zoom out
+   ====================================================================== */
+@media screen and (max-height: 850px), screen and (max-width: 1366px) {
+    .doc-modal-overlay {
+        padding: 10px !important;
+    }
+    
+    .doc-parser-modal-container {
+        max-width: min(740px, 92vw) !important;
+        max-height: calc(100vh - 16px) !important;
+        border-radius: 6px !important;
+    }
+    
+    .doc-parser-modal-header {
+        padding: 10px 16px !important;
+    }
+    
+    .doc-parser-title {
+        font-size: 15px !important;
+    }
+    
+    .doc-parser-subtitle {
+        display: none !important;
+    }
+    
+    .doc-parser-modal-body {
+        padding: 10px 14px !important;
+        gap: 8px !important;
+    }
+    
+    .doc-parser-dropzone {
+        padding: 16px 12px !important;
+        gap: 6px !important;
+    }
+    
+    .doc-parser-dropzone-icon {
+        width: 38px !important;
+        height: 38px !important;
+        margin-bottom: 2px !important;
+    }
+    
+    .doc-parser-dropzone-icon svg {
+        width: 22px !important;
+        height: 22px !important;
+    }
+    
+    .dropzone-main-text {
+        font-size: 13px !important;
+    }
+    
+    .dropzone-sub-text {
+        font-size: 11.5px !important;
+    }
+    
+    .doc-parser-modal-footer {
+        padding: 8px 16px !important;
+    }
+    
+    .btn-parser-start,
+    #btnDocParserContinue {
+        padding: 6px 14px !important;
+        font-size: 12px !important;
+    }
+    
+    /* SafeCheck Compact Scaling */
+    .modal-safecheck-header {
+        padding: 8px 12px !important;
+    }
+    
+    .modal-safecheck-header-title {
+        font-size: 12.5px !important;
+    }
+    
+    .modal-safecheck-body {
+        padding: 10px 12px !important;
+        gap: 8px !important;
+    }
+    
+    .modal-safecheck-banner {
+        padding: 8px 12px !important;
+        gap: 10px !important;
+    }
+    
+    .modal-safecheck-banner-icon {
+        width: 30px !important;
+        height: 30px !important;
+    }
+    
+    .modal-safecheck-banner-icon svg {
+        width: 17px !important;
+        height: 17px !important;
+    }
+    
+    .modal-safecheck-banner-title {
+        font-size: 12.5px !important;
+    }
+    
+    .modal-safecheck-banner-desc {
+        font-size: 11.5px !important;
+        line-height: 1.35 !important;
+        max-height: 50px !important;
+    }
+    
+    .modal-safecheck-score-box {
+        padding: 4px 10px !important;
+    }
+    
+    .modal-safecheck-score-val {
+        font-size: 18px !important;
+    }
+    
+    .modal-safecheck-score-label {
+        font-size: 9.5px !important;
+    }
+    
+    .modal-safecheck-label {
+        font-size: 11px !important;
+    }
+    
+    .modal-safecheck-list {
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)) !important;
+        gap: 5px 8px !important;
+    }
+    
+    .modal-safecheck-item {
+        padding: 5px 8px !important;
+        font-size: 11.5px !important;
+    }
+    
+    .modal-safecheck-check-icon {
+        width: 15px !important;
+        height: 15px !important;
+        font-size: 10px !important;
+    }
+    
+    .modal-safecheck-warnings-box {
+        padding: 6px 10px !important;
+    }
+    
+    .modal-safecheck-label-warning {
+        font-size: 11px !important;
+    }
+    
+    .modal-safecheck-warning-item {
+        font-size: 11px !important;
+    }
 }

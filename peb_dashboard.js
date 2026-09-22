@@ -356,14 +356,67 @@ function handleStepperNext() {
     }
 }
 
+// HELPER NORMALISASI NAMA FILE DOKUMEN (Mengabaikan timestamp prefix & spasi/simbol)
+function normalizeDocName(str) {
+    if (!str) return '';
+    return String(str)
+        .toLowerCase()
+        .replace(/^\d{10,14}_/, '') // Buang timestamp prefix misal 1727000000000_
+        .replace(/[^a-z0-9]/g, '');
+}
+
 // HELPER GUESS DOCUMENT TYPE (GLOBAL SCOPE)
 function guessDocType(filename) {
     if (!filename) return 'DOKUMEN PABEAN';
     const lower = filename.toLowerCase();
-    if (lower.includes('inv') || lower.includes('faktur') || lower.includes('commercial')) return 'INVOICE';
-    if (lower.includes('pack') || lower.includes('pl.') || lower.includes('pl_') || lower.includes('list')) return 'PACKING LIST';
-    if (lower.includes('bl') || lower.includes('b/l') || lower.includes('lading') || lower.includes('waybill') || lower.includes('bapsin')) return 'BILL OF LADING';
-    if (lower.includes('coo') || lower.includes('cert') || lower.includes('origin')) return 'CERTIFICATE';
+
+    // 1. Deteksi B/L / Konosemen / Sea Waybill / Air Waybill
+    const blTokens = ['bl', 'bol', 'swb', 'awb', 'ocean bl', 'ocean-bl', 'ocean_bl', 'b/l', 'b.l'];
+    const hasBlToken = blTokens.some(tok => {
+        const regex = new RegExp(`(^|[^a-z0-9])${tok.replace(/[/.]/g, '\\$&')}([^a-z0-9]|$)`, 'i');
+        return regex.test(lower);
+    });
+
+    if (
+        hasBlToken ||
+        lower.includes('lading') ||
+        lower.includes('waybill') ||
+        lower.includes('konosemen') ||
+        lower.includes('bapsin') ||
+        lower.includes('bill of lading') ||
+        lower.includes('seawaybill') ||
+        lower.includes('airwaybill') ||
+        lower.startsWith('bl ') || lower.startsWith('bl_') || lower.startsWith('bl-') || lower.startsWith('bl.') ||
+        lower.endsWith('_bl.pdf') || lower.endsWith('-bl.pdf') || lower.endsWith(' bl.pdf') || lower.endsWith('.bl.pdf')
+    ) {
+        return 'BILL OF LADING';
+    }
+
+    // 2. Deteksi Invoice / Faktur
+    if (
+        /(^|[^a-z0-9])(inv|invoice|faktur)([^a-z0-9]|$)/i.test(lower) ||
+        lower.includes('commercial') ||
+        lower.includes('faktur') ||
+        lower.startsWith('inv')
+    ) {
+        return 'INVOICE';
+    }
+
+    // 3. Deteksi Packing List / Daftar Kemasan
+    if (
+        /(^|[^a-z0-9])(pl|pack|packing|kemasan)([^a-z0-9]|$)/i.test(lower) ||
+        lower.includes('packing') ||
+        lower.includes('packlist') ||
+        lower.includes('kemasan') ||
+        lower.startsWith('pl')
+    ) {
+        return 'PACKING LIST';
+    }
+
+    if (lower.includes('coo') || lower.includes('cert') || lower.includes('origin')) {
+        return 'CERTIFICATE';
+    }
+
     return 'DOKUMEN PABEAN';
 }
 
@@ -409,6 +462,7 @@ function loadDraftData(data, shouldSave = true) {
     let plFileName = null;
     let blFileName = null;
 
+    // 1. Deteksi awal dari nama file fisik yang diunggah
     if (uploadedFiles.length > 0) {
         uploadedFiles.forEach(f => {
             const dt = guessDocType(f.name);
@@ -418,29 +472,63 @@ function loadDraftData(data, shouldSave = true) {
         });
     }
 
-    // Jika 1 file (misal SB22623-10.pdf) berisi semua lampiran shipment, jadikan default untuk ketiganya
-    if (primaryFile) {
-        if (!invFileName) invFileName = primaryFile.name;
-        if (!plFileName) plFileName = primaryFile.name;
-        if (!blFileName) blFileName = primaryFile.name;
+    // 2. Cross-check dengan hasil AI Document Classifier (docList)
+    if (docList.length > 0 && uploadedFiles.length > 0) {
+        docList.forEach(d => {
+            const dt = d.documentType || '';
+            const dNorm = normalizeDocName(d.fileName);
+            const matchedUploaded = uploadedFiles.find(uf => {
+                const ufNorm = normalizeDocName(uf.name);
+                return ufNorm === dNorm || ufNorm.includes(dNorm) || dNorm.includes(ufNorm);
+            });
+
+            if (matchedUploaded) {
+                if (/lading|bl|waybill/i.test(dt) && !blFileName) blFileName = matchedUploaded.name;
+                else if (/invoice|inv/i.test(dt) && !invFileName) invFileName = matchedUploaded.name;
+                else if (/packing|pl/i.test(dt) && !plFileName) plFileName = matchedUploaded.name;
+            }
+        });
+    }
+
+    // 3. Alokasikan file terunggah yang belum terpetakan ke slot yang masih kosong
+    if (uploadedFiles.length > 0) {
+        const unassigned = uploadedFiles.filter(f => f.name !== invFileName && f.name !== plFileName && f.name !== blFileName);
+        if (!blFileName && unassigned.length > 0) blFileName = unassigned.shift().name;
+        if (!invFileName && unassigned.length > 0) invFileName = unassigned.shift().name;
+        if (!plFileName && unassigned.length > 0) plFileName = unassigned.shift().name;
+    }
+
+    // 4. Jika HANYA ADA 1 FILE yang diunggah (berkas lampiran gabungan / single PDF)
+    if (uploadedFiles.length === 1 && primaryFile) {
+        invFileName = primaryFile.name;
+        plFileName = primaryFile.name;
+        blFileName = primaryFile.name;
     }
 
     const invDoc = docList.find(d => /invoice/i.test(d.documentType || '') || /inv/i.test(d.fileName || ''));
     const plDoc = docList.find(d => /packing/i.test(d.documentType || '') || /pl/i.test(d.fileName || ''));
-    const blDoc = docList.find(d => /lading/i.test(d.documentType || '') || /bl/i.test(d.fileName || ''));
+    const blDoc = docList.find(d => /lading|bl|waybill/i.test(d.documentType || '') || /bl/i.test(d.fileName || ''));
 
     window._currentDocMap.INVOICE = invFileName || invDoc?.fileName || (data.invoiceNumber ? `INV.${data.invoiceNumber}.pdf` : 'INV.98007744.pdf');
     window._currentDocMap.PACKING_LIST = plFileName || plDoc?.fileName || (data.packingListNumber ? `PL.${data.packingListNumber}.pdf` : 'PL.98007744.pdf');
-    window._currentDocMap.BILL_OF_LADING = blFileName || blDoc?.fileName || (data.blNumber ? `BL BAPSIN0153818 PT VALEO AC-RBB47.pdf` : 'BL BAPSIN0153818 PT VALEO AC-RBB47.pdf');
+    window._currentDocMap.BILL_OF_LADING = blFileName || blDoc?.fileName || (data.blNumber ? `BL.${data.blNumber}.pdf` : 'BL BAPSIN0153818 PT VALEO AC-RBB47.pdf');
 
-    // Otomatis mapping nama file ke blobUrl dokumen yang diunggah agar saat dibuka tidak meminta link ulang!
-    if (primaryBlob) {
+    // 5. MAPPING KE _docFileMap SECARA AMAN (TIDAK MENIMPA B/L DENGAN INVOICE!)
+    if (uploadedFiles.length === 1 && primaryBlob) {
         window._docFileMap[window._currentDocMap.INVOICE] = primaryBlob;
         window._docFileMap[window._currentDocMap.PACKING_LIST] = primaryBlob;
         window._docFileMap[window._currentDocMap.BILL_OF_LADING] = primaryBlob;
-        if (invDoc?.fileName) window._docFileMap[invDoc.fileName] = primaryBlob;
-        if (plDoc?.fileName) window._docFileMap[plDoc.fileName] = primaryBlob;
-        if (blDoc?.fileName) window._docFileMap[blDoc.fileName] = primaryBlob;
+    } else {
+        // Setiap dokumen dipetakan ke blob filenya masing-masing
+        if (invFileName && window._docFileMap[invFileName]) {
+            window._docFileMap[window._currentDocMap.INVOICE] = window._docFileMap[invFileName];
+        }
+        if (plFileName && window._docFileMap[plFileName]) {
+            window._docFileMap[window._currentDocMap.PACKING_LIST] = window._docFileMap[plFileName];
+        }
+        if (blFileName && window._docFileMap[blFileName]) {
+            window._docFileMap[window._currentDocMap.BILL_OF_LADING] = window._docFileMap[blFileName];
+        }
     }
 
     const tagInv = document.getElementById('tagFileInvoice');
@@ -617,11 +705,255 @@ function loadDraftData(data, shouldSave = true) {
 
     calculateTare();
     renderItemsTable(data.items || []);
+    renderDocumentsTable(data);
     renderSafeCheck(data.safeCheck);
 
     if (shouldSave) {
         saveCurrentDraftState();
     }
+}
+
+// ====================================================================
+// RENDER TABEL DOKUMEN LAMPIRAN (TAB DOKUMEN - CEISA 4.0)
+// ====================================================================
+function renderDocumentsTable(data = {}) {
+    const tbody = document.getElementById('ceisaDocTableBody') || document.querySelector('#tab-dokumen .ceisa-table tbody');
+    if (!tbody) return;
+
+    tbody.innerHTML = '';
+
+    const docList = data.safeCheck?.documentList || [];
+    const rows = [];
+
+    // 1. Dokumen Invoice (380)
+    const invNum = data.invoiceNumber || '';
+    const invDate = data.invoiceDate || '';
+    const invFile = window._currentDocMap?.INVOICE || (invNum ? `INV.${invNum}.pdf` : 'INV.98007744.pdf');
+
+    // 2. Dokumen Packing List (217)
+    const plNum = data.packingListNumber || data.invoiceNumber || '';
+    const plDate = data.packingListDate || data.invoiceDate || '';
+    const plFile = window._currentDocMap?.PACKING_LIST || (plNum ? `PL.${plNum}.pdf` : 'PL.98007744.pdf');
+
+    // 3. Dokumen Bill of Lading (705)
+    const blNum = data.blNumber || '';
+    const blDate = data.blDate || '';
+    const blFile = window._currentDocMap?.BILL_OF_LADING || (blNum ? `BL.${blNum}.pdf` : 'BL BAPSIN0153818 PT VALEO AC-RBB47.pdf');
+
+    // Cek apakah shipment memiliki berkas B/L atau nomor B/L
+    const hasBl = Boolean(
+        blNum || 
+        (window._currentDocMap?.BILL_OF_LADING && !window._currentDocMap.BILL_OF_LADING.includes('VALEO')) || 
+        docList.some(d => /lading|bl|waybill/i.test(d.documentType || ''))
+    );
+
+    // Jika ada BL atau merupakan draft Valeo / draft default
+    if (hasBl || data.shipperName?.toLowerCase().includes('valeo') || (!data.shipperName && !data.invoiceNumber)) {
+        rows.push({
+            id: 'row-bl',
+            code: '705 - B/L',
+            docType: '705 - BILL OF LADING (OCEAN B/L)',
+            inputId: 'blNumber',
+            dateId: 'blDate',
+            btnId: 'btnOpenDocBL',
+            tagId: 'tagFileBL',
+            number: blNum,
+            date: blDate,
+            fileName: blFile
+        });
+    }
+
+    // Invoice
+    rows.push({
+        id: 'row-invoice',
+        code: '380 - INVOICE',
+        docType: '380 - INVOICE (KOMERSIAL)',
+        inputId: 'invoiceNumber',
+        dateId: 'invoiceDate',
+        btnId: 'btnOpenDocInvoice',
+        tagId: 'tagFileInvoice',
+        number: invNum,
+        date: invDate,
+        fileName: invFile
+    });
+
+    // Packing List
+    rows.push({
+        id: 'row-packinglist',
+        code: '217 - PACKING LIST',
+        docType: '217 - PACKING LIST (DAFTAR KEMASAN)',
+        inputId: 'packingListNumber',
+        dateId: 'packingListDate',
+        btnId: 'btnOpenDocPackingList',
+        tagId: 'tagFilePackingList',
+        number: plNum,
+        date: plDate,
+        fileName: plFile
+    });
+
+    // Jika BL belum ada di rows tetapi ada blNum
+    if (!rows.some(r => r.id === 'row-bl') && blNum) {
+        rows.push({
+            id: 'row-bl',
+            code: '705 - B/L',
+            docType: '705 - BILL OF LADING (OCEAN B/L)',
+            inputId: 'blNumber',
+            dateId: 'blDate',
+            btnId: 'btnOpenDocBL',
+            tagId: 'tagFileBL',
+            number: blNum,
+            date: blDate,
+            fileName: blFile
+        });
+    }
+
+    // Dokumen tambahan lainnya dari docList (misal COO / Sertifikat Asal)
+    docList.forEach((d, idx) => {
+        const dt = d.documentType || '';
+        if (!/invoice|inv|packing|pl|lading|bl|waybill/i.test(dt)) {
+            const extraCode = /coo|cert|origin/i.test(dt) ? '861 - CERTIFICATE OF ORIGIN' : '999 - DOKUMEN LAINNYA';
+            rows.push({
+                id: `row-doc-extra-${idx}`,
+                code: extraCode,
+                docType: dt || 'DOKUMEN PABEAN',
+                inputId: `docExtraNumber_${idx}`,
+                dateId: `docExtraDate_${idx}`,
+                btnId: `btnOpenDocExtra_${idx}`,
+                tagId: `tagFileExtra_${idx}`,
+                number: '',
+                date: '',
+                fileName: d.fileName || 'Dokumen_Pabean.pdf'
+            });
+        }
+    });
+
+    // Render baris dokumen
+    rows.forEach((row, index) => {
+        appendDocRow(row, index + 1);
+    });
+
+    updateDocTableIndices();
+}
+
+function appendDocRow(row, index) {
+    const tbody = document.getElementById('ceisaDocTableBody') || document.querySelector('#tab-dokumen .ceisa-table tbody');
+    if (!tbody) return;
+
+    const tr = document.createElement('tr');
+    tr.id = row.id || `row-doc-${Date.now()}`;
+    tr.innerHTML = `
+        <td style="text-align: center; font-family: var(--font-mono); font-weight: 600;" class="doc-row-num">${index}</td>
+        <td style="font-weight: 600; color: var(--text-primary); font-size: 12.5px;">${escapeHtml(row.code)}</td>
+        <td><input type="text" id="${row.inputId}" class="table-input-mono doc-input-sync" value="${escapeHtml(row.number || '')}" placeholder="Nomor ${escapeHtml(row.code.split('-')[1]?.trim() || 'dokumen')}..."></td>
+        <td><input type="text" id="${row.dateId}" class="table-input-mono doc-input-sync" value="${escapeHtml(row.date || '')}" placeholder="DD-MM-YYYY"></td>
+        <td style="text-align: center; color: #94a3b8;">-</td>
+        <td style="text-align: center; color: #94a3b8;">-</td>
+        <td style="text-align: center; color: #94a3b8;">-</td>
+        <td>
+            <div class="doc-link-wrap">
+                <button type="button" class="btn-doc-link" id="${row.btnId}" data-doc-type="${escapeHtml(row.docType || row.code)}" data-filename="${escapeHtml(row.fileName || '')}" title="Buka berkas ${escapeHtml(row.fileName || '')}">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                </button>
+                <span class="doc-file-tag" id="${row.tagId}" title="${escapeHtml(row.fileName || '')}">${escapeHtml(row.fileName || 'Dokumen.pdf')}</span>
+            </div>
+        </td>
+        <td style="text-align: center;">
+            <div style="display: flex; justify-content: center; gap: 6px;">
+                <button type="button" class="btn-ceisa-sub btn-icon-only btn-doc-delete" data-row-id="${tr.id}" title="Hapus Dokumen">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="3 6 5 6 21 6"></polyline>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    </svg>
+                </button>
+            </div>
+        </td>
+    `;
+
+    // Wire Buka Dokumen
+    const btnOpen = tr.querySelector('.btn-doc-link');
+    if (btnOpen) {
+        btnOpen.addEventListener('click', () => {
+            const numInput = tr.querySelector(`#${row.inputId}`);
+            const dateInput = tr.querySelector(`#${row.dateId}`);
+            const tagEl = tr.querySelector('.doc-file-tag');
+            const targetFile = tagEl?.textContent?.trim() || row.fileName || 'Dokumen.pdf';
+            openCeisaDocViewer({
+                docType: row.docType || row.code,
+                fileName: targetFile,
+                docNumber: numInput?.value || row.number,
+                docDate: dateInput?.value || row.date
+            });
+        });
+    }
+
+    // Wire Hapus Dokumen
+    const btnDel = tr.querySelector('.btn-doc-delete');
+    if (btnDel) {
+        btnDel.addEventListener('click', function () {
+            tr.style.transition = 'opacity 0.2s';
+            tr.style.opacity = '0';
+            setTimeout(() => {
+                tr.remove();
+                updateDocTableIndices();
+                triggerAutoSave();
+            }, 200);
+        });
+    }
+
+    // Wire input sync auto-save
+    tr.querySelectorAll('input').forEach(inp => {
+        inp.addEventListener('input', () => triggerAutoSave());
+        inp.addEventListener('change', () => triggerAutoSave());
+    });
+
+    tbody.appendChild(tr);
+}
+
+function updateDocTableIndices() {
+    const tbody = document.getElementById('ceisaDocTableBody') || document.querySelector('#tab-dokumen .ceisa-table tbody');
+    const totalSpan = document.getElementById('ceisaDocTableTotal') || document.querySelector('.ceisa-table-pagination > span');
+    if (!tbody) return;
+
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    rows.forEach((tr, idx) => {
+        const numCell = tr.querySelector('td:first-child');
+        if (numCell) numCell.textContent = idx + 1;
+    });
+
+    if (totalSpan) {
+        totalSpan.textContent = `Total ${rows.length}`;
+    }
+}
+
+function addNewDocRow() {
+    const tbody = document.getElementById('ceisaDocTableBody') || document.querySelector('#tab-dokumen .ceisa-table tbody');
+    if (!tbody) return;
+
+    const currentCount = tbody.querySelectorAll('tr').length;
+    const newIdx = currentCount + 1;
+    const randId = Date.now();
+
+    const newRow = {
+        id: `row-doc-${randId}`,
+        code: '999 - DOKUMEN LAINNYA',
+        docType: 'DOKUMEN PABEAN',
+        inputId: `docCustomNum_${randId}`,
+        dateId: `docCustomDate_${randId}`,
+        btnId: `btnOpenDocCustom_${randId}`,
+        tagId: `tagFileCustom_${randId}`,
+        number: '',
+        date: '',
+        fileName: 'Pilih_Dokumen.pdf'
+    };
+
+    appendDocRow(newRow, newIdx);
+    updateDocTableIndices();
+    triggerAutoSave();
+    showToast("Baris dokumen lampiran baru ditambahkan.", "info");
 }
 
 // RENDER ITEMS TABLE
@@ -1137,55 +1469,93 @@ function openCeisaDocViewer({ docType, fileName, docNumber, docDate }) {
         iframe.src = 'about:blank';
     }
 
-    // 1. Resolve blobUrl from memory
-    let blobUrl = window._docFileMap[window._activeModalFileName];
+    const isBL = /lading|bl|bill|waybill|705|bapsin/i.test(docType || '') || /bl|lading|waybill|bapsin/i.test(window._activeModalFileName || '');
+    const isINV = /invoice|faktur|380/i.test(docType || '') || /inv|invoice|faktur/i.test(window._activeModalFileName || '');
+    const isPL = /packing|kemasan|217/i.test(docType || '') || /pl|pack|packing/i.test(window._activeModalFileName || '');
 
-    // Jika tidak cocok langsung, cari secara case-insensitive atau dari substring nama file
+    let blobUrl = null;
+    let finalFileName = window._activeModalFileName;
+
+    // 1. Direct key match di _docFileMap
+    if (window._docFileMap[finalFileName]) {
+        blobUrl = window._docFileMap[finalFileName];
+    }
+
+    // 2. Normalized name match (mengabaikan timestamp prefix, spasi vs underscore, simbol)
     if (!blobUrl) {
-        const targetLower = window._activeModalFileName.toLowerCase();
+        const normTarget = normalizeDocName(finalFileName);
         for (const [k, v] of Object.entries(window._docFileMap)) {
-            if (k.toLowerCase() === targetLower || k.toLowerCase().includes(targetLower) || targetLower.includes(k.toLowerCase())) {
+            const normK = normalizeDocName(k);
+            if (normK && normTarget && (normK === normTarget || normK.includes(normTarget) || normTarget.includes(normK))) {
                 blobUrl = v;
-                window._activeModalFileName = k;
+                finalFileName = k;
                 break;
             }
         }
     }
 
-    // Jika masih belum ada, gunakan dokumen utama yang diunggah pengguna pada sesi ini
-    if (!blobUrl && window._lastUploadedBlobUrl) {
-        blobUrl = window._lastUploadedBlobUrl;
-        if (window._lastUploadedFile) {
-            window._activeModalFileName = window._lastUploadedFile.name;
+    // 3. Cek mapping dokumen sesi saat ini berdasarkan jenis dokumen yang diminta
+    if (!blobUrl) {
+        if (isBL && window._currentDocMap?.BILL_OF_LADING && window._docFileMap[window._currentDocMap.BILL_OF_LADING]) {
+            blobUrl = window._docFileMap[window._currentDocMap.BILL_OF_LADING];
+            finalFileName = window._currentDocMap.BILL_OF_LADING;
+        } else if (isINV && window._currentDocMap?.INVOICE && window._docFileMap[window._currentDocMap.INVOICE]) {
+            blobUrl = window._docFileMap[window._currentDocMap.INVOICE];
+            finalFileName = window._currentDocMap.INVOICE;
+        } else if (isPL && window._currentDocMap?.PACKING_LIST && window._docFileMap[window._currentDocMap.PACKING_LIST]) {
+            blobUrl = window._docFileMap[window._currentDocMap.PACKING_LIST];
+            finalFileName = window._currentDocMap.PACKING_LIST;
         }
     }
 
-    // Jika masih belum ada, cek apakah ada file apapun di _docFileMap
-    if (!blobUrl && Object.keys(window._docFileMap).length > 0) {
-        const firstKey = Object.keys(window._docFileMap)[0];
-        blobUrl = window._docFileMap[firstKey];
-        window._activeModalFileName = firstKey;
+    // 4. Cari dari seluruh entri _docFileMap yang cocok dengan jenis dokumen
+    if (!blobUrl) {
+        for (const [k, v] of Object.entries(window._docFileMap)) {
+            const guessed = guessDocType(k);
+            if (isBL && guessed === 'BILL OF LADING') {
+                blobUrl = v;
+                finalFileName = k;
+                break;
+            } else if (isINV && guessed === 'INVOICE') {
+                blobUrl = v;
+                finalFileName = k;
+                break;
+            } else if (isPL && guessed === 'PACKING LIST') {
+                blobUrl = v;
+                finalFileName = k;
+                break;
+            }
+        }
     }
 
+    // 5. HANYA JIKA memang HANYA ADA 1 file yang diunggah (single merged shipment file)
+    const uploadedList = window._lastUploadedFiles || [];
+    if (!blobUrl && uploadedList.length === 1 && window._lastUploadedBlobUrl) {
+        blobUrl = window._lastUploadedBlobUrl;
+        finalFileName = uploadedList[0].name;
+    }
+
+    // Terapkan blobUrl jika berhasil ditemukan di browser
     if (blobUrl) {
-        if (titleEl) titleEl.textContent = window._activeModalFileName;
-        if (fallbackFileName) fallbackFileName.textContent = window._activeModalFileName;
+        window._activeModalFileName = finalFileName;
+        if (titleEl) titleEl.textContent = finalFileName;
+        if (fallbackFileName) fallbackFileName.textContent = finalFileName;
         if (iframe) {
             iframe.style.display = 'block';
             iframe.src = blobUrl;
         }
         if (btnDownload) {
             btnDownload.href = blobUrl;
-            btnDownload.download = window._activeModalFileName;
+            btnDownload.download = finalFileName;
         }
         if (btnOpenTab) btnOpenTab.href = blobUrl;
         setTimeout(() => { if (loading) loading.style.display = 'none'; }, 150);
         return;
     }
 
-    // 2. Try loading from local Document Parser server (server.js on port 5005)
-    const serverUrl = `http://localhost:5005/api/documents/${encodeURIComponent(window._activeModalFileName)}`;
-    const relativeUrl = `attachments/${encodeURIComponent(window._activeModalFileName)}`;
+    // 6. Coba ambil dari server lokal (port 5005) dengan parameter filter docType yang akurat
+    const serverUrl = `http://localhost:5005/api/documents/${encodeURIComponent(finalFileName)}?docType=${encodeURIComponent(docType || '')}`;
+    const relativeUrl = `attachments/${encodeURIComponent(finalFileName)}`;
 
     fetch(serverUrl, { method: 'HEAD' })
         .then(res => {
@@ -1193,7 +1563,7 @@ function openCeisaDocViewer({ docType, fileName, docNumber, docDate }) {
                 if (iframe) iframe.src = serverUrl;
                 if (btnDownload) {
                     btnDownload.href = serverUrl;
-                    btnDownload.download = window._activeModalFileName;
+                    btnDownload.download = finalFileName;
                 }
                 if (btnOpenTab) btnOpenTab.href = serverUrl;
                 if (loading) loading.style.display = 'none';
@@ -1209,7 +1579,7 @@ function openCeisaDocViewer({ docType, fileName, docNumber, docDate }) {
                         if (iframe) iframe.src = relativeUrl;
                         if (btnDownload) {
                             btnDownload.href = relativeUrl;
-                            btnDownload.download = window._activeModalFileName;
+                            btnDownload.download = finalFileName;
                         }
                         if (btnOpenTab) btnOpenTab.href = relativeUrl;
                         if (loading) loading.style.display = 'none';
@@ -1497,14 +1867,6 @@ function initDocumentParserModal() {
         return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
     }
 
-    function guessDocType(filename) {
-        const lower = filename.toLowerCase();
-        if (lower.includes('inv') || lower.includes('faktur') || lower.includes('commercial')) return 'INVOICE';
-        if (lower.includes('pack') || lower.includes('pl.') || lower.includes('pl_') || lower.includes('list')) return 'PACKING LIST';
-        if (lower.includes('bl') || lower.includes('b/l') || lower.includes('lading') || lower.includes('waybill') || lower.includes('bapsin')) return 'BILL OF LADING';
-        if (lower.includes('coo') || lower.includes('cert') || lower.includes('origin')) return 'CERTIFICATE';
-        return 'DOKUMEN PABEAN';
-    }
 
     function renderFileList() {
         if (btnStart) {
@@ -1664,13 +2026,64 @@ function initDocumentParserModal() {
         row.innerHTML = `<span class="step-log-icon">${icon}</span><span class="step-log-text">${text}</span>`;
     }
 
-    function showErrorState(message) {
+    function showErrorState(message, isSetupError = false) {
         if (spinner) spinner.style.display = 'none';
         if (progressFill) progressFill.style.width = '100%';
         progressFill.style.background = '#ef4444';
-        if (stepTitle) stepTitle.textContent = 'Proses Gagal';
+        if (stepTitle) stepTitle.textContent = isSetupError ? 'Server Belum Aktif / Perlu Setup PC' : 'Proses Gagal';
         if (stepDesc) stepDesc.textContent = '';
-        if (errorMsg) errorMsg.textContent = message || 'Terjadi kesalahan saat memproses dokumen.';
+
+        if (errorMsg) {
+            if (isSetupError) {
+                errorMsg.innerHTML = `
+                    <div style="font-size: 13px; line-height: 1.5; color: #f87171; text-align: left; width: 100%;">
+                        <strong style="color: #fca5a5; font-size: 14px; display: block; margin-bottom: 4px;">⚠️ Server Document Parser belum aktif & PC ini belum di-setup.</strong>
+                        <p style="margin: 4px 0 8px 0; color: #cbd5e1; font-size: 12.5px;">Jika PC ini baru / belum pernah menjalankan server, silakan lakukan salah satu cara di bawah (cukup 1x saja):</p>
+                        <div style="background: rgba(15, 23, 42, 0.7); padding: 10px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.12); margin-bottom: 10px;">
+                            <div style="color: #38bdf8; font-weight: 600; font-size: 12.5px; margin-bottom: 4px;">📁 Opsi 1 (1-Klik Otomatis - Sangat Direkomendasikan):</div>
+                            <div style="color: #cbd5e1; font-size: 12px; line-height: 1.4;">
+                                Buka folder <b>Synthetic</b> di File Explorer lalu klik ganda file <b>SETUP_PC.bat</b>.<br>
+                                Skrip ini otomatis mengatur <code>Set-ExecutionPolicy RemoteSigned</code>, menginstall modul (<code>npm install</code>), dan mendaftarkan auto-start agar tombol Start selanjutnya langsung menyalakan server otomatis!
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                            <button type="button" id="btnCopySetupCmd" class="btn" style="background: #2563eb; color: #ffffff; font-size: 12px; font-weight: 600; padding: 6px 14px; border-radius: 6px; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                                📋 Salin Perintah Setup (PowerShell)
+                            </button>
+                            <button type="button" id="btnRetryConnect" class="btn" style="background: #059669; color: #ffffff; font-size: 12px; font-weight: 600; padding: 6px 14px; border-radius: 6px; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                                🔄 Coba Hubungkan Lagi
+                            </button>
+                        </div>
+                    </div>
+                `;
+                setTimeout(() => {
+                    const btnCopy = document.getElementById('btnCopySetupCmd');
+                    if (btnCopy) {
+                        btnCopy.onclick = () => {
+                            const cmd = 'powershell -ExecutionPolicy Bypass -Command "Set-ExecutionPolicy RemoteSigned -Scope CurrentUser -Force"; cd c:\\Synthetic\\backend-service; npm install; npm start';
+                            navigator.clipboard.writeText(cmd).then(() => {
+                                btnCopy.textContent = '✅ Berhasil Disalin ke Clipboard!';
+                                setTimeout(() => {
+                                    if (btnCopy) btnCopy.textContent = '📋 Salin Perintah Setup (PowerShell)';
+                                }, 3000);
+                            }).catch(() => {
+                                prompt('Salin perintah berikut secara manual:', cmd);
+                            });
+                        };
+                    }
+                    const btnRetryConn = document.getElementById('btnRetryConnect');
+                    if (btnRetryConn) {
+                        btnRetryConn.onclick = () => {
+                            if (errorBox) errorBox.style.display = 'none';
+                            runScan();
+                        };
+                    }
+                }, 50);
+            } else {
+                errorMsg.textContent = message || 'Terjadi kesalahan saat memproses dokumen.';
+            }
+        }
+
         if (errorBox) errorBox.style.display = 'flex';
         if (btnStart) {
             btnStart.disabled = false;
@@ -1700,6 +2113,58 @@ function initDocumentParserModal() {
                 apiKeyRow.style.display = 'none';
             }
         }
+    }
+
+    // Cek dan nyalakan backend server secara otomatis jika belum aktif
+    async function ensureBackendReady(connectRow) {
+        // 1. Cek langsung apakah server sudah online
+        try {
+            const test = await fetch('http://localhost:5005/api/status', {
+                method: 'GET',
+                signal: AbortSignal.timeout(1500)
+            });
+            if (test.ok) return { ok: true };
+        } catch (_) {}
+
+        // 2. Jika offline, minta ekstensi menyalakan server di latar belakang via Native Messaging
+        if (connectRow) {
+            updateLog(connectRow, '⏳', 'Server belum aktif. Mencoba menyalakan server Document Parser otomatis...', 'running');
+        }
+
+        const nativeResult = await new Promise((resolve) => {
+            if (typeof chrome === 'undefined' || !chrome.runtime || !chrome.runtime.sendMessage) {
+                return resolve({ ok: false, needSetup: true, error: 'Chrome extension runtime tidak ditemukan.' });
+            }
+            chrome.runtime.sendMessage({ type: 'START_BACKEND_SERVER' }, (res) => {
+                if (chrome.runtime.lastError || !res || !res.ok) {
+                    const err = (chrome.runtime.lastError && chrome.runtime.lastError.message) || (res && res.error) || 'Host belum terdaftar';
+                    return resolve({ ok: false, needSetup: true, error: err });
+                }
+                resolve({ ok: true, data: res.data });
+            });
+        });
+
+        // 3. Polling server port 5005 sampai aktif (maksimal 20 detik)
+        if (nativeResult.ok) {
+            if (connectRow) {
+                updateLog(connectRow, '⏳', 'Server sedang booting & memuat modul di latar belakang...', 'running');
+            }
+            for (let i = 0; i < 30; i++) {
+                await new Promise(r => setTimeout(r, 600));
+                try {
+                    const ping = await fetch('http://localhost:5005/api/status', {
+                        method: 'GET',
+                        signal: AbortSignal.timeout(1000)
+                    });
+                    if (ping.ok) {
+                        return { ok: true };
+                    }
+                } catch (_) {}
+            }
+            return { ok: false, needSetup: false, error: 'Server memakan waktu terlalu lama untuk menyala (timeout 18 detik).' };
+        }
+
+        return nativeResult;
     }
 
     // Handler simpan API key inline
@@ -1759,6 +2224,14 @@ function initDocumentParserModal() {
         const connectRow = appendLog('⏳', 'Menghubungkan ke Node Document Parser (http://localhost:5005)...', 'running');
 
         try {
+            // Pastikan server sudah aktif atau nyalakan secara otomatis
+            const readyState = await ensureBackendReady(connectRow);
+            if (!readyState.ok) {
+                const err = new Error(readyState.error || 'Server backend tidak dapat dihubungi.');
+                err.isSetupError = !!readyState.needSetup;
+                throw err;
+            }
+
             const formData = new FormData();
             selectedFiles.forEach(file => {
                 formData.append('files', file);
@@ -1776,7 +2249,9 @@ function initDocumentParserModal() {
                     body: formData
                 });
             } catch (netErr) {
-                throw new Error('Gagal terhubung ke Backend Document Parser di http://localhost:5005. Pastikan server aktif dengan menjalankan "npm start" di folder backend-service.');
+                const err = new Error('Gagal terhubung ke Backend Document Parser di http://localhost:5005.');
+                err.isSetupError = true;
+                throw err;
             }
 
             if (!response.ok && response.status !== 200) {
@@ -1908,7 +2383,7 @@ function initDocumentParserModal() {
             if (btnContinue) btnContinue.style.display = 'inline-flex';
 
         } catch (err) {
-            showErrorState(err?.message || 'Gagal memproses dokumen.');
+            showErrorState(err?.message || 'Gagal memproses dokumen.', !!err?.isSetupError);
         } finally {
             isScanRunning = false;
         }
@@ -1938,12 +2413,12 @@ function initDocumentParserModal() {
 
         if (banner && statusBadge && title) {
             if (isRelated) {
-                banner.className = 'safecheck-banner';
+                banner.className = 'modal-safecheck-banner';
                 statusBadge.className = 'badge-safe-valid';
                 statusBadge.textContent = 'Tervalidasi: 1 Shipment';
                 title.textContent = 'Semua Dokumen Cocok & Terverifikasi 1 Kesatuan Pengiriman';
             } else {
-                banner.className = 'safecheck-banner safecheck-banner-warning';
+                banner.className = 'modal-safecheck-banner safecheck-banner-warning';
                 statusBadge.className = 'badge-safe-warning';
                 statusBadge.textContent = 'Peringatan: Dokumen Asing / Selisih';
                 title.textContent = 'Perhatian: Ditemukan Ketidaksesuaian Antar-Dokumen';
@@ -1956,17 +2431,12 @@ function initDocumentParserModal() {
             if (matched.length > 0) {
                 matched.forEach(m => {
                     const li = document.createElement('li');
-                    li.style.display = 'flex';
-                    li.style.alignItems = 'flex-start';
-                    li.style.gap = '8px';
-                    li.style.marginBottom = '6px';
-                    li.style.fontSize = '12px';
-                    li.style.color = '#334155';
-                    li.innerHTML = `<span style="color: #16a34a; font-weight: 700; flex-shrink: 0; font-size: 13px;">✓</span><span>${escapeHtml(m)}</span>`;
+                    li.className = 'modal-safecheck-item';
+                    li.innerHTML = `<span class="modal-safecheck-check-icon">✓</span><span class="modal-safecheck-item-text">${escapeHtml(m)}</span>`;
                     matchedList.appendChild(li);
                 });
             } else {
-                matchedList.innerHTML = `<li style="color: #64748b; font-size: 12px;">Tidak ada parameter identifikasi khusus.</li>`;
+                matchedList.innerHTML = `<li class="modal-safecheck-empty">Tidak ada parameter identifikasi khusus.</li>`;
             }
         }
 
@@ -1977,13 +2447,8 @@ function initDocumentParserModal() {
                 warningsList.innerHTML = '';
                 warnings.forEach(w => {
                     const li = document.createElement('li');
-                    li.style.display = 'flex';
-                    li.style.alignItems = 'flex-start';
-                    li.style.gap = '8px';
-                    li.style.marginBottom = '6px';
-                    li.style.fontSize = '12px';
-                    li.style.color = '#dc2626';
-                    li.innerHTML = `<span style="color: #dc2626; font-weight: 700; flex-shrink: 0;">⚠</span><span>${escapeHtml(w)}</span>`;
+                    li.className = 'modal-safecheck-warning-item';
+                    li.innerHTML = `<span class="modal-safecheck-warn-icon">⚠</span><span class="modal-safecheck-warning-text">${escapeHtml(w)}</span>`;
                     warningsList.appendChild(li);
                 });
             } else {
@@ -2171,32 +2636,32 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Wire delete (trash) buttons in Dokumen Lampiran table
-    document.querySelectorAll('.btn-doc-delete').forEach(btn => {
-        btn.addEventListener('click', function () {
-            const rowId = this.getAttribute('data-row-id');
-            if (!rowId) return;
-            const row = document.getElementById(rowId);
-            if (row) {
-                row.style.transition = 'opacity 0.2s';
-                row.style.opacity = '0';
-                setTimeout(() => {
-                    row.remove();
-                    // Update row numbers
-                    const tbody = document.querySelector('#tab-dokumen .ceisa-table tbody');
-                    if (tbody) {
-                        Array.from(tbody.querySelectorAll('tr')).forEach((tr, idx) => {
-                            const numCell = tr.querySelector('td:first-child');
-                            if (numCell) numCell.textContent = idx + 1;
-                        });
-                        // Update pagination total
-                        const totalSpan = document.querySelector('.ceisa-table-pagination > span');
-                        if (totalSpan) totalSpan.textContent = `Total ${tbody.querySelectorAll('tr').length}`;
-                    }
-                }, 200);
-            }
+    // 4.1 Tambah & Urutkan Dokumen Lampiran
+    const btnAddDoc = document.getElementById('btnAddDoc');
+    if (btnAddDoc) {
+        btnAddDoc.addEventListener('click', addNewDocRow);
+    }
+
+    const btnSortDoc = document.getElementById('btnSortDoc');
+    if (btnSortDoc) {
+        btnSortDoc.addEventListener('click', () => {
+            const tbody = document.getElementById('ceisaDocTableBody') || document.querySelector('#tab-dokumen .ceisa-table tbody');
+            if (!tbody) return;
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            const orderScore = (row) => {
+                const text = row.textContent || '';
+                if (text.includes('705') || text.includes('B/L') || text.includes('LADING')) return 1;
+                if (text.includes('380') || text.includes('INVOICE')) return 2;
+                if (text.includes('217') || text.includes('PACKING')) return 3;
+                if (text.includes('861') || text.includes('ORIGIN')) return 4;
+                return 5;
+            };
+            rows.sort((a, b) => orderScore(a) - orderScore(b));
+            rows.forEach(r => tbody.appendChild(r));
+            updateDocTableIndices();
+            showToast("Tabel dokumen lampiran telah diurutkan.", "info");
         });
-    });
+    }
 
     if (btnToggleSafeCheck) {
         btnToggleSafeCheck.addEventListener('click', (e) => {
@@ -2393,11 +2858,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnOpenBl = document.getElementById('btnOpenDocBL');
     if (btnOpenBl) {
         btnOpenBl.addEventListener('click', () => {
+            const blNum = document.getElementById('blNumber')?.value || '';
+            const blDate = document.getElementById('blDate')?.value || '';
+            const defaultBlName = blNum ? `BL.${blNum}.pdf` : 'BL BAPSIN0153818 PT VALEO AC-RBB47.pdf';
             openCeisaDocViewer({
                 docType: '705 - BILL OF LADING (OCEAN B/L)',
-                fileName: window._currentDocMap?.BILL_OF_LADING || 'BL BAPSIN0153818 PT VALEO AC-RBB47.pdf',
-                docNumber: document.getElementById('blNumber')?.value || 'BAPSIN0153818',
-                docDate: document.getElementById('blDate')?.value || '11/09/2026'
+                fileName: window._currentDocMap?.BILL_OF_LADING || defaultBlName,
+                docNumber: blNum || 'BAPSIN0153818',
+                docDate: blDate || '11/09/2026'
             });
         });
     }

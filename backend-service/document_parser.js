@@ -14,9 +14,10 @@ function getAiClient(customKey) {
     return new GoogleGenAI({ apiKey: key.trim() });
 }
 
-async function parseDocuments(pdfPaths, onProgress = () => {}, customApiKey = null) {
-    console.log(`Memproses ${pdfPaths.length} dokumen sekaligus...`);
-    onProgress({ step: 'init', message: `Memproses ${pdfPaths.length} dokumen sekaligus...`, totalFiles: pdfPaths.length });
+async function parseDocuments(pdfInputs, onProgress = () => {}, customApiKey = null) {
+    const pdfPaths = pdfInputs;
+    console.log(`Memproses ${pdfInputs.length} dokumen sekaligus...`);
+    onProgress({ step: 'init', message: `Memproses ${pdfInputs.length} dokumen sekaligus...`, totalFiles: pdfInputs.length });
     
     try {
         const ai = getAiClient(customApiKey);
@@ -25,15 +26,16 @@ async function parseDocuments(pdfPaths, onProgress = () => {}, customApiKey = nu
         const uploadedMeta = [];
         
         // Upload semua file ke Gemini
-        for (let i = 0; i < pdfPaths.length; i++) {
-            const pdfPath = pdfPaths[i];
-            const fileName = path.basename(pdfPath);
-            console.log(`Mengunggah: ${fileName}`);
+        for (let i = 0; i < pdfInputs.length; i++) {
+            const inputItem = pdfInputs[i];
+            const pdfPath = typeof inputItem === 'string' ? inputItem : inputItem.path;
+            const fileName = (typeof inputItem === 'object' && inputItem.originalName) ? inputItem.originalName : path.basename(pdfPath);
+            console.log(`Mengunggah: ${fileName} (${pdfPath})`);
             onProgress({
                 step: 'upload',
                 file: fileName,
                 index: i,
-                total: pdfPaths.length,
+                total: pdfInputs.length,
                 status: 'running',
                 message: `Mengunggah ke AI: ${fileName}`
             });
@@ -47,7 +49,7 @@ async function parseDocuments(pdfPaths, onProgress = () => {}, customApiKey = nu
                 step: 'upload',
                 file: fileName,
                 index: i,
-                total: pdfPaths.length,
+                total: pdfInputs.length,
                 status: 'done',
                 message: `Berhasil diunggah: ${fileName}`
             });
@@ -56,7 +58,7 @@ async function parseDocuments(pdfPaths, onProgress = () => {}, customApiKey = nu
         onProgress({
             step: 'parsing',
             status: 'running',
-            message: `Semua dokumen (${pdfPaths.length}) berhasil diunggah. Menghubungi Ray-OCR V.1...`
+            message: `Semua dokumen (${pdfInputs.length}) berhasil diunggah. Menghubungi Ray-OCR V.1...`
         });
 
         const fileNamesList = uploadedMeta.map((f, i) => `${i + 1}. [File ${i + 1}]: "${f.fileName}"`).join('\n');

@@ -6,12 +6,13 @@
 
     "description": "Auto coloring dokumen CEISA berdasarkan lokasi/pelabuhan dan nomor pendaftaran.",
 
-    "minimum_chrome_version": "109",
+    "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAprSCP2mODaVwl/OEMlXw+64EFBlOriWwygfNfKxQRzxl5/9nfMukJJwS8Iu5Ef17xgJnxCrQAGX+54CL3ZfEW80kJNd7lNC6gKijWoSHBD2lIbN6pp5VF6Xl2MTymjW/AnTdofk80OwSHFxvmWsTpoZTRe3MSjjO3nazrsPkTTwL27bPspyN/iCNJ42dRtNvaxyvEcgb6qnNlTrrJVIzFcb7ydNXE4Lei4gtqiNw7cMzLDHpnc2yK/xJLXKkp/WI8HOhk2UzND/vc5rsH9IsU9Aa6/mc73WIQEI1jro0vRlT9xzE/sApfVpKv3qpvPdCafR+suTxmvYQuQ9XV+5p4QIDAQAB",
 
     "permissions": [
         "storage",
         "offscreen",
-        "activeTab"
+        "activeTab",
+        "nativeMessaging"
     ],
 
     "host_permissions": [
