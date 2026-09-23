@@ -661,6 +661,16 @@ body {
     white-space: nowrap;
 }
 
+.badge-bc-type {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: var(--radius-sm);
+    letter-spacing: 0.5px;
+    display: inline-block;
+}
+
 .doc-title-meta {
     font-size: 12px;
     color: var(--text-muted);
@@ -3454,4 +3464,479 @@ textarea.form-control {
     .modal-safecheck-warning-item {
         font-size: 11px !important;
     }
-}
+}
+
+/* ====================================================================
+   FLOATING BACKGROUND PARSER WIDGET (POPUP DARI KANAN - CIRCULAR PROGRESS)
+   ==================================================================== */
+.floating-parser-widget {
+    position: fixed;
+    right: 24px;
+    bottom: 28px;
+    z-index: 99999;
+    transform: translateX(calc(100% + 40px));
+    opacity: 0;
+    pointer-events: none;
+    transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+}
+
+.floating-parser-widget.active {
+    transform: translateX(0);
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.floating-parser-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 14px 12px 14px;
+    background: rgba(15, 23, 42, 0.94);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(56, 189, 248, 0.35);
+    border-radius: 14px;
+    box-shadow: 0 12px 35px -4px rgba(0, 0, 0, 0.65), 0 0 24px -2px rgba(56, 189, 248, 0.25);
+    cursor: pointer;
+    position: relative;
+    user-select: none;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.floating-parser-card:hover {
+    transform: translateY(-3px) scale(1.02);
+    border-color: rgba(56, 189, 248, 0.7);
+    box-shadow: 0 16px 40px -4px rgba(0, 0, 0, 0.75), 0 0 32px rgba(56, 189, 248, 0.4);
+}
+
+/* Circular SVG Progress */
+.floating-circle-wrapper {
+    position: relative;
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.floating-circle-svg {
+    width: 44px;
+    height: 44px;
+    transform: rotate(-90deg);
+}
+
+.floating-circle-svg circle {
+    fill: none;
+    stroke-width: 3.5;
+}
+
+.floating-circle-svg .circle-bg {
+    stroke: rgba(255, 255, 255, 0.12);
+}
+
+.floating-circle-svg .circle-progress {
+    stroke: #38bdf8;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.35s ease, stroke 0.3s ease;
+}
+
+.floating-circle-inner {
+    position: absolute;
+    font-size: 11px;
+    font-weight: 700;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    color: #38bdf8;
+    text-shadow: 0 0 8px rgba(56, 189, 248, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.3s ease;
+}
+
+/* Info Details */
+.floating-parser-info {
+    display: flex;
+    flex-direction: column;
+    min-width: 175px;
+    max-width: 250px;
+}
+
+.floating-parser-header {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 2px;
+}
+
+.floating-parser-live-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #38bdf8;
+    box-shadow: 0 0 8px #38bdf8;
+    animation: parser-live-pulse 1.6s infinite ease-in-out;
+    flex-shrink: 0;
+}
+
+@keyframes parser-live-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.35; transform: scale(0.75); }
+}
+
+.floating-parser-title {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #f8fafc;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.floating-parser-desc {
+    font-size: 11px;
+    color: #94a3b8;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.3;
+}
+
+.floating-parser-hint {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10.5px;
+    color: #38bdf8;
+    font-weight: 500;
+    margin-top: 4px;
+    transition: color 0.25s ease;
+}
+
+.floating-parser-hint svg {
+    transition: transform 0.2s ease;
+}
+
+.floating-parser-card:hover .floating-parser-hint svg {
+    transform: translateX(2px);
+}
+
+/* Dismiss Button */
+.floating-parser-dismiss {
+    background: transparent;
+    border: none;
+    color: #64748b;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 4px;
+    align-self: flex-start;
+    margin-left: 2px;
+    margin-top: -4px;
+    transition: all 0.15s ease;
+}
+
+.floating-parser-dismiss:hover {
+    color: #f1f5f9;
+    background: rgba(255, 255, 255, 0.12);
+}
+
+/* Status: Completed */
+.floating-parser-widget.status-completed .floating-parser-card {
+    border-color: rgba(34, 197, 94, 0.5);
+    box-shadow: 0 12px 35px -4px rgba(0, 0, 0, 0.65), 0 0 24px -2px rgba(34, 197, 94, 0.3);
+}
+
+.floating-parser-widget.status-completed .floating-parser-card:hover {
+    border-color: rgba(34, 197, 94, 0.8);
+    box-shadow: 0 16px 40px -4px rgba(0, 0, 0, 0.75), 0 0 32px rgba(34, 197, 94, 0.45);
+}
+
+.floating-parser-widget.status-completed .circle-progress {
+    stroke: #22c55e !important;
+}
+
+.floating-parser-widget.status-completed .floating-circle-inner {
+    color: #22c55e !important;
+    text-shadow: 0 0 8px rgba(34, 197, 94, 0.45);
+}
+
+.floating-parser-widget.status-completed .floating-parser-live-dot {
+    background: #22c55e !important;
+    box-shadow: 0 0 8px #22c55e !important;
+    animation: none !important;
+}
+
+.floating-parser-widget.status-completed .floating-parser-hint {
+    color: #22c55e !important;
+}
+
+/* Status: Error */
+.floating-parser-widget.status-error .floating-parser-card {
+    border-color: rgba(239, 68, 68, 0.5);
+    box-shadow: 0 12px 35px -4px rgba(0, 0, 0, 0.65), 0 0 24px -2px rgba(239, 68, 68, 0.3);
+}
+
+.floating-parser-widget.status-error .circle-progress {
+    stroke: #ef4444 !important;
+}
+
+.floating-parser-widget.status-error .floating-circle-inner {
+    color: #ef4444 !important;
+    text-shadow: 0 0 8px rgba(239, 68, 68, 0.45);
+}
+
+.floating-parser-widget.status-error .floating-parser-live-dot {
+    background: #ef4444 !important;
+    box-shadow: 0 0 8px #ef4444 !important;
+    animation: none !important;
+}
+
+.floating-parser-widget.status-error .floating-parser-hint {
+    color: #ef4444 !important;
+}
+
+/* ==========================================================================
+   AUTHENTIC CEISA 4.0 PIB ITEM-BY-ITEM VIEW STYLES (TAB 7: BARANG)
+   ========================================================================== */
+.ceisa-stepper-box {
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    background: #ffffff;
+    padding: 2px 4px;
+}
+
+.ceisa-stepper-btn {
+    width: 28px;
+    height: 28px;
+    border: 1px solid #93c5fd;
+    background: #eff6ff;
+    color: #1e40af;
+    font-weight: 700;
+    font-size: 13px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+    padding: 0;
+    margin: 0 1px;
+}
+
+.ceisa-stepper-btn:hover:not(:disabled) {
+    background: #dbeafe;
+    border-color: #3b82f6;
+}
+
+.ceisa-stepper-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    border-color: #e2e8f0;
+    background: #f8fafc;
+    color: #94a3b8;
+}
+
+.ceisa-stepper-counter {
+    padding: 0 12px;
+    font-family: var(--font-mono, monospace);
+    font-size: 13px;
+    font-weight: 700;
+    color: #1e293b;
+    white-space: nowrap;
+}
+
+.btn-ceisa-save {
+    background: #1e40af;
+    color: #ffffff;
+    border: none;
+    border-radius: 4px;
+    padding: 6px 14px;
+    font-size: 12.5px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.btn-ceisa-save:hover {
+    background: #1d4ed8;
+}
+
+.btn-ceisa-close {
+    background: #ef4444;
+    color: #ffffff;
+    border: none;
+    border-radius: 4px;
+    padding: 6px 14px;
+    font-size: 12.5px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.btn-ceisa-close:hover {
+    background: #dc2626;
+}
+
+.ceisa-item-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px 28px;
+}
+
+@media (max-width: 1024px) {
+    .ceisa-item-form-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.ceisa-item-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.ceisa-item-row.align-top {
+    align-items: flex-start;
+}
+
+.ceisa-item-label {
+    width: 160px;
+    flex-shrink: 0;
+    font-size: 12px;
+    font-weight: 500;
+    color: #334155;
+    display: flex;
+    align-items: center;
+}
+
+.ceisa-item-label .req {
+    color: #ef4444;
+    margin-left: 2px;
+}
+
+.ceisa-item-control {
+    flex: 1;
+    min-width: 0;
+}
+
+.btn-sesuai-hs {
+    background: #0284c7;
+    color: #ffffff;
+    border: none;
+    border-radius: 4px;
+    padding: 2px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.btn-sesuai-hs:hover {
+    background: #0369a1;
+}
+
+.ceisa-subcard {
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    margin-top: 18px;
+    background: #ffffff;
+    overflow: hidden;
+}
+
+.ceisa-subcard-header {
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 8px 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.ceisa-subcard-title {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.ceisa-subcard-body {
+    padding: 12px 14px;
+}
+
+.ceisa-pungutan-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+@media (max-width: 900px) {
+    .ceisa-pungutan-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.ceisa-pungutan-box {
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    background: #ffffff;
+    overflow: hidden;
+}
+
+.ceisa-pungutan-box-header {
+    background: #e2e8f0;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #1e293b;
+    border-bottom: 1px solid #cbd5e1;
+}
+
+.ceisa-pungutan-box-body {
+    padding: 12px;
+}
+
+.pungutan-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+    font-size: 12px;
+}
+
+.ceisa-empty-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 16px;
+    color: #94a3b8;
+    font-size: 12px;
+    gap: 4px;
+}
+
+.ceisa-empty-icon {
+    width: 32px;
+    height: 32px;
+    stroke: #cbd5e1;
+}
+
+.ceisa-card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 20px;
+    background: #ffffff;
+    border-top: 1px solid #e2e8f0;
+}
+

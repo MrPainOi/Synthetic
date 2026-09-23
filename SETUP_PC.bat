@@ -43,15 +43,14 @@ if not exist "%~dp0backend-service\node_modules" (
 echo.
 
 echo [4/4] Mendaftarkan Auto-Launcher ke Google Chrome & Edge...
-set "BAT_PATH=%~dp0launcher\launcher.bat"
-set "BAT_PATH=%BAT_PATH:\=/%"
+set "JSON_PATH=%~dp0launcher\com.ceisa.server_launcher.json"
 
-:: Buat JSON manifest dengan path absolut yang valid
+:: Buat JSON manifest portabel (menggunakan relative path launcher.bat agar berlaku di drive C, D, maupun lainnya)
 (
 echo {
 echo   "name": "com.ceisa.server_launcher",
 echo   "description": "CEISA Document Parser Backend Server Launcher",
-echo   "path": "%BAT_PATH%",
+echo   "path": "launcher.bat",
 echo   "type": "stdio",
 echo   "allowed_origins": [
 echo     "chrome-extension://geogeopfnkjopjgpfdnfnikfpecdodhe/"
@@ -59,7 +58,7 @@ echo   ]
 echo }
 ) > "%JSON_PATH%"
 
-:: Registrasi ke Google Chrome
+:: Registrasi path manifest dinamis ke Google Chrome
 reg add "HKCU\Software\Google\Chrome\NativeMessagingHosts\com.ceisa.server_launcher" /ve /t REG_SZ /d "%JSON_PATH%" /f >nul 2>&1
 if %errorlevel% equ 0 (
     echo       [OK] Google Chrome Native Messaging berhasil didaftarkan.

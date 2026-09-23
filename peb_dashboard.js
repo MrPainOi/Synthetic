@@ -6,39 +6,81 @@
 // MASTER PORTAL MODULE SWITCHER (CEISA 4.0 SIDEBAR & WORKSPACE)
 function switchPortalModule(moduleName) {
     const pebView = document.getElementById('module-peb');
+    const pibView = document.getElementById('module-pib');
     const inspectorView = document.getElementById('module-inspector');
+
+    // Multi-page routing across decoupled pages
+    if (moduleName === 'peb' && !pebView) {
+        window.location.href = 'peb.html';
+        return;
+    }
+    if (moduleName === 'pib' && !pibView) {
+        window.location.href = 'pib.html';
+        return;
+    }
+    if (moduleName === 'inspector' && !inspectorView) {
+        window.location.href = 'dashboard.html';
+        return;
+    }
+
+    try {
+        sessionStorage.setItem('ceisa_active_portal_module', moduleName);
+    } catch (e) {}
+
     const btnPeb = document.getElementById('btnNavPeb');
+    const btnPib = document.getElementById('btnNavPib');
     const btnInspector = document.getElementById('btnNavInspector');
     const pebHeaderActions = document.getElementById('pebHeaderActions');
+    const pibHeaderActions = document.getElementById('pibHeaderActions');
     const inspectorHeaderActions = document.getElementById('inspectorHeaderActions');
 
+    // Reset visibility of all views
+    if (pebView) pebView.style.display = 'none';
+    if (pibView) pibView.style.display = 'none';
+    if (inspectorView) inspectorView.style.display = 'none';
+
+    // Reset active status of sidebar buttons
+    if (btnPeb) {
+        btnPeb.classList.remove('active');
+        btnPeb.setAttribute('aria-selected', 'false');
+    }
+    if (btnPib) {
+        btnPib.classList.remove('active');
+        btnPib.setAttribute('aria-selected', 'false');
+    }
+    if (btnInspector) {
+        btnInspector.classList.remove('active');
+        btnInspector.setAttribute('aria-selected', 'false');
+    }
+
+    // Hide all contextual header actions
+    if (pebHeaderActions) pebHeaderActions.style.display = 'none';
+    if (pibHeaderActions) pibHeaderActions.style.display = 'none';
+    if (inspectorHeaderActions) inspectorHeaderActions.style.display = 'none';
+
     if (moduleName === 'inspector') {
-        if (pebView) pebView.style.display = 'none';
         if (inspectorView) inspectorView.style.display = 'block';
-        if (btnPeb) {
-            btnPeb.classList.remove('active');
-            btnPeb.setAttribute('aria-selected', 'false');
-        }
         if (btnInspector) {
             btnInspector.classList.add('active');
             btnInspector.setAttribute('aria-selected', 'true');
         }
-        if (pebHeaderActions) pebHeaderActions.style.display = 'none';
         if (inspectorHeaderActions) inspectorHeaderActions.style.display = 'flex';
         if (typeof loadDashboardData === 'function') loadDashboardData();
+    } else if (moduleName === 'pib') {
+        if (pibView) pibView.style.display = 'block';
+        if (btnPib) {
+            btnPib.classList.add('active');
+            btnPib.setAttribute('aria-selected', 'true');
+        }
+        if (pibHeaderActions) pibHeaderActions.style.display = 'flex';
     } else {
+        // Default: 'peb' (Ekspor)
         if (pebView) pebView.style.display = 'block';
-        if (inspectorView) inspectorView.style.display = 'none';
         if (btnPeb) {
             btnPeb.classList.add('active');
             btnPeb.setAttribute('aria-selected', 'true');
         }
-        if (btnInspector) {
-            btnInspector.classList.remove('active');
-            btnInspector.setAttribute('aria-selected', 'false');
-        }
         if (pebHeaderActions) pebHeaderActions.style.display = 'flex';
-        if (inspectorHeaderActions) inspectorHeaderActions.style.display = 'none';
     }
     try {
         sessionStorage.setItem('ceisa_active_portal_module', moduleName);
@@ -148,13 +190,32 @@ function exportJsonDraft() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     const noAju = document.getElementById('noAju')?.value || 'PEB_Draft';
+    const safeFilename = `Draft_PEB_${noAju.replace(/[^a-zA-Z0-9-]/g, '_')}.json`;
     a.href = url;
-    a.download = `Draft_PEB_${noAju.replace(/[^a-zA-Z0-9-]/g, '_')}.json`;
+    a.download = safeFilename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    showToast("Berkas JSON berhasil diekspor!", "success");
+
+    // Simpan juga ke backend server di folder drafts/ekspor/
+    try {
+        fetch('http://localhost:5005/api/save-draft', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                mode: 'ekspor',
+                data: draft,
+                filename: safeFilename
+            })
+        }).then(res => res.json()).then(res => {
+            console.log('[SAVE-DRAFT EKSPOR]', res);
+        }).catch(err => {
+            console.warn('Gagal sinkronisasi draft ke server:', err);
+        });
+    } catch (e) {}
+
+    showToast("Berkas JSON PEB berhasil diekspor (tersimpan di drafts/ekspor/)!", "success");
 }
 
 function collectFormData() {
@@ -1777,21 +1838,125 @@ function initDocumentParserModal() {
     const btnToggleParserLog = document.getElementById('btnToggleParserLog');
     const btnReuploadParser = document.getElementById('btnReuploadParser');
 
+    // Floating Background Parser Widget Elements
+    const floatingWidget = document.getElementById('floatingParserWidget');
+    const floatingCircleProgress = document.getElementById('floatingCircleProgress');
+    const floatingCirclePercent = document.getElementById('floatingCirclePercent');
+    const floatingParserTitle = document.getElementById('floatingParserTitle');
+    const floatingParserDesc = document.getElementById('floatingParserDesc');
+    const btnOpenFloating = document.getElementById('btnOpenFloatingParser');
+    const btnDismissFloating = document.getElementById('btnDismissFloatingParser');
+
     if (!modal) return;
 
     let selectedFiles = [];
     let isScanRunning = false;
+    let currentScanState = {
+        percent: 0,
+        title: 'Memproses Dokumen...',
+        desc: 'Ray-OCR V.1 di latar belakang',
+        status: 'running' // 'running' | 'completed' | 'error'
+    };
 
-    function openModal() {
+    function updateFloatingProgress(percent, title, desc, status = 'running') {
+        currentScanState = { percent, title, desc, status };
+
+        if (floatingParserTitle && title) floatingParserTitle.textContent = title;
+        if (floatingParserDesc && desc) floatingParserDesc.textContent = desc;
+
+        // Circular progress SVG: r=18, circumference = 2 * PI * 18 = 113.1
+        const circumference = 113.1;
+        const clamped = Math.max(0, Math.min(100, Math.round(percent)));
+        const offset = circumference * (1 - clamped / 100);
+
+        if (floatingCircleProgress) {
+            floatingCircleProgress.style.strokeDashoffset = offset;
+        }
+
+        if (floatingCirclePercent) {
+            if (status === 'completed') {
+                floatingCirclePercent.innerHTML = `
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                `;
+            } else if (status === 'error') {
+                floatingCirclePercent.innerHTML = `
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                    </svg>
+                `;
+            } else {
+                floatingCirclePercent.textContent = `${clamped}%`;
+            }
+        }
+
+        if (floatingWidget) {
+            floatingWidget.classList.remove('status-completed', 'status-error');
+            if (status === 'completed') {
+                floatingWidget.classList.add('status-completed');
+            } else if (status === 'error') {
+                floatingWidget.classList.add('status-error');
+            }
+        }
+    }
+
+    function showFloatingWidget() {
+        if (!floatingWidget) return;
+        floatingWidget.style.display = 'block';
+        void floatingWidget.offsetWidth; // Force reflow
+        floatingWidget.classList.add('active');
+    }
+
+    function hideFloatingWidget() {
+        if (!floatingWidget) return;
+        floatingWidget.classList.remove('active');
+        setTimeout(() => {
+            if (!floatingWidget.classList.contains('active')) {
+                floatingWidget.style.display = 'none';
+            }
+        }, 450);
+    }
+
+    function openModal(keepState = false) {
         modal.style.display = 'flex';
         document.body.style.overflow = 'hidden';
-        resetProgress();
+        hideFloatingWidget();
+        if (!keepState && !isScanRunning) {
+            resetProgress();
+        }
     }
 
     function closeModal() {
         modal.style.display = 'none';
         document.body.style.overflow = '';
-        resetProgress();
+        if (isScanRunning) {
+            showFloatingWidget();
+            showToast("Pemindaian tetap berjalan di latar belakang", "info");
+        } else {
+            // Ketika tidak sedang scanning, sembunyikan widget dan jangan pernah dimunculkan lagi
+            hideFloatingWidget();
+        }
+    }
+
+    // Klik widget mengambang di kanan untuk membuka kembali popup modal
+    if (btnOpenFloating) {
+        btnOpenFloating.addEventListener('click', (e) => {
+            if (e.target.closest('#btnDismissFloatingParser')) return;
+            hideFloatingWidget();
+            currentScanState.status = 'idle';
+            openModal(true);
+        });
+    }
+
+    // Tombol close/dismiss pada widget mengambang
+    if (btnDismissFloating) {
+        btnDismissFloating.addEventListener('click', (e) => {
+            e.stopPropagation();
+            hideFloatingWidget();
+            currentScanState.status = 'idle';
+        });
     }
 
     function resetProgress() {
@@ -1836,6 +2001,7 @@ function initDocumentParserModal() {
             `;
         }
         isScanRunning = false;
+        currentScanState = { percent: 0, title: '', desc: '', status: 'idle' };
     }
 
     if (btnToggleParserLog) {
@@ -1849,14 +2015,37 @@ function initDocumentParserModal() {
 
     if (btnReuploadParser) {
         btnReuploadParser.addEventListener('click', () => {
-            resetProgress();
             selectedFiles = [];
             if (fileInput) fileInput.value = '';
             renderFileList();
+            resetProgress();
+            hideFloatingWidget();
         });
     }
 
-    if (btnDokumenBaru) btnDokumenBaru.addEventListener('click', openModal);
+    const handleOpenDokumenBaru = () => {
+        if (isScanRunning) {
+            // Jika sedang ada proses scan aktif, buka kembali prosesnya
+            openModal(true);
+        } else {
+            // Jika tidak ada scan aktif, reset total untuk unggah Dokumen Baru
+            selectedFiles = [];
+            if (fileInput) fileInput.value = '';
+            renderFileList();
+            resetProgress();
+            hideFloatingWidget();
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+    };
+
+    if (btnDokumenBaru) {
+        btnDokumenBaru.addEventListener('click', handleOpenDokumenBaru);
+    }
+    const btnPibDokumenBaru = document.getElementById('btnPibDokumenBaru');
+    if (btnPibDokumenBaru) {
+        btnPibDokumenBaru.addEventListener('click', handleOpenDokumenBaru);
+    }
     if (btnCloseTop) btnCloseTop.addEventListener('click', closeModal);
 
     // Close on backdrop click
@@ -1878,7 +2067,7 @@ function initDocumentParserModal() {
     }
 
 
-    function renderFileList() {
+    function renderFileList(isDone = false) {
         if (btnStart) {
             btnStart.disabled = false;
         }
@@ -1888,6 +2077,7 @@ function initDocumentParserModal() {
             filesList.innerHTML = '';
             return;
         }
+        filesWrapper.classList.remove('collapsed');
         filesWrapper.style.display = 'block';
         filesCount.textContent = `${selectedFiles.length} Dokumen Dipilih`;
         filesList.innerHTML = '';
@@ -1896,6 +2086,10 @@ function initDocumentParserModal() {
             item.className = 'doc-parser-file-item';
             const docType = guessDocType(file.name);
             const sizeStr = formatFileSize(file.size);
+            const statusBadge = isDone 
+                ? `<span class="file-item-tag" style="background:#dcfce7;color:#15803d;border:1px solid #86efac;">✅ Terbaca</span>` 
+                : `<span class="file-item-tag">${docType}</span>`;
+
             item.innerHTML = `
                 <div class="file-item-left">
                     <span class="file-item-icon">
@@ -1908,11 +2102,11 @@ function initDocumentParserModal() {
                     </span>
                     <div class="file-item-details">
                         <span class="file-item-name" title="${file.name}">${file.name}</span>
-                        <span class="file-item-size">${sizeStr}</span>
+                        <span class="file-item-size">${sizeStr} &bull; ${docType}</span>
                     </div>
                 </div>
                 <div class="file-item-right">
-                    <span class="file-item-tag">${docType}</span>
+                    ${statusBadge}
                     <button type="button" class="btn-remove-file" title="Hapus berkas ini" data-index="${index}">&times;</button>
                 </div>
             `;
@@ -1921,7 +2115,7 @@ function initDocumentParserModal() {
                 btnRemove.addEventListener('click', (ev) => {
                     ev.stopPropagation();
                     selectedFiles.splice(index, 1);
-                    renderFileList();
+                    renderFileList(isDone);
                 });
             }
             filesList.appendChild(item);
@@ -1949,22 +2143,36 @@ function initDocumentParserModal() {
             window._lastUploadedFile = selectedFiles[0];
             window._lastUploadedBlobUrl = window._docFileMap[selectedFiles[0].name];
         }
+        if (filesWrapper) {
+            filesWrapper.classList.remove('collapsed');
+            filesWrapper.style.display = 'block';
+        }
         if (btnStart) {
             btnStart.disabled = false;
         }
-        renderFileList();
+        renderFileList(false);
     }
 
     if (dropzone && fileInput) {
-        dropzone.addEventListener('click', () => fileInput.click());
+        dropzone.addEventListener('click', (e) => {
+            if (e.target !== fileInput && !e.target.closest('#btnBrowseDocParser')) {
+                fileInput.click();
+            }
+        });
         if (btnBrowse) {
             btnBrowse.addEventListener('click', (e) => {
+                e.preventDefault();
                 e.stopPropagation();
                 fileInput.click();
             });
         }
+        fileInput.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
         fileInput.addEventListener('change', (e) => {
-            addFiles(e.target.files);
+            if (e.target.files && e.target.files.length > 0) {
+                addFiles(e.target.files);
+            }
             fileInput.value = '';
         });
         ['dragenter', 'dragover'].forEach(eventName => {
@@ -1982,9 +2190,17 @@ function initDocumentParserModal() {
             }, false);
         });
         dropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropzone.classList.remove('drag-over');
             const dt = e.dataTransfer;
-            if (dt && dt.files && dt.files.length > 0) addFiles(dt.files);
+            if (dt && dt.files && dt.files.length > 0) {
+                addFiles(dt.files);
+            }
         }, false);
+
+        window.addEventListener('dragover', (e) => e.preventDefault(), false);
+        window.addEventListener('drop', (e) => e.preventDefault(), false);
     }
 
     if (btnClearFiles) {
@@ -2070,7 +2286,7 @@ function initDocumentParserModal() {
                     const btnCopy = document.getElementById('btnCopySetupCmd');
                     if (btnCopy) {
                         btnCopy.onclick = () => {
-                            const cmd = 'powershell -ExecutionPolicy Bypass -Command "Set-ExecutionPolicy RemoteSigned -Scope CurrentUser -Force"; cd d:\\Synthetic\\Synthetic\\backend-service; npm install; npm start';
+                            const cmd = 'powershell -ExecutionPolicy Bypass -Command "Set-ExecutionPolicy RemoteSigned -Scope CurrentUser -Force"; $targets = @(".\\SETUP_PC.bat", "..\\SETUP_PC.bat", "C:\\Synthetic\\SETUP_PC.bat", "D:\\Synthetic\\SETUP_PC.bat", "D:\\Synthetic\\Synthetic\\SETUP_PC.bat"); $p = $targets | Where-Object { Test-Path $_ } | Select-Object -First 1; if ($p) { & $p } else { cd backend-service; npm start }';
                             navigator.clipboard.writeText(cmd).then(() => {
                                 btnCopy.textContent = '✅ Berhasil Disalin ke Clipboard!';
                                 setTimeout(() => {
@@ -2215,6 +2431,7 @@ function initDocumentParserModal() {
         }
 
         isScanRunning = true;
+        updateFloatingProgress(5, 'Menghubungkan Server...', 'Memeriksa status port 5005', 'running');
 
         // Reset UI progress
         if (stepLog) stepLog.innerHTML = '';
@@ -2242,14 +2459,19 @@ function initDocumentParserModal() {
                 throw err;
             }
 
+            const activeModule = sessionStorage.getItem('ceisa_active_portal_module') || 'peb';
+            const customsMode = (activeModule === 'pib') ? 'impor' : 'ekspor';
+
             const formData = new FormData();
             selectedFiles.forEach(file => {
                 formData.append('files', file);
             });
+            formData.append('mode', customsMode);
 
             const customKey = localStorage.getItem('CEISA_GEMINI_API_KEY') || '';
             const headers = {};
             if (customKey) headers['x-gemini-key'] = customKey;
+            headers['x-customs-mode'] = customsMode;
 
             let response;
             try {
@@ -2270,6 +2492,7 @@ function initDocumentParserModal() {
 
             updateLog(connectRow, '✅', 'Terhubung ke Backend Document Parser', 'done');
             if (progressFill) progressFill.style.width = '15%';
+            updateFloatingProgress(15, 'Terhubung ke Backend', 'Menyiapkan berkas dokumen...', 'running');
 
             const reader = response.body.getReader();
             const decoder = new TextDecoder('utf-8');
@@ -2307,20 +2530,25 @@ function initDocumentParserModal() {
                                     }
                                     if (stepTitle) stepTitle.textContent = `Mengunggah: ${fileKey}...`;
                                     if (stepDesc) stepDesc.textContent = `File ${evt.index + 1} dari ${evt.total}`;
-                                    if (progressFill) progressFill.style.width = `${15 + Math.round(((evt.index + 0.5) / evt.total) * 25)}%`;
+                                    const pct = 15 + Math.round(((evt.index + 0.5) / evt.total) * 25);
+                                    if (progressFill) progressFill.style.width = `${pct}%`;
+                                    updateFloatingProgress(pct, `Mengunggah: ${fileKey}...`, `File ${evt.index + 1} dari ${evt.total}`, 'running');
                                 } else if (evt.status === 'done') {
                                     if (uploadLogMap[fileKey]) {
                                         updateLog(uploadLogMap[fileKey], '✅', evt.message, 'done');
                                     } else {
                                         uploadLogMap[fileKey] = appendLog('✅', evt.message, 'done');
                                     }
-                                    if (progressFill) progressFill.style.width = `${15 + Math.round(((evt.index + 1) / evt.total) * 25)}%`;
+                                    const pct = 15 + Math.round(((evt.index + 1) / evt.total) * 25);
+                                    if (progressFill) progressFill.style.width = `${pct}%`;
+                                    updateFloatingProgress(pct, 'Unggah Berkas Selesai', evt.message || `${evt.index + 1}/${evt.total} terunggah`, 'running');
                                 }
                             } else if (evt.step === 'parsing') {
                                 if (stepTitle) stepTitle.textContent = 'Menyiapkan Ray-OCR V.1...';
                                 if (stepDesc) stepDesc.textContent = evt.message;
                                 if (progressFill) progressFill.style.width = '45%';
                                 appendLog('⏳', evt.message, 'running');
+                                updateFloatingProgress(45, 'Menyiapkan Ray-OCR V.1...', evt.message || 'Ekstraksi teks & struktur', 'running');
                             } else if (evt.step === 'ai') {
                                 if (stepTitle) stepTitle.textContent = 'Ray-OCR V.1 Menganalisis Dokumen...';
                                 if (stepDesc) stepDesc.textContent = evt.message;
@@ -2330,6 +2558,7 @@ function initDocumentParserModal() {
                                 } else {
                                     updateLog(lastAiRow, '🤖', evt.message, 'running');
                                 }
+                                updateFloatingProgress(70, 'Ray-OCR V.1 Menganalisis Dokumen...', evt.message || 'AI mengenali entitas pabean', 'running');
                             } else if (evt.step === 'safecheck') {
                                 if (lastAiRow) {
                                     updateLog(lastAiRow, '✅', 'Data pabean berhasil dianalisis oleh Ray-OCR V.1', 'done');
@@ -2338,9 +2567,11 @@ function initDocumentParserModal() {
                                 if (stepDesc) stepDesc.textContent = evt.message;
                                 if (progressFill) progressFill.style.width = '88%';
                                 appendLog('🛡️', evt.message, 'done');
+                                updateFloatingProgress(88, 'SafeCheck & Validasi Shipment...', evt.message || 'Memverifikasi nomor, nilai, tanggal', 'running');
                             } else if (evt.step === 'complete') {
                                 if (progressFill) progressFill.style.width = '96%';
                                 appendLog('✅', evt.message, 'done');
+                                updateFloatingProgress(96, 'Menyelesaikan Pemindaian...', evt.message || 'Menyiapkan draft PEB', 'running');
                             }
                         }
 
@@ -2366,9 +2597,13 @@ function initDocumentParserModal() {
             if (spinner) spinner.style.display = 'none';
 
             // MINIMIZE DENGAN ANIMASI:
-            // Sembunyikan dropzone dan file list agar SafeCheck naik ke atas
+            // Sembunyikan dropzone agar SafeCheck naik ke atas, TETAP tampilkan berkas terlampir
             if (dropzone) dropzone.classList.add('collapsed');
-            if (filesWrapper) filesWrapper.classList.add('collapsed');
+            if (filesWrapper) {
+                filesWrapper.classList.remove('collapsed');
+                filesWrapper.style.display = 'block';
+            }
+            renderFileList(true);
 
             // Minimize box loading progress menjadi status pill ringkas
             if (progressBox) progressBox.classList.add('minimized');
@@ -2382,8 +2617,16 @@ function initDocumentParserModal() {
                 try { localStorage.setItem(STORAGE_KEY_LAST_FILENAME, selectedFiles[0].name); } catch (e) {}
             }
 
-            // LOAD DATA HASIL EKSTRAKSI ASLI KE FORMULIR PEB (latar belakang)
-            loadDraftData(extractedResult, true);
+            // LOAD DATA HASIL EKSTRAKSI ASLI KE FORMULIR PEB / PIB (latar belakang)
+            if (activeModule === 'pib' && typeof loadPibDraftData === 'function') {
+                loadPibDraftData(extractedResult, true);
+                const lblPib = document.getElementById('lblPibFileName');
+                if (lblPib && selectedFiles.length > 0) {
+                    lblPib.textContent = selectedFiles[0].name;
+                }
+            } else {
+                loadDraftData(extractedResult, true);
+            }
 
             // TAMPILKAN DAN NAIKKAN HASIL SAFECHECK KE ATAS DENGAN ANIMASI SLIDE UP
             renderModalSafeCheck(extractedResult.safeCheck);
@@ -2392,8 +2635,24 @@ function initDocumentParserModal() {
             if (btnStart) btnStart.style.display = 'none';
             if (btnContinue) btnContinue.style.display = 'inline-flex';
 
+            // Update floating progress ke completed
+            updateFloatingProgress(100, '✅ Ekstraksi Selesai!', `${activeFileText} • SafeCheck Tervalidasi`, 'completed');
+
+            // Jika modal sedang ditutup user, beri notifikasi toast dan tampilkan widget
+            if (modal.style.display === 'none') {
+                showFloatingWidget();
+                showToast("✅ Pemindaian selesai! Klik widget di kanan bawah untuk membuka formulir.", "success");
+            } else {
+                hideFloatingWidget();
+            }
+
         } catch (err) {
             showErrorState(err?.message || 'Gagal memproses dokumen.', !!err?.isSetupError);
+            updateFloatingProgress(100, '❌ Pemindaian Gagal', err?.message || 'Gagal memproses dokumen.', 'error');
+            if (modal.style.display === 'none') {
+                showFloatingWidget();
+                showToast("⚠️ Pemindaian dokumen gagal. Klik widget untuk melihat detail.", "error");
+            }
         } finally {
             isScanRunning = false;
         }
@@ -2477,31 +2736,40 @@ function initDocumentParserModal() {
         }
     }
 
-    // Handler tombol Lanjutkan ke Formulir PEB
+    // Handler tombol Lanjutkan ke Formulir (PEB / PIB sesuai modul aktif)
     if (btnContinue) {
         btnContinue.addEventListener('click', () => {
+            hideFloatingWidget();
             closeModal();
-            switchPortalModule('peb');
-            switchCeisaTab('tab-dokumen');
 
-            const safeCheckBody = document.getElementById('safeCheckBody');
-            const btnToggleSafeCheck = document.getElementById('btnToggleSafeCheck');
-            const safeCheckHeader = document.getElementById('safeCheckHeader');
-            if (safeCheckBody) {
-                safeCheckBody.classList.remove('collapsed');
-                safeCheckBody.style.display = 'block';
-            }
-            if (btnToggleSafeCheck) {
-                btnToggleSafeCheck.classList.add('expanded');
-                btnToggleSafeCheck.setAttribute('aria-expanded', 'true');
-            }
-            if (safeCheckHeader) safeCheckHeader.classList.add('expanded');
+            const activeModule = sessionStorage.getItem('ceisa_active_portal_module') || 'peb';
+            if (activeModule === 'pib') {
+                switchPortalModule('pib');
+                if (typeof switchPibTab === 'function') switchPibTab('pib-tab-dokumen');
+                showToast("Draft PIB siap ditinjau!", "success");
+            } else {
+                switchPortalModule('peb');
+                switchCeisaTab('tab-dokumen');
 
-            setTimeout(() => {
-                const safeCheckSection = document.getElementById('safeCheckSection');
-                if (safeCheckSection) safeCheckSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }, 150);
-            showToast("Draft PEB siap ditinjau!", "success");
+                const safeCheckBody = document.getElementById('safeCheckBody');
+                const btnToggleSafeCheck = document.getElementById('btnToggleSafeCheck');
+                const safeCheckHeader = document.getElementById('safeCheckHeader');
+                if (safeCheckBody) {
+                    safeCheckBody.classList.remove('collapsed');
+                    safeCheckBody.style.display = 'block';
+                }
+                if (btnToggleSafeCheck) {
+                    btnToggleSafeCheck.classList.add('expanded');
+                    btnToggleSafeCheck.setAttribute('aria-expanded', 'true');
+                }
+                if (safeCheckHeader) safeCheckHeader.classList.add('expanded');
+
+                setTimeout(() => {
+                    const safeCheckSection = document.getElementById('safeCheckSection');
+                    if (safeCheckSection) safeCheckSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 150);
+                showToast("Draft PEB siap ditinjau!", "success");
+            }
         });
     }
 
@@ -2518,9 +2786,11 @@ function initDocumentParserModal() {
 document.addEventListener('DOMContentLoaded', () => {
     // 1. CEISA 4.0 Left Sidebar Module Switcher Listeners
     const btnNavPeb = document.getElementById('btnNavPeb');
+    const btnNavPib = document.getElementById('btnNavPib');
     const btnNavInspector = document.getElementById('btnNavInspector');
-    if (btnNavPeb) btnNavPeb.addEventListener('click', () => switchPortalModule('peb'));
-    if (btnNavInspector) btnNavInspector.addEventListener('click', () => switchPortalModule('inspector'));
+    if (btnNavPeb && btnNavPeb.tagName !== 'A') btnNavPeb.addEventListener('click', () => switchPortalModule('peb'));
+    if (btnNavPib && btnNavPib.tagName !== 'A') btnNavPib.addEventListener('click', () => switchPortalModule('pib'));
+    if (btnNavInspector && btnNavInspector.tagName !== 'A') btnNavInspector.addEventListener('click', () => switchPortalModule('inspector'));
 
     // 1.1 CEISA 4.0 Sidebar Toggle (Expand / Collapse >> / <<)
     const sidebarToggle = document.getElementById('ceisaSidebarToggle');
@@ -2554,12 +2824,26 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (e) {}
     }
 
-    // 2. Defaultkan selalu ke Ceisa Inspector saat web dashboard dibuka
+    // 2. Tentukan modul awal sesuai halaman yang aktif
     try {
-        const initialModule = sessionStorage.getItem('ceisa_active_portal_module') || 'inspector';
+        const hasPib = !!document.getElementById('module-pib');
+        const hasPeb = !!document.getElementById('module-peb');
+        const hasInspector = !!document.getElementById('module-inspector');
+
+        let initialModule = 'peb';
+        if (hasPib && !hasPeb) {
+            initialModule = 'pib';
+        } else if (hasPeb && !hasInspector) {
+            initialModule = 'peb';
+        } else if (hasInspector && !hasPeb && !hasPib) {
+            initialModule = 'inspector';
+        } else {
+            initialModule = sessionStorage.getItem('ceisa_active_portal_module') || 'inspector';
+        }
+        sessionStorage.setItem('ceisa_active_portal_module', initialModule);
         switchPortalModule(initialModule);
     } catch (e) {
-        switchPortalModule('inspector');
+        if (document.getElementById('module-peb')) switchPortalModule('peb');
     }
 
     // 3. PEB Header Action Buttons
@@ -2934,12 +3218,14 @@ document.addEventListener('DOMContentLoaded', () => {
         btnFallbackSelect.addEventListener('click', () => docModalInput.click());
     }
 
-    // 11. Restore PEB draft or load sample
-    const hasRestored = restoreDraftState();
-    if (!hasRestored) {
-        loadDraftData(SAMPLE_DATA, false);
-    }
+    // 11. Restore PEB draft or load sample (hanya jika #module-peb ada)
+    if (document.getElementById('module-peb')) {
+        const hasRestored = restoreDraftState();
+        if (!hasRestored) {
+            loadDraftData(SAMPLE_DATA, false);
+        }
 
-    // 12. Initialize 9-Tab Stepper State
-    switchCeisaTab('tab-header');
+        // 12. Initialize 9-Tab Stepper State
+        switchCeisaTab('tab-header');
+    }
 });

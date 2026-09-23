@@ -8,6 +8,11 @@ echo    CEISA DOCUMENT PARSER BACKEND SERVER (Port 5005)
 echo ================================================================
 echo.
 
+:: Daftarkan Host Native Messaging otomatis ke Chrome & Edge jika folder berpindah drive/lokasi
+set "JSON_PATH=%~dp0launcher\com.ceisa.server_launcher.json"
+reg add "HKCU\Software\Google\Chrome\NativeMessagingHosts\com.ceisa.server_launcher" /ve /t REG_SZ /d "%JSON_PATH%" /f >nul 2>&1
+reg add "HKCU\Software\Microsoft\Edge\NativeMessagingHosts\com.ceisa.server_launcher" /ve /t REG_SZ /d "%JSON_PATH%" /f >nul 2>&1
+
 :: Pastikan Execution Policy
 powershell -ExecutionPolicy Bypass -Command "Set-ExecutionPolicy RemoteSigned -Scope CurrentUser -Force" >nul 2>&1
 

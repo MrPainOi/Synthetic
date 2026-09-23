@@ -1,0 +1,1654 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CEISA 4.0 - Modul Draft PIB</title>
+    <link rel="stylesheet" href="dashboard.css">
+</head>
+
+<body>
+
+    <!-- TOP PORTAL HEADER -->
+    <header class="portal-header">
+        <div class="portal-header-inner">
+            <div class="portal-brand">
+                <div class="portal-logo-emblem">
+                    <svg class="portal-logo-svg" width="32" height="32" viewBox="0 0 48 48" fill="none"
+                        xmlns="http://www.w3.org/2000/svg" aria-label="Logo Bea Cukai">
+                        <path d="M24 4L7 9V22C7 33.5 14.3 41.8 24 44C33.7 41.8 41 33.5 41 22V9L24 4Z" fill="#0A2540"
+                            stroke="#F59E0B" stroke-width="2.5" stroke-linejoin="round" />
+                        <path d="M24 7L10 11.2V21.5C10 31.2 16.2 38.3 24 40.5C31.8 38.3 38 31.2 38 21.5V11.2L24 7Z"
+                            fill="#0F3460" stroke="#FCD34D" stroke-width="1.2" />
+                        <path
+                            d="M24 10.5L25.6 14.5L29.8 14.7L26.5 17.3L27.7 21.3L24 18.8L20.3 21.3L21.5 17.3L18.2 14.7L22.4 14.5L24 10.5Z"
+                            fill="#FBBF24" stroke="#F59E0B" stroke-width="0.5" />
+                        <path
+                            d="M22 22C18 20 12 21 11 25C13 25.5 16 25 18 26C14 27 12 29 13 32C15.5 31 18 30 20 30.5C18 32 16 34 17 36C20 34.5 22 31.5 22.5 29V22H22Z"
+                            fill="#FBBF24" opacity="0.95" />
+                        <path
+                            d="M26 22C30 20 36 21 37 25C35 25.5 32 25 30 26C34 27 36 29 35 32C32.5 31 30 30 28 30.5C30 32 32 34 31 36C28 34.5 26 31.5 25.5 29V22H26Z"
+                            fill="#FBBF24" opacity="0.95" />
+                        <path d="M24 19V38M21 34C21 36.5 22.3 38 24 38C25.7 38 27 36.5 27 34" stroke="#FFFFFF"
+                            stroke-width="1.8" stroke-linecap="round" />
+                        <circle cx="24" cy="20" r="1.8" fill="#FCD34D" stroke="#FFFFFF" stroke-width="0.8" />
+                        <path d="M22 25C22.5 24 25.5 24 26 25C26.5 26.5 21.5 27.5 22 29C22.5 30.5 25.5 30.5 26 32"
+                            stroke="#FFFFFF" stroke-width="1.2" stroke-linecap="round" />
+                    </svg>
+                </div>
+                <div class="portal-brand-text">
+                    <span class="portal-system-title">CEISA 4.0 &bull; PIB</span>
+                    <span class="portal-system-sub">Modul Draft Impor BC 2.0</span>
+                </div>
+            </div>
+            <!-- Contextual Header Actions: PIB Mode (Impor) -->
+            <div class="portal-header-actions" id="pibHeaderActions" style="display: flex;">
+                <input type="file" id="pibHeaderJsonFileInput" accept=".json" style="display: none;">
+                <button type="button" class="btn btn-header-primary" id="btnPibHeaderUploadJson"
+                    title="Unggah berkas JSON Draft PIB">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2.2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                    Unggah JSON PIB
+                </button>
+                <button type="button" class="btn btn-header-subtle" id="btnPibDokumenBaru" title="Buka Halaman Pemindaian Dokumen Impor">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2.2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="12" y1="18" x2="12" y2="12"></line>
+                        <line x1="9" y1="15" x2="15" y2="15"></line>
+                    </svg>
+                    Dokumen Baru
+                </button>
+                <button type="button" class="btn btn-header-subtle" id="btnPibHeaderPrint" title="Cetak formulir Draft PIB">
+                    Cetak
+                </button>
+                <button type="button" id="btnDokumenBaru" style="display:none;"></button>
+            </div>
+        </div>
+    </header>
+
+    <!-- MASTER PORTAL WRAPPER -->
+    <div class="ceisa-portal-layout">
+        <!-- CEISA 4.0 Vertical Sidebar (1:1 Sesuai Screenshot CEISA Asli) -->
+        <aside class="ceisa-sidebar" id="ceisaSidebar" aria-label="Navigasi Menu CEISA 4.0">
+            <!-- Sidebar Header with Title Text & Expand/Collapse Toggle in Marked Spot -->
+            <div class="ceisa-sidebar-header">
+                <div class="ceisa-sidebar-brand-box">
+                    <span class="sidebar-brand-badge">PORTAL</span>
+                    <span class="sidebar-brand-title">MENU CEISA</span>
+                </div>
+                <button type="button" class="ceisa-sidebar-toggle" id="ceisaSidebarToggle"
+                    title="Perluas / Ciutkan Menu Samping" aria-label="Toggle Menu Samping" aria-expanded="false">
+                    <svg class="icon-toggle-expand" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="13 17 18 12 13 7"></polyline>
+                        <polyline points="6 17 11 12 6 7"></polyline>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Navigation Items: Modul Ekspor, Modul Impor & CEISA Inspector -->
+            <div class="ceisa-sidebar-nav" role="tablist" aria-label="Menu Utama Portal CEISA">
+                <!-- 1. Modul Draft PEB (Ekspor) -->
+                <a href="peb.html" class="ceisa-sidebar-item " id="btnNavPeb" role="tab"
+                    aria-selected="false" title="Modul Draft PEB (Ekspor)" data-tooltip="Modul Draft PEB (Ekspor)">
+                    <div class="sidebar-icon-box">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="16" y1="13" x2="8" y2="13"></line>
+                            <line x1="16" y1="17" x2="8" y2="17"></line>
+                        </svg>
+                    </div>
+                    <span class="sidebar-label">Modul Draft PEB</span>
+                </a>
+
+                <!-- 2. Modul Draft PIB (Impor) -->
+                <a href="pib.html" class="ceisa-sidebar-item active" id="btnNavPib" role="tab"
+                    aria-selected="true" title="Modul Draft PIB (Impor)" data-tooltip="Modul Draft PIB (Impor)">
+                    <div class="sidebar-icon-box">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                            <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                            <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                        </svg>
+                    </div>
+                    <span class="sidebar-label">Modul Draft PIB</span>
+                </a>
+
+                <!-- Dots Divider -->
+                <div class="ceisa-sidebar-dots" aria-hidden="true"><span></span><span></span><span></span></div>
+
+                <!-- 3. CEISA Inspector (Monitoring & SPPB) -->
+                <a href="dashboard.html" class="ceisa-sidebar-item " id="btnNavInspector" role="tab"
+                    aria-selected="false" title="CEISA Inspector (Monitoring & SPPB)"
+                    data-tooltip="CEISA Inspector (Monitoring & SPPB)">
+                    <div class="sidebar-icon-box">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                            <line x1="8" y1="21" x2="16" y2="21"></line>
+                            <line x1="12" y1="17" x2="12" y2="21"></line>
+                        </svg>
+                    </div>
+                    <span class="sidebar-label">CEISA Inspector</span>
+                </a>
+            </div>
+        </aside>
+
+        <!-- Main Workspace Viewport -->
+        <div class="ceisa-portal-content">
+            <div id="module-pib" class="portal-module-view" style="display: block;">
+                <!-- Main Workspace PIB (Standar Resmi 1:1 CEISA 4.0) -->
+                <main class="main-workspace" style="padding-top: 4px;">
+
+                    <!-- Sub-Header Strip PIB (1:1 Standar Resmi CEISA 4.0) -->
+                    <section class="doc-title-strip">
+                        <div class="doc-title-container">
+                            <div class="doc-title-left">
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <span class="badge-bc-type" style="background: #0284c7; color: #fff; padding: 3px 8px; border-radius: 4px; font-weight: 700; font-size: 11px; letter-spacing: 0.5px;">BC 2.0</span>
+                                    <h1 style="margin: 0; font-size: 18px; font-weight: 700;">Pemberitahuan Impor Barang (PIB)</h1>
+                                </div>
+                                <span class="badge-draft-status" id="lblPibDraftStatus">Draft PIB - Belum Terkirim</span>
+                            </div>
+                            <div class="doc-title-meta">
+                                Total Pungutan Impor: <strong id="lblPibTotalBillingBadge" style="color: #2563eb; font-size: 14px; font-weight: 700;">Rp 0</strong> &bull; BM: <span id="lblPibSummaryBm">Rp 0</span> &bull; PPN: <span id="lblPibSummaryPpn">Rp 0</span> &bull; PPh 22: <span id="lblPibSummaryPph">Rp 0</span>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- CEISA 4.0 Stepper Bar -->
+                    <div class="ceisa-stepper-bar">
+                        <div class="ceisa-stepper-info">
+                            <span class="stepper-badge" id="pibCeisaStepBadge">1/9</span>
+                            <span class="stepper-title">Langkah Pengisian Dokumen Impor:</span>
+                            <span class="stepper-active-tab" id="pibCeisaStepLabel">Header</span>
+                        </div>
+                        <div class="ceisa-stepper-actions">
+                            <button type="button" class="btn btn-stepper-prev" id="btnPibTabPrev" style="display: none;">
+                                <span style="font-size: 14px;">&#x21BA;</span> Sebelumnya
+                            </button>
+                            <button type="button" class="btn btn-stepper-next" id="btnPibTabNext">
+                                Selanjutnya <span style="font-size: 14px;">&#x21BB;</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- CEISA 4.0 Tabs Strip (1:1 Standar CEISA) -->
+                    <nav class="ceisa-tabs" role="tablist">
+                        <button type="button" class="ceisa-tab-btn active" data-pib-tab="pib-tab-header">Header</button>
+                        <button type="button" class="ceisa-tab-btn" data-pib-tab="pib-tab-entitas">Entitas</button>
+                        <button type="button" class="ceisa-tab-btn" data-pib-tab="pib-tab-dokumen">Dokumen</button>
+                        <button type="button" class="ceisa-tab-btn" data-pib-tab="pib-tab-pengangkut">Pengangkut</button>
+                        <button type="button" class="ceisa-tab-btn" data-pib-tab="pib-tab-kemasan">Kemasan &amp; Peti Kemas</button>
+                        <button type="button" class="ceisa-tab-btn" data-pib-tab="pib-tab-transaksi">Transaksi</button>
+                        <button type="button" class="ceisa-tab-btn" data-pib-tab="pib-tab-barang">Barang</button>
+                        <button type="button" class="ceisa-tab-btn tab-btn-pungutan" data-pib-tab="pib-tab-pungutan">Pungutan</button>
+                        <button type="button" class="ceisa-tab-btn" data-pib-tab="pib-tab-pernyataan">Pernyataan</button>
+                    </nav>
+
+                    <!-- TAB 1: HEADER PIB -->
+                    <section id="pib-tab-header" class="tab-content-panel active">
+                        <div class="ceisa-form-card">
+                            <div class="ceisa-header-form">
+                                <div class="ceisa-form-row">
+                                    <div class="ceisa-form-row-label">Nomor Aju</div>
+                                    <div class="ceisa-form-row-control">
+                                        <input type="text" id="pibNoAju" class="form-control form-control-mono"
+                                            value="010700-001234-20260923-000881" readonly>
+                                    </div>
+                                </div>
+                                <div class="ceisa-form-row">
+                                    <div class="ceisa-form-row-label">Kantor Pabean Bongkar / Pengawasan <span class="req">*</span></div>
+                                    <div class="ceisa-form-row-control">
+                                        <select id="pibKantorPabean" class="form-control">
+                                            <option value="010700 - KPU BEA DAN CUKAI TIPE A TANJUNG PRIOK" selected>010700 - KPU BEA DAN CUKAI TIPE A TANJUNG PRIOK</option>
+                                            <option value="030000 - KPU BEA DAN CUKAI TIPE B BATAM">030000 - KPU BEA DAN CUKAI TIPE B BATAM</option>
+                                            <option value="070100 - KPU BEA DAN CUKAI TIPE A TANJUNG PERAK">070100 - KPU BEA DAN CUKAI TIPE A TANJUNG PERAK</option>
+                                            <option value="050100 - KPU BEA DAN CUKAI TIPE C SOEKARNO HATTA">050100 - KPU BEA DAN CUKAI TIPE C SOEKARNO HATTA</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="ceisa-form-row">
+                                    <div class="ceisa-form-row-label">Jenis Impor <span class="req">*</span></div>
+                                    <div class="ceisa-form-row-control">
+                                        <select id="pibJenisImpor" class="form-control">
+                                            <option value="1 - UNTUK DIPAKAI" selected>1 - UNTUK DIPAKAI</option>
+                                            <option value="2 - SEMENTARA">2 - SEMENTARA</option>
+                                            <option value="3 - RE-IMPOR">3 - RE-IMPOR</option>
+                                            <option value="5 - PELAYANAN SEGERA (RUSH HANDLING)">5 - PELAYANAN SEGERA (RUSH HANDLING)</option>
+                                            <option value="6 - GABUNGAN">6 - GABUNGAN</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="ceisa-form-row">
+                                    <div class="ceisa-form-row-label">Jenis Prosedur <span class="req">*</span></div>
+                                    <div class="ceisa-form-row-control">
+                                        <select id="pibJenisProsedur" class="form-control">
+                                            <option value="1 - BIASA" selected>1 - BIASA</option>
+                                            <option value="2 - BERKALA">2 - BERKALA</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="ceisa-form-row">
+                                    <div class="ceisa-form-row-label">Kategori / Jalur Impor <span class="req">*</span></div>
+                                    <div class="ceisa-form-row-control">
+                                        <select id="pibKategoriImpor" class="form-control">
+                                            <option value="1 - UMUM" selected>1 - UMUM</option>
+                                            <option value="2 - MITA NON PRIORITAS">2 - MITA NON PRIORITAS</option>
+                                            <option value="3 - AEO / MITRA UTAMA">3 - AEO / MITRA UTAMA</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="ceisa-form-row">
+                                    <div class="ceisa-form-row-label">Cara Pembayaran <span class="req">*</span></div>
+                                    <div class="ceisa-form-row-control">
+                                        <select id="pibCaraBayar" class="form-control">
+                                            <option value="1 - BIASA / TUNAI" selected>1 - BIASA / TUNAI</option>
+                                            <option value="2 - BERKALA">2 - BERKALA</option>
+                                            <option value="3 - JAMINAN">3 - JAMINAN</option>
+                                            <option value="4 - LAINNYA">4 - LAINNYA</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- TAB 2: ENTITAS PIB -->
+                    <section id="pib-tab-entitas" class="tab-content-panel">
+                        <div class="form-grid-2">
+                            <!-- Card 1: Importir (Penerima) -->
+                            <div class="ceisa-form-card">
+                                <div class="ceisa-card-header">
+                                    <span class="ceisa-card-title">Importir (Penerima di Indonesia)</span>
+                                </div>
+                                <div class="ceisa-card-body" style="display: flex; flex-direction: column; gap: 10px;">
+                                    <div class="form-group">
+                                        <label class="form-label">Nomor Identitas <span class="req">*</span></label>
+                                        <div class="ceisa-split-input">
+                                            <select class="form-control" id="pibImportirIdType" style="flex: 0 0 145px;">
+                                                <option value="5 - NPWP 16 DIGIT" selected>5 - NPWP 16 DIGIT</option>
+                                                <option value="1 - NPWP 15 DIGIT">1 - NPWP 15 DIGIT</option>
+                                                <option value="2 - NIK / PASPOR">2 - NIK / PASPOR</option>
+                                            </select>
+                                            <input type="text" id="pibImportirId" class="form-control form-control-mono"
+                                                value="01.234.567.8-012.000">
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">NIB (Nomor Induk Berusaha) <span class="req">*</span></label>
+                                        <input type="text" id="pibImportirNib" class="form-control form-control-mono"
+                                            value="912000881234">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Nama Importir <span class="req">*</span></label>
+                                        <input type="text" id="pibImportirName" class="form-control"
+                                            value="PT. INDONESIA MAKMUR IMPORTAMA">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Alamat Lengkap <span class="req">*</span></label>
+                                        <textarea id="pibImportirAddress" class="form-control"
+                                            rows="3">Kawasan Industri MM2100 Blok C-5, Cikarang Barat, Kab. Bekasi, Jawa Barat 17530 - INDONESIA</textarea>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Status Angka Pengenal Impor (API) <span class="req">*</span></label>
+                                        <select id="pibImportirStatus" class="form-control">
+                                            <option value="API-U" selected>API-U (Umum - Tarif PPh 22 2.5%)</option>
+                                            <option value="API-P">API-P (Produsen - Tarif PPh 22 2.5%)</option>
+                                            <option value="NON-API">NON-API (Non-API - Tarif PPh 22 7.5%)</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Status Kepabeanan</label>
+                                        <select id="pibImportirCustomsStatus" class="form-control">
+                                            <option value="Importir Umum" selected>Importir Umum</option>
+                                            <option value="MITA Kepabeanan">MITA Kepabeanan</option>
+                                            <option value="AEO (Authorized Economic Operator)">AEO (Authorized Economic Operator)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Card 2: Pemilik Barang -->
+                            <div class="ceisa-form-card">
+                                <div class="ceisa-card-header">
+                                    <span class="ceisa-card-title">Pemilik Barang</span>
+                                    <label style="font-size: 12px; display: flex; align-items: center; gap: 5px; cursor: pointer; color: var(--ceisa-blue);">
+                                        <input type="checkbox" id="pibCheckOwnerSame" checked> Sama dengan Importir
+                                    </label>
+                                </div>
+                                <div class="ceisa-card-body" style="display: flex; flex-direction: column; gap: 10px;">
+                                    <div class="form-group">
+                                        <label class="form-label">Nomor Identitas Pemilik</label>
+                                        <input type="text" id="pibOwnerId" class="form-control form-control-mono"
+                                            value="01.234.567.8-012.000">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Nama Pemilik</label>
+                                        <input type="text" id="pibOwnerName" class="form-control"
+                                            value="PT. INDONESIA MAKMUR IMPORTAMA">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Alamat Pemilik</label>
+                                        <textarea id="pibOwnerAddress" class="form-control"
+                                            rows="3">Kawasan Industri MM2100 Blok C-5, Cikarang Barat, Kab. Bekasi, Jawa Barat 17530 - INDONESIA</textarea>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Card 3: Pemasok / Pengirim Luar Negeri -->
+                            <div class="ceisa-form-card">
+                                <div class="ceisa-card-header">
+                                    <span class="ceisa-card-title">Pemasok / Pengirim Luar Negeri (Supplier)</span>
+                                </div>
+                                <div class="ceisa-card-body" style="display: flex; flex-direction: column; gap: 10px;">
+                                    <div class="form-group">
+                                        <label class="form-label">Nama Pemasok LN <span class="req">*</span></label>
+                                        <input type="text" id="pibSupplierName" class="form-control"
+                                            value="SHANGHAI PRECISION MACHINERY CO., LTD.">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Alamat Pemasok LN <span class="req">*</span></label>
+                                        <textarea id="pibSupplierAddress" class="form-control"
+                                            rows="3">No. 888 Songze Avenue, Qingpu District, Shanghai 201700, China</textarea>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Negara Pemasok <span class="req">*</span></label>
+                                        <select id="pibSupplierCountry" class="form-control">
+                                            <option value="CN - CHINA" selected>CN - CHINA</option>
+                                            <option value="JP - JAPAN">JP - JAPAN</option>
+                                            <option value="KR - SOUTH KOREA">KR - SOUTH KOREA</option>
+                                            <option value="SG - SINGAPORE">SG - SINGAPORE</option>
+                                            <option value="TH - THAILAND">TH - THAILAND</option>
+                                            <option value="US - UNITED STATES">US - UNITED STATES</option>
+                                            <option value="DE - GERMANY">DE - GERMANY</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Card 4: Penjual (Seller) -->
+                            <div class="ceisa-form-card">
+                                <div class="ceisa-card-header">
+                                    <span class="ceisa-card-title">Penjual (Seller)</span>
+                                    <label style="font-size: 12px; display: flex; align-items: center; gap: 5px; cursor: pointer; color: var(--ceisa-blue);">
+                                        <input type="checkbox" id="pibCheckSellerSame" checked> Sama dengan Pemasok
+                                    </label>
+                                </div>
+                                <div class="ceisa-card-body" style="display: flex; flex-direction: column; gap: 10px;">
+                                    <div class="form-group">
+                                        <label class="form-label">Nama Penjual</label>
+                                        <input type="text" id="pibSellerName" class="form-control"
+                                            value="SHANGHAI PRECISION MACHINERY CO., LTD.">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Alamat Penjual</label>
+                                        <textarea id="pibSellerAddress" class="form-control"
+                                            rows="3">No. 888 Songze Avenue, Qingpu District, Shanghai 201700, China</textarea>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Negara Penjual</label>
+                                        <select id="pibSellerCountry" class="form-control">
+                                            <option value="CN - CHINA" selected>CN - CHINA</option>
+                                            <option value="SG - SINGAPORE">SG - SINGAPORE</option>
+                                            <option value="JP - JAPAN">JP - JAPAN</option>
+                                            <option value="US - UNITED STATES">US - UNITED STATES</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Card 5: PPJK (Opsional) -->
+                            <div class="ceisa-form-card" style="grid-column: span 2;">
+                                <div class="ceisa-card-header">
+                                    <span class="ceisa-card-title">PPJK (Pengusaha Pengurusan Jasa Kepabeanan) - Opsional</span>
+                                </div>
+                                <div class="ceisa-card-body" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
+                                    <div class="form-group">
+                                        <label class="form-label">NPWP PPJK</label>
+                                        <input type="text" id="pibPpjkId" class="form-control form-control-mono"
+                                            value="0026923485215000">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Nama PPJK</label>
+                                        <input type="text" id="pibPpjkName" class="form-control"
+                                            value="PT. SARANA PPJK LOGISTIK UTAMA">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Alamat PPJK</label>
+                                        <input type="text" id="pibPpjkAddress" class="form-control"
+                                            value="Jl. Sulawesi No. 12 Tanjung Priok, Jakarta Utara">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- TAB 3: DOKUMEN PIB -->
+                    <section id="pib-tab-dokumen" class="tab-content-panel">
+                        <div class="ceisa-form-card">
+                            <div class="ceisa-card-header">
+                                <span class="ceisa-card-title">Dokumen Pelengkap Pabean Impor (Lampiran BC 2.0)</span>
+                            </div>
+                            <div class="ceisa-card-body">
+                                <div class="ceisa-table-container">
+                                    <table class="ceisa-table">
+                                        <thead>
+                                            <tr>
+                                                <th style="width: 180px;">Kode &amp; Jenis Dokumen</th>
+                                                <th style="width: 200px;">Nomor Dokumen <span class="req">*</span></th>
+                                                <th style="width: 140px;">Tanggal Dokumen <span class="req">*</span></th>
+                                                <th>File Terlampir</th>
+                                                <th style="width: 190px;">Keterangan / Fasilitas</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="pibDocTableBody">
+                                            <tr>
+                                                <td><span class="badge-doc-code">705</span> Bill of Lading (B/L)</td>
+                                                <td><input type="text" id="pibBlNumber" class="form-control form-control-mono" value="SMLU987654321"></td>
+                                                <td><input type="date" id="pibBlDate" class="form-control" value="2026-09-18"></td>
+                                                <td>
+                                                    <div class="doc-link-wrap">
+                                                        <span class="doc-file-tag" id="tagFilePibBL">BL_SMLU987654321.pdf</span>
+                                                    </div>
+                                                </td>
+                                                <td><span style="color: var(--text-muted); font-size: 12px;">Dokumen Pengangkutan Utama</span></td>
+                                            </tr>
+                                            <tr>
+                                                <td><span class="badge-doc-code">380</span> Commercial Invoice</td>
+                                                <td><input type="text" id="pibInvoiceNumber" class="form-control form-control-mono" value="INV-SPM/2026/0904"></td>
+                                                <td><input type="date" id="pibInvoiceDate" class="form-control" value="2026-09-15"></td>
+                                                <td>
+                                                    <div class="doc-link-wrap">
+                                                        <span class="doc-file-tag" id="tagFilePibInvoice">INV-SPM_2026_0904.pdf</span>
+                                                    </div>
+                                                </td>
+                                                <td><span style="color: var(--text-muted); font-size: 12px;">Faktur Perdagangan Internasional</span></td>
+                                            </tr>
+                                            <tr>
+                                                <td><span class="badge-doc-code">217</span> Packing List</td>
+                                                <td><input type="text" id="pibPackingListNumber" class="form-control form-control-mono" value="PL-SPM/2026/0904"></td>
+                                                <td><input type="date" id="pibPackingListDate" class="form-control" value="2026-09-15"></td>
+                                                <td>
+                                                    <div class="doc-link-wrap">
+                                                        <span class="doc-file-tag" id="tagFilePibPackingList">PL-SPM_2026_0904.pdf</span>
+                                                    </div>
+                                                </td>
+                                                <td><span style="color: var(--text-muted); font-size: 12px;">Daftar Rincian Kemasan &amp; Berat</span></td>
+                                            </tr>
+                                            <tr>
+                                                <td><span class="badge-doc-code">861</span> Certificate of Origin (COO)</td>
+                                                <td><input type="text" id="pibCooNumber" class="form-control form-control-mono" value="E261234567890"></td>
+                                                <td><input type="date" id="pibCooDate" class="form-control" value="2026-09-17"></td>
+                                                <td>
+                                                    <div class="doc-link-wrap">
+                                                        <span class="doc-file-tag" id="tagFilePibCOO">COO_E261234567890.pdf</span>
+                                                    </div>
+                                                </td>
+                                                <td><span style="color: var(--color-green-text); font-size: 12px; font-weight: 600;">SKA Form E / Form D (Preferensi)</span></td>
+                                            </tr>
+                                            <tr>
+                                                <td><span class="badge-doc-code">999</span> Perizinan Lartas / PI Kemendag</td>
+                                                <td><input type="text" id="pibLartasNumber" class="form-control form-control-mono" value="PI-03.26.0123/KEMENDAG"></td>
+                                                <td><input type="date" id="pibLartasDate" class="form-control" value="2026-08-10"></td>
+                                                <td>
+                                                    <div class="doc-link-wrap">
+                                                        <span class="doc-file-tag" id="tagFilePibLartas">PI_Kemendag_2026.pdf</span>
+                                                    </div>
+                                                </td>
+                                                <td><span style="color: var(--text-muted); font-size: 12px;">Persetujuan Impor / Laporan Surveyor (LS)</span></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- TAB 4: PENGANGKUT PIB -->
+                    <section id="pib-tab-pengangkut" class="tab-content-panel">
+                        <div class="form-grid-2">
+                            <div class="ceisa-form-card">
+                                <div class="ceisa-card-header">
+                                    <span class="ceisa-card-title">Sarana Pengangkut</span>
+                                </div>
+                                <div class="ceisa-card-body" style="display: flex; flex-direction: column; gap: 10px;">
+                                    <div class="form-group">
+                                        <label class="form-label">Cara Pengangkutan <span class="req">*</span></label>
+                                        <select id="pibCaraPengangkutan" class="form-control">
+                                            <option value="1 - LAUT" selected>1 - LAUT</option>
+                                            <option value="2 - UDARA">2 - UDARA</option>
+                                            <option value="3 - DARAT">3 - DARAT</option>
+                                            <option value="4 - POS / KURIR">4 - POS / KURIR</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Nama Sarana Pengangkut (Kapal / Pesawat) <span class="req">*</span></label>
+                                        <input type="text" id="pibVesselName" class="form-control" value="WAN HAI 502">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Nomor Voyage / Flight <span class="req">*</span></label>
+                                        <input type="text" id="pibVoyageNumber" class="form-control form-control-mono" value="V.W240">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Bendera Sarana Pengangkut <span class="req">*</span></label>
+                                        <select id="pibVesselFlag" class="form-control">
+                                            <option value="TW - TAIWAN" selected>TW - TAIWAN</option>
+                                            <option value="PA - PANAMA">PA - PANAMA</option>
+                                            <option value="LR - LIBERIA">LR - LIBERIA</option>
+                                            <option value="SG - SINGAPORE">SG - SINGAPORE</option>
+                                            <option value="ID - INDONESIA">ID - INDONESIA</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Perkiraan Tanggal Tiba (ETA) <span class="req">*</span></label>
+                                        <input type="date" id="pibEtaDate" class="form-control" value="2026-09-24">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="ceisa-form-card">
+                                <div class="ceisa-card-header">
+                                    <span class="ceisa-card-title">Pelabuhan &amp; Penimbunan</span>
+                                </div>
+                                <div class="ceisa-card-body" style="display: flex; flex-direction: column; gap: 10px;">
+                                    <div class="form-group">
+                                        <label class="form-label">Pelabuhan Muat Luar Negeri <span class="req">*</span></label>
+                                        <input type="text" id="pibPortLoading" class="form-control" value="CNSHA - SHANGHAI, CHINA">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Pelabuhan Transit Luar Negeri</label>
+                                        <input type="text" id="pibPortTransit" class="form-control" value="SGSIN - SINGAPORE">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Pelabuhan Bongkar Indonesia <span class="req">*</span></label>
+                                        <input type="text" id="pibPortDischarge" class="form-control" value="IDTPP - TANJUNG PRIOK, JAKARTA">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Tempat Penimbunan Pabean (TPS) <span class="req">*</span></label>
+                                        <input type="text" id="pibTpsLocation" class="form-control" value="TPS JAKARTA INTERNATIONAL CONTAINER TERMINAL (JICT)">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- TAB 5: KEMASAN & PETI KEMAS PIB -->
+                    <section id="pib-tab-kemasan" class="tab-content-panel">
+                        <div class="form-grid-2">
+                            <div class="ceisa-form-card">
+                                <div class="ceisa-card-header">
+                                    <span class="ceisa-card-title">Kemasan &amp; Berat</span>
+                                </div>
+                                <div class="ceisa-card-body" style="display: flex; flex-direction: column; gap: 10px;">
+                                    <div class="form-group">
+                                        <label class="form-label">Jenis Kemasan <span class="req">*</span></label>
+                                        <select id="pibPackageType" class="form-control">
+                                            <option value="PK - PACKAGE" selected>PK - PACKAGE</option>
+                                            <option value="CT - CARTON">CT - CARTON</option>
+                                            <option value="PL - PALLET">PL - PALLET</option>
+                                            <option value="BG - BAG">BG - BAG</option>
+                                            <option value="DR - DRUM">DR - DRUM</option>
+                                            <option value="BX - BOX">BX - BOX</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Jumlah Kemasan <span class="req">*</span></label>
+                                        <input type="number" id="pibPackageQty" class="form-control" value="48">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Berat Kotor / Gross Weight (Kg) <span class="req">*</span></label>
+                                        <input type="number" step="0.01" id="pibGrossWeight" class="form-control" value="4520.00">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Berat Bersih / Net Weight (Kg) <span class="req">*</span></label>
+                                        <input type="number" step="0.01" id="pibNetWeight" class="form-control" value="4200.00">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="ceisa-form-card">
+                                <div class="ceisa-card-header">
+                                    <span class="ceisa-card-title">Peti Kemas (Kontainer)</span>
+                                </div>
+                                <div class="ceisa-card-body" style="display: flex; flex-direction: column; gap: 10px;">
+                                    <div class="form-group">
+                                        <label class="form-label">Nomor Kontainer</label>
+                                        <input type="text" id="pibContainerNumber" class="form-control form-control-mono" value="WHLU4567890">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Ukuran Kontainer</label>
+                                        <select id="pibContainerSize" class="form-control">
+                                            <option value="40 FT" selected>40 FT</option>
+                                            <option value="20 FT">20 FT</option>
+                                            <option value="45 FT">45 FT</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Tipe Muatan</label>
+                                        <select id="pibContainerType" class="form-control">
+                                            <option value="FCL" selected>FCL (Full Container Load)</option>
+                                            <option value="LCL">LCL (Less than Container Load)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- TAB 6: TRANSAKSI PIB -->
+                    <section id="pib-tab-transaksi" class="tab-content-panel">
+                        <div class="ceisa-form-card">
+                            <div class="ceisa-card-header">
+                                <span class="ceisa-card-title">Nilai Transaksi &amp; Perhitungan Pabean (CIF)</span>
+                            </div>
+                            <div class="ceisa-card-body" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                                <div style="display: flex; flex-direction: column; gap: 10px;">
+                                    <div class="form-group">
+                                        <label class="form-label">Valuta (Mata Uang) <span class="req">*</span></label>
+                                        <select id="pibCurrency" class="form-control">
+                                            <option value="USD" selected>USD - UNITED STATES DOLLAR</option>
+                                            <option value="CNY">CNY - CHINESE YUAN</option>
+                                            <option value="JPY">JPY - JAPANESE YEN</option>
+                                            <option value="EUR">EUR - EURO</option>
+                                            <option value="SGD">SGD - SINGAPORE DOLLAR</option>
+                                            <option value="IDR">IDR - INDONESIAN RUPIAH</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Kurs NDPBM Bea Cukai (Rp) <span class="req">*</span></label>
+                                        <input type="number" step="0.01" id="pibExchangeRate" class="form-control form-control-mono" value="15850.00">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Cara Penyerahan (Incoterms) <span class="req">*</span></label>
+                                        <select id="pibIncoterm" class="form-control">
+                                            <option value="FOB" selected>FOB - FREE ON BOARD</option>
+                                            <option value="CFR">CFR - COST AND FREIGHT</option>
+                                            <option value="CIF">CIF - COST INSURANCE FREIGHT</option>
+                                            <option value="FCA">FCA - FREE CARRIER</option>
+                                            <option value="EXW">EXW - EX WORKS</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Nilai Invoice (Barang) <span class="req">*</span></label>
+                                        <input type="number" step="0.01" id="pibInvoiceAmount" class="form-control" value="68450.00">
+                                    </div>
+                                </div>
+
+                                <div style="display: flex; flex-direction: column; gap: 10px;">
+                                    <div class="form-group">
+                                        <label class="form-label">Biaya Freight (Ongkos Angkut)</label>
+                                        <input type="number" step="0.01" id="pibFreightAmount" class="form-control" value="2400.00">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Biaya Asuransi (Insurance)</label>
+                                        <div class="ceisa-split-input">
+                                            <select id="pibInsuranceType" class="form-control" style="flex: 0 0 160px;">
+                                                <option value="DN - Dalam Negeri" selected>DN - Dalam Negeri</option>
+                                                <option value="LN - Luar Negeri">LN - Luar Negeri</option>
+                                            </select>
+                                            <input type="number" step="0.01" id="pibInsuranceAmount" class="form-control" value="342.25">
+                                        </div>
+                                    </div>
+                                    <div class="form-group" style="background: var(--ceisa-blue-light); padding: 12px; border-radius: 6px; border: 1px solid #bfdbfe;">
+                                        <label class="form-label" style="font-weight: 700; color: var(--ceisa-blue);">Nilai Pabean (CIF Valuta) - Otomatis</label>
+                                        <input type="text" id="pibCifValuta" class="form-control form-control-mono" value="71,192.25" readonly style="font-weight: 700; background: #fff;">
+                                        <label class="form-label" style="font-weight: 700; color: var(--ceisa-blue); margin-top: 8px;">Nilai Pabean (CIF Rupiah) - Otomatis</label>
+                                        <input type="text" id="pibCifIdr" class="form-control form-control-mono" value="Rp 1.128.397.163" readonly style="font-weight: 700; color: #1e3a8a; background: #fff;">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- TAB 7: BARANG PIB (AUTHENTIC CEISA 4.0 ITEM-BY-ITEM VIEW) -->
+                    <section id="pib-tab-barang" class="tab-content-panel">
+                        <!-- Top Summary & Jump Toolbar -->
+                        <div class="ceisa-item-toolbar" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; background: #ffffff; border: 1px solid var(--border-color); padding: 8px 14px; border-radius: 6px;">
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <span class="badge-draft-status" id="pibItemCountBadge" style="font-weight: 700; font-size: 12.5px;">0 Barang Terdeteksi</span>
+                                <span style="font-size: 12px; color: var(--text-muted);">|</span>
+                                <div style="display: flex; align-items: center; gap: 6px;">
+                                    <span style="font-size: 12px; color: #475569;">Loncat ke No:</span>
+                                    <input type="number" id="pibJumpItemInput" min="1" max="1" value="1" style="width: 65px; height: 26px; padding: 2px 6px; font-size: 12px; border: 1px solid #cbd5e1; border-radius: 4px; text-align: center;">
+                                    <button type="button" class="btn btn-ceisa-sub btn-sm" id="btnPibJumpItem" style="padding: 2px 10px; font-size: 11.5px;">Buka</button>
+                                </div>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <button type="button" class="btn btn-ceisa-sub btn-sm" id="btnTogglePibSummaryTable" title="Tampilkan / Sembunyikan Tabel Rangkuman Semua Barang">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                                    <span id="lblToggleSummaryTable">📋 Tampilkan Tabel Rangkuman</span>
+                                </button>
+                                <button type="button" class="btn btn-ceisa-sub btn-sm" id="btnPibAddItem" title="Tambah Barang Baru">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                    Tambah Barang
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Collapsible Summary Table (Toggleable) -->
+                        <div id="pibSummaryTableWrapper" class="ceisa-form-card" style="display: none; margin-bottom: 16px;">
+                            <div class="ceisa-card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                                <span class="ceisa-card-title">Tabel Rangkuman Seluruh Barang Impor</span>
+                                <input type="text" id="pibSummarySearch" placeholder="Cari HS atau Uraian..." style="height: 26px; padding: 2px 8px; font-size: 11.5px; border: 1px solid #cbd5e1; border-radius: 4px; width: 220px;">
+                            </div>
+                            <div class="ceisa-card-body" style="padding: 0;">
+                                <div class="ceisa-table-container" style="max-height: 280px; overflow-y: auto;">
+                                    <table class="ceisa-table">
+                                        <thead>
+                                            <tr>
+                                                <th style="width: 45px; text-align: center;">No</th>
+                                                <th style="width: 140px;">Pos Tarif (HS)</th>
+                                                <th>Uraian Barang &amp; Spesifikasi</th>
+                                                <th style="width: 75px; text-align: center;">Negara</th>
+                                                <th style="width: 130px; text-align: right;">Jumlah / Sat</th>
+                                                <th style="width: 130px; text-align: right;">Amount FOB ($)</th>
+                                                <th style="width: 75px; text-align: center;">BM (%)</th>
+                                                <th style="width: 80px; text-align: center;">Aksi</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="pibItemsTableBody">
+                                            <!-- Diisi secara dinamis via JS -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- AUTHENTIC CEISA 4.0 ITEM DETAIL CARD -->
+                        <div class="ceisa-form-card" id="pibItemDetailCard">
+                            <!-- Stepper & Top Actions -->
+                            <div class="ceisa-card-header" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; background: #ffffff; border-bottom: 1px solid #e2e8f0;">
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <div class="ceisa-stepper-box">
+                                        <button type="button" class="ceisa-stepper-btn" id="btnPibItemPrev" title="Barang Sebelumnya">&lt;</button>
+                                        <button type="button" class="ceisa-stepper-btn" id="btnPibItemNext" title="Barang Selanjutnya">&gt;</button>
+                                        <span class="ceisa-stepper-counter" id="lblPibItemPager">1/1</span>
+                                    </div>
+                                </div>
+                                <div style="display: flex; gap: 8px; align-items: center;">
+                                    <button type="button" class="btn-ceisa-save" id="btnPibItemSimpan" title="Simpan Perubahan Barang">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                                        Simpan
+                                    </button>
+                                    <button type="button" class="btn-ceisa-close" id="btnPibItemTutup" title="Hapus / Reset Item Ini">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+                                        Tutup
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- 2-COLUMN ITEM FORM BODY -->
+                            <div class="ceisa-card-body" style="padding: 18px 20px;">
+                                <div class="ceisa-item-form-grid">
+                                    <!-- COLUMN 1 (LEFT) -->
+                                    <div class="ceisa-item-col">
+                                        <div class="ceisa-item-row">
+                                            <div class="ceisa-item-label">Seri</div>
+                                            <div class="ceisa-item-control">
+                                                <input type="text" id="pibItemSeri" class="form-control" value="1" readonly style="background: #f8fafc; font-weight: 600;">
+                                            </div>
+                                        </div>
+
+                                        <div class="ceisa-item-row">
+                                            <div class="ceisa-item-label">
+                                                <span>Pos Tarif (HS)</span>
+                                                <span style="display: inline-block; width: 14px; height: 14px; border-radius: 50%; background: #3b82f6; color: #fff; font-size: 10px; line-height: 14px; text-align: center; margin-left: 4px; cursor: help;" title="Pos Tarif Harmonized System 8 atau 10 digit">i</span>
+                                            </div>
+                                            <div class="ceisa-item-control">
+                                                <input type="text" id="pibItemHsCode" class="form-control form-control-mono" placeholder="Contoh: 8538.90.19">
+                                            </div>
+                                        </div>
+
+                                        <div class="ceisa-item-row">
+                                            <div class="ceisa-item-label">Pernyataan Lartas</div>
+                                            <div class="ceisa-item-control">
+                                                <div class="ceisa-radio-group">
+                                                    <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
+                                                        <input type="radio" name="pibItemLartasRadio" id="pibItemLartasYa" value="terkena"> Terkena Lartas
+                                                    </label>
+                                                    <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
+                                                        <input type="radio" name="pibItemLartasRadio" id="pibItemLartasTidak" value="tidak" checked> Tidak Terkena Lartas
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="ceisa-item-row">
+                                            <div class="ceisa-item-label">Kode Barang</div>
+                                            <div class="ceisa-item-control">
+                                                <input type="text" id="pibItemKode" class="form-control" value="-">
+                                            </div>
+                                        </div>
+
+                                        <div class="ceisa-item-row align-top">
+                                            <div class="ceisa-item-label" style="padding-top: 6px;">Uraian Jenis Barang</div>
+                                            <div class="ceisa-item-control">
+                                                <div style="display: flex; justify-content: flex-end; margin-bottom: 4px;">
+                                                    <button type="button" class="btn-sesuai-hs" id="btnPibItemSesuaiHs" title="Samakan uraian dengan Buku Tarif Kepabeanan Indonesia">Sesuai HS</button>
+                                                </div>
+                                                <textarea id="pibItemUraian" class="form-control" rows="4" style="resize: vertical; font-size: 12.5px;"></textarea>
+                                            </div>
+                                        </div>
+
+                                        <div class="ceisa-item-row">
+                                            <div class="ceisa-item-label">Merek</div>
+                                            <div class="ceisa-item-control">
+                                                <input type="text" id="pibItemMerek" class="form-control" value="-">
+                                            </div>
+                                        </div>
+
+                                        <div class="ceisa-item-row">
+                                            <div class="ceisa-item-label">Tipe</div>
+                                            <div class="ceisa-item-control">
+                                                <input type="text" id="pibItemTipe" class="form-control" value="-">
+                                            </div>
+                                        </div>
+
+                                        <div class="ceisa-item-row">
+                                            <div class="ceisa-item-label">Spesifikasi Lain</div>
+                                            <div class="ceisa-item-control">
+                                                <input type="text" id="pibItemSpesifikasi" class="form-control" value="-">
+                                            </div>
+                                        </div>
+
+                                        <div class="ceisa-item-row">
+                                            <div class="ceisa-item-label">Negara</div>
+                                            <div class="ceisa-item-control">
+                                                <select id="pibItemNegara" class="form-control">
+                                                    <option value="CN - CHINA">CN - CHINA</option>
+                                                    <option value="TR - TURKEY">TR - TURKEY</option>
+                                                    <option value="JP - JAPAN">JP - JAPAN</option>
+                                                    <option value="SG - SINGAPORE">SG - SINGAPORE</option>
+                                                    <option value="US - UNITED STATES">US - UNITED STATES</option>
+                                                    <option value="DE - GERMANY">DE - GERMANY</option>
+                                                    <option value="TW - TAIWAN">TW - TAIWAN</option>
+                                                    <option value="KR - SOUTH KOREA">KR - SOUTH KOREA</option>
+                                                    <option value="MY - MALAYSIA">MY - MALAYSIA</option>
+                                                    <option value="TH - THAILAND">TH - THAILAND</option>
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        <div class="ceisa-item-row">
+                                            <div class="ceisa-item-label">Kondisi Barang</div>
+                                            <div class="ceisa-item-control">
+                                                <select id="pibItemKondisi" class="form-control">
+                                                    <option value="Barang Baru">Barang Baru</option>
+                                                    <option value="Bukan Baru / Bekas">Bukan Baru / Bekas</option>
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        <div class="ceisa-item-row">
+                                            <div class="ceisa-item-label">Kategori Barang</div>
+                                            <div class="ceisa-item-control">
+                                                <select id="pibItemKategori" class="form-control">
+                                                    <option value="4 - BAHAN BAKU">4 - BAHAN BAKU</option>
+                                                    <option value="1 - BARANG MODAL">1 - BARANG MODAL</option>
+                                                    <option value="2 - BARANG KONSUMSI">2 - BARANG KONSUMSI</option>
+                                                    <option value="9 - LAINNYA">9 - LAINNYA</option>
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        <div class="ceisa-item-row">
+                                            <div class="ceisa-item-label">Asal Barang <span class="req">*</span></div>
+                                            <div class="ceisa-item-control">
+                                                <select id="pibItemAsal" class="form-control">
+                                                    <option value="1 - SEPENUHNYA DIPEROLEH DAN/ATAU DIPRODUKSI DI LUAR DAERAH PABEAN (WHOLLY OBTAINED)">1 - SEPENUHNYA DIPEROLEH DAN/ATAU DIPRODUKSI DI LUAR DAERAH PABEAN (WHOLLY OBTAINED)</option>
+                                                    <option value="2 - TIDAK SEPENUHNYA DIPEROLEH (NOT WHOLLY OBTAINED)">2 - TIDAK SEPENUHNYA DIPEROLEH (NOT WHOLLY OBTAINED)</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- COLUMN 2 (RIGHT) -->
+                                    <div class="ceisa-item-col">
+                                        <div class="ceisa-item-row">
+                                            <div class="ceisa-item-label">Jumlah dan Satuan Barang</div>
+                                            <div class="ceisa-item-control">
+                                                <div class="ceisa-split-input">
+                                                    <input type="text" id="pibItemQty" class="form-control form-control-mono" style="flex: 2; text-align: right;" placeholder="0.0000">
+                                                    <select id="pibItemUnit" class="form-control" style="flex: 1.2;">
+                                                        <option value="PCE - PIECE">PCE - PIECE</option>
+                                                        <option value="PCS - PIECES">PCS - PIECES</option>
+                                                        <option value="MT - METRIC TON">MT - METRIC TON</option>
+                                                        <option value="KGM - KILOGRAM">KGM - KILOGRAM</option>
+                                                        <option value="SET - SET">SET - SET</option>
+                                                        <option value="ROL - ROLLS">ROL - ROLLS</option>
+                                                        <option value="MTR - METER">MTR - METER</option>
+                                                        <option value="LBR - LEMBAR">LBR - LEMBAR</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="ceisa-item-row">
+                                            <div class="ceisa-item-label">Kemasan</div>
+                                            <div class="ceisa-item-control">
+                                                <div class="ceisa-split-input">
+                                                    <input type="number" id="pibItemKemasanQty" class="form-control" style="flex: 1; text-align: right;" value="1">
+                                                    <select id="pibItemKemasanJenis" class="form-control" style="flex: 2;">
+                                                        <option value="PX - PALLET">PX - PALLET</option>
+                                                        <option value="PK - PACKAGE">PK - PACKAGE</option>
+                                                        <option value="CT - CARTON">CT - CARTON</option>
+                                                        <option value="BX - BOX">BX - BOX</option>
+                                                        <option value="BG - BAG">BG - BAG</option>
+                                                        <option value="DR - DRUM">DR - DRUM</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="ceisa-item-row">
+                                            <div class="ceisa-item-label">Berat Bersih (kg)</div>
+                                            <div class="ceisa-item-control">
+                                                <input type="text" id="pibItemNetto" class="form-control form-control-mono" style="text-align: right;" placeholder="0.0000">
+                                            </div>
+                                        </div>
+
+                                        <div class="ceisa-item-row">
+                                            <div class="ceisa-item-label">Berat Kotor (kg)</div>
+                                            <div class="ceisa-item-control">
+                                                <input type="text" id="pibItemBruto" class="form-control form-control-mono" style="text-align: right;" placeholder="0.0000">
+                                            </div>
+                                        </div>
+
+                                        <div class="ceisa-item-row">
+                                            <div class="ceisa-item-label">Volume (M3)</div>
+                                            <div class="ceisa-item-control">
+                                                <input type="text" id="pibItemVolume" class="form-control form-control-mono" style="text-align: right;" value="0.00">
+                                            </div>
+                                        </div>
+
+                                        <div class="ceisa-item-row">
+                                            <div class="ceisa-item-label">Amount FOB</div>
+                                            <div class="ceisa-item-control">
+                                                <input type="text" id="pibItemAmountFob" class="form-control form-control-mono" style="text-align: right; font-weight: 600;" placeholder="0.00">
+                                            </div>
+                                        </div>
+
+                                        <div class="ceisa-item-row">
+                                            <div class="ceisa-item-label">(Biaya Tambahan - Diskon)</div>
+                                            <div class="ceisa-item-control">
+                                                <input type="text" id="pibItemBiayaTambahan" class="form-control form-control-mono" style="text-align: right;" value="0.00">
+                                            </div>
+                                        </div>
+
+                                        <div class="ceisa-item-row">
+                                            <div class="ceisa-item-label">FOB</div>
+                                            <div class="ceisa-item-control">
+                                                <input type="text" id="pibItemFob" class="form-control form-control-mono" style="text-align: right; font-weight: 600;" placeholder="0.00">
+                                            </div>
+                                        </div>
+
+                                        <div class="ceisa-item-row">
+                                            <div class="ceisa-item-label">Harga Satuan</div>
+                                            <div class="ceisa-item-control">
+                                                <input type="text" id="pibItemHargaSatuan" class="form-control form-control-mono" style="text-align: right;" value="0.00">
+                                            </div>
+                                        </div>
+
+                                        <div class="ceisa-item-row">
+                                            <div class="ceisa-item-label">Asuransi</div>
+                                            <div class="ceisa-item-control">
+                                                <input type="text" id="pibItemAsuransi" class="form-control form-control-mono" style="text-align: right;" value="0.00">
+                                            </div>
+                                        </div>
+
+                                        <div class="ceisa-item-row">
+                                            <div class="ceisa-item-label">CIF Rupiah</div>
+                                            <div class="ceisa-item-control">
+                                                <input type="text" id="pibItemCifRupiah" class="form-control form-control-mono" style="text-align: right; font-weight: 700; color: #1e40af; background: #eff6ff;" readonly>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- SUB-SECTION 1: DOKUMEN FASILITAS / LARTAS -->
+                                <div class="ceisa-subcard">
+                                    <div class="ceisa-subcard-header">
+                                        <span class="ceisa-subcard-title">Dokumen Fasilitas/Lartas</span>
+                                        <button type="button" class="btn btn-ceisa-sub btn-sm" id="btnPibItemAddDoc">
+                                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                            Tambah
+                                        </button>
+                                    </div>
+                                    <div class="ceisa-subcard-body" style="padding: 0;">
+                                        <div class="ceisa-table-container">
+                                            <table class="ceisa-table" style="margin-bottom: 0;">
+                                                <thead>
+                                                    <tr style="background: #f8fafc;">
+                                                        <th style="width: 50px;">Seri</th>
+                                                        <th>Jenis</th>
+                                                        <th>Nomor</th>
+                                                        <th>Tanggal</th>
+                                                        <th>Fasilitas</th>
+                                                        <th>No. Urut di Izin</th>
+                                                        <th>File</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="pibItemDocTableBody">
+                                                    <tr>
+                                                        <td colspan="7">
+                                                            <div class="ceisa-empty-box">
+                                                                <svg class="ceisa-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                                                                <span>No Data</span>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- SUB-SECTION 2: VOLUNTARY DECLARATION -->
+                                <div class="ceisa-subcard">
+                                    <div class="ceisa-subcard-header">
+                                        <span class="ceisa-subcard-title">Voluntary Declaration</span>
+                                        <button type="button" class="btn btn-ceisa-sub btn-sm" id="btnPibItemAddVd">
+                                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                            Tambah
+                                        </button>
+                                    </div>
+                                    <div class="ceisa-subcard-body" style="padding: 0;">
+                                        <div class="ceisa-table-container">
+                                            <table class="ceisa-table" style="margin-bottom: 0;">
+                                                <thead>
+                                                    <tr style="background: #f8fafc;">
+                                                        <th>Jenis VD</th>
+                                                        <th>Jatuh Tempo Royalti</th>
+                                                        <th>Nilai Barang Vd</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="pibItemVdTableBody">
+                                                    <tr>
+                                                        <td colspan="3">
+                                                            <div class="ceisa-empty-box">
+                                                                <svg class="ceisa-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                                                <span>No Data</span>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- SUB-SECTION 3: PUNGUTAN PER ITEM -->
+                                <div class="ceisa-subcard">
+                                    <div class="ceisa-subcard-header">
+                                        <span class="ceisa-subcard-title">Pungutan</span>
+                                    </div>
+                                    <div class="ceisa-subcard-body">
+                                        <div class="ceisa-pungutan-grid">
+                                            <!-- LEFT: BM & BMT -->
+                                            <div class="ceisa-pungutan-box">
+                                                <div class="ceisa-pungutan-box-header">BM</div>
+                                                <div class="ceisa-pungutan-box-body">
+                                                    <div style="display: flex; gap: 6px; align-items: center; margin-bottom: 10px;">
+                                                        <select class="form-control" style="flex: 1;" id="pibItemBmJenis">
+                                                            <option value="BM">BM</option>
+                                                        </select>
+                                                        <select class="form-control" style="flex: 1.4;" id="pibItemBmTarifTipe">
+                                                            <option value="Advalorem">Advalorem</option>
+                                                            <option value="Spesifik">Spesifik</option>
+                                                        </select>
+                                                        <input type="text" class="form-control form-control-mono" id="pibItemBmTarifVal" value="5%" style="flex: 0.8; text-align: center;">
+                                                        <select class="form-control" style="flex: 2;" id="pibItemBmFasilitas">
+                                                            <option value="5 - BBS - DIBEBASKAN">5 - BBS - DIBEBASKAN</option>
+                                                            <option value="1 - BYR - DIBAYAR">1 - BYR - DIBAYAR</option>
+                                                            <option value="2 - TTG - DITANGGUNG">2 - TTG - DITANGGUNG</option>
+                                                            <option value="6 - TDK - TIDAK DIPUNGUT">6 - TDK - TIDAK DIPUNGUT</option>
+                                                        </select>
+                                                        <input type="text" class="form-control form-control-mono" id="pibItemBmPersenFasilitas" value="100%" style="flex: 0.8; text-align: center;">
+                                                    </div>
+
+                                                    <div style="font-weight: 700; font-size: 11.5px; color: #475569; margin: 12px 0 6px 0; border-top: 1px solid #f1f5f9; padding-top: 8px;">BMT</div>
+                                                    
+                                                    <div class="pungutan-row">
+                                                        <label style="display: flex; align-items: center; gap: 4px; width: 85px;"><input type="checkbox" id="chkPibItemBmad"> BMAD</label>
+                                                        <select class="form-control" style="width: 100px;"><option>Sementara</option></select>
+                                                        <input type="text" class="form-control" style="width: 55px; text-align: center;" placeholder="%">
+                                                        <select class="form-control" style="flex: 1;"><option></option></select>
+                                                        <input type="text" class="form-control" style="width: 55px; text-align: center;" placeholder="%">
+                                                    </div>
+
+                                                    <div class="pungutan-row">
+                                                        <label style="display: flex; align-items: center; gap: 4px; width: 85px;"><input type="checkbox" id="chkPibItemBmtp"> BMTP</label>
+                                                        <select class="form-control" style="width: 100px;"><option>Sementara</option></select>
+                                                        <input type="text" class="form-control" style="width: 55px; text-align: center;" placeholder="%">
+                                                        <select class="form-control" style="flex: 1;"><option></option></select>
+                                                        <input type="text" class="form-control" style="width: 55px; text-align: center;" placeholder="%">
+                                                    </div>
+
+                                                    <div class="pungutan-row">
+                                                        <label style="display: flex; align-items: center; gap: 4px; width: 85px;"><input type="checkbox" id="chkPibItemBmi"> BMI</label>
+                                                        <select class="form-control" style="width: 100px;"><option>Sementara</option></select>
+                                                        <input type="text" class="form-control" style="width: 55px; text-align: center;" placeholder="%">
+                                                        <select class="form-control" style="flex: 1;"><option></option></select>
+                                                        <input type="text" class="form-control" style="width: 55px; text-align: center;" placeholder="%">
+                                                    </div>
+
+                                                    <div class="pungutan-row">
+                                                        <label style="display: flex; align-items: center; gap: 4px; width: 85px;"><input type="checkbox" id="chkPibItemBmit"> BMIT</label>
+                                                        <select class="form-control" style="width: 100px;"><option>Sementara</option></select>
+                                                        <input type="text" class="form-control" style="width: 55px; text-align: center;" placeholder="%">
+                                                        <select class="form-control" style="flex: 1;"><option></option></select>
+                                                        <input type="text" class="form-control" style="width: 55px; text-align: center;" placeholder="%">
+                                                    </div>
+
+                                                    <div style="margin-top: 10px; border-top: 1px solid #f1f5f9; padding-top: 8px;">
+                                                        <label style="display: flex; align-items: center; gap: 6px; font-weight: 500;"><input type="checkbox" id="chkPibItemCukai"> Cukai</label>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- RIGHT: PDRI -->
+                                            <div class="ceisa-pungutan-box">
+                                                <div class="ceisa-pungutan-box-header">PDRI</div>
+                                                <div class="ceisa-pungutan-box-body">
+                                                    <div class="pungutan-row">
+                                                        <span style="width: 65px; font-weight: 600;">PPN</span>
+                                                        <input type="text" class="form-control form-control-mono" id="pibItemPpnTarif" value="11%" style="width: 60px; text-align: center;">
+                                                        <select class="form-control" style="flex: 1;" id="pibItemPpnFasilitas">
+                                                            <option value="5 - BBS - DIBEBASKAN">5 - BBS - DIBEBASKAN</option>
+                                                            <option value="1 - BYR - DIBAYAR">1 - BYR - DIBAYAR</option>
+                                                            <option value="6 - TDK - TIDAK DIPUNGUT">6 - TDK - TIDAK DIPUNGUT</option>
+                                                        </select>
+                                                        <input type="text" class="form-control form-control-mono" value="100%" style="width: 65px; text-align: center;">
+                                                    </div>
+
+                                                    <div class="pungutan-row">
+                                                        <span style="width: 65px; font-weight: 600;">PPNBM</span>
+                                                        <input type="text" class="form-control form-control-mono" id="pibItemPpnbmTarif" placeholder="%" style="width: 60px; text-align: center;">
+                                                        <select class="form-control" style="flex: 1;" id="pibItemPpnbmFasilitas">
+                                                            <option value=""></option>
+                                                            <option value="5 - BBS - DIBEBASKAN">5 - BBS - DIBEBASKAN</option>
+                                                        </select>
+                                                        <input type="text" class="form-control form-control-mono" placeholder="%" style="width: 65px; text-align: center;">
+                                                    </div>
+
+                                                    <div class="pungutan-row">
+                                                        <span style="width: 65px; font-weight: 600;">PPh</span>
+                                                        <input type="text" class="form-control form-control-mono" id="pibItemPphTarif" value="2.5%" style="width: 60px; text-align: center;">
+                                                        <select class="form-control" style="flex: 1;" id="pibItemPphFasilitas">
+                                                            <option value="5 - BBS - DIBEBASKAN">5 - BBS - DIBEBASKAN</option>
+                                                            <option value="1 - BYR - DIBAYAR">1 - BYR - DIBAYAR</option>
+                                                            <option value="6 - TDK - TIDAK DIPUNGUT">6 - TDK - TIDAK DIPUNGUT</option>
+                                                        </select>
+                                                        <input type="text" class="form-control form-control-mono" value="100%" style="width: 65px; text-align: center;">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- CARD FOOTER: BOTTOM NAVIGATION -->
+                            <div class="ceisa-card-footer">
+                                <button type="button" class="btn btn-ceisa-sub" id="btnPibItemNavPrevTab">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                                    Sebelumnya
+                                </button>
+                                <button type="button" class="btn btn-ceisa-primary" id="btnPibItemNavNextTab">
+                                    Selanjutnya
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                                </button>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- TAB 8: PUNGUTAN PIB -->
+                    <section id="pib-tab-pungutan" class="tab-content-panel">
+                        <div class="ceisa-form-card">
+                            <div class="ceisa-card-header">
+                                <span class="ceisa-card-title">Perhitungan Pungutan Pabean, Cukai &amp; Pajak Dalam Rangka Impor (PDRI)</span>
+                            </div>
+                            <div class="ceisa-card-body" style="max-width: 860px; margin: 0 auto;">
+                                <div class="ceisa-header-form">
+                                    <div class="ceisa-form-row">
+                                        <div class="ceisa-form-row-label">Nilai Pabean (CIF Rupiah)</div>
+                                        <div class="ceisa-form-row-control">
+                                            <input type="text" id="pibPungutanCifRp" class="form-control form-control-mono" value="Rp 1.128.397.163" readonly style="font-weight: 700; background: var(--surface-subtle);">
+                                        </div>
+                                    </div>
+                                    <div class="ceisa-form-row">
+                                        <div class="ceisa-form-row-label">Tarif Bea Masuk (BM) <span class="req">*</span></div>
+                                        <div class="ceisa-form-row-control">
+                                            <div class="ceisa-split-input">
+                                                <input type="number" step="0.5" id="pibTarifBm" class="form-control" value="5.0" style="flex: 0 0 100px; text-align: right;">
+                                                <span style="display: flex; align-items: center; font-weight: 600;">% &nbsp; Nilai BM:</span>
+                                                <input type="text" id="pibPungutanNilaiBm" class="form-control form-control-mono" value="Rp 56.419.858" readonly style="font-weight: 600; background: var(--surface-subtle);">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="ceisa-form-row">
+                                        <div class="ceisa-form-row-label">Nilai Impor (CIF + BM)</div>
+                                        <div class="ceisa-form-row-control">
+                                            <input type="text" id="pibPungutanNilaiImpor" class="form-control form-control-mono" value="Rp 1.184.817.021" readonly style="font-weight: 700; background: var(--surface-subtle);">
+                                        </div>
+                                    </div>
+                                    <div class="ceisa-form-row">
+                                        <div class="ceisa-form-row-label">PPN Impor (11%)</div>
+                                        <div class="ceisa-form-row-control">
+                                            <input type="text" id="pibPungutanNilaiPpn" class="form-control form-control-mono" value="Rp 130.329.872" readonly style="font-weight: 600; background: var(--surface-subtle);">
+                                        </div>
+                                    </div>
+                                    <div class="ceisa-form-row">
+                                        <div class="ceisa-form-row-label">PPh Pasal 22 Impor (2.5% API)</div>
+                                        <div class="ceisa-form-row-control">
+                                            <input type="text" id="pibPungutanNilaiPph" class="form-control form-control-mono" value="Rp 29.620.426" readonly style="font-weight: 600; background: var(--surface-subtle);">
+                                        </div>
+                                    </div>
+                                    <div class="ceisa-form-row" style="border-top: 2px solid var(--border-color); padding-top: 14px; margin-top: 8px;">
+                                        <div class="ceisa-form-row-label" style="font-size: 15px; font-weight: 800; color: var(--ceisa-blue);">TOTAL TAGIHAN BILLING DJBC</div>
+                                        <div class="ceisa-form-row-control">
+                                            <input type="text" id="pibPungutanTotalBilling" class="form-control form-control-mono" value="Rp 216.370.156" readonly style="font-size: 16px; font-weight: 800; color: #1e40af; background: #eff6ff; border: 2px solid #3b82f6;">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- TAB 9: PERNYATAAN PIB -->
+                    <section id="pib-tab-pernyataan" class="tab-content-panel">
+                        <div class="ceisa-form-card">
+                            <div class="ceisa-card-header">
+                                <span class="ceisa-card-title">Pernyataan Kebenaran Data Kepabeanan Impor</span>
+                            </div>
+                            <div class="ceisa-card-body" style="max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px;">
+                                <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.6; background: var(--surface-subtle); padding: 12px; border-radius: 6px; border-left: 4px solid var(--ceisa-blue);">
+                                    Dengan ini saya menyatakan bertanggung jawab atas kebenaran hal-hal yang diberitahukan dalam Pemberitahuan Impor Barang (PIB) ini serta bersedia dikenakan sanksi sesuai dengan peraturan perundang-undangan kepabeanan yang berlaku apabila data yang diberitahukan tidak benar.
+                                </p>
+                                <div class="form-group">
+                                    <label class="form-label">Tempat / Kota Pemberitahuan <span class="req">*</span></label>
+                                    <input type="text" id="pibPernyataanKota" class="form-control" value="Jakarta Utara">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Tanggal Pernyataan <span class="req">*</span></label>
+                                    <input type="date" id="pibPernyataanTanggal" class="form-control" value="2026-09-23">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Nama Pemberitahu (Direktur / Kuasa Importir) <span class="req">*</span></label>
+                                    <input type="text" id="pibPernyataanNama" class="form-control" value="HENDRA WIJAYA">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Jabatan Pemberitahu <span class="req">*</span></label>
+                                    <input type="text" id="pibPernyataanJabatan" class="form-control" value="Direktur Utama">
+                                </div>
+                                <div style="margin-top: 8px;">
+                                    <label style="display: flex; align-items: center; gap: 8px; font-weight: 600; cursor: pointer; color: var(--text-primary);">
+                                        <input type="checkbox" id="pibPernyataanAgree" checked> Saya menyetujui seluruh ketentuan dan keabsahan data kepabeanan di atas
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Bottom Submission Dock PIB -->
+                    <div class="ceisa-bottom-dock">
+                        <div class="dock-status-message">
+                            <span class="status-dot-green"></span>
+                            <span id="pibSaveIndicator" style="font-weight: 600; color: var(--color-green-text);">Tersimpan Otomatis</span>
+                            <span style="color: var(--text-muted);">&bull;</span>
+                            <span class="doc-title-meta">
+                                No. Aju: <strong id="lblPibNoAju">010700-001234-20260923-000881</strong> &bull; File:
+                                <strong id="lblPibFileName">Draft_PIB_BC20_Auto.json</strong>
+                            </span>
+                        </div>
+                        <div class="dock-actions">
+                            <button type="button" class="btn btn-secondary-ceisa" id="btnPibResetDraft"
+                                title="Bersihkan dan reset form Draft PIB">
+                                Reset Formulir
+                            </button>
+                            <button type="button" class="btn btn-secondary-ceisa" id="btnPibExportJson"
+                                title="Unduh berkas JSON draft PIB">
+                                Ekspor Berkas JSON
+                            </button>
+                            <button type="button" class="btn btn-primary-ceisa" id="btnPibSubmitCustoms"
+                                style="background: #0284c7; border-color: #0284c7;">
+                                Validasi &amp; Kirim PIB ke OpenAPI
+                            </button>
+                        </div>
+                    </div>
+                </main>
+            </div>
+            <div id="ceisaDocViewerModal" class="doc-modal-overlay" style="display: none;" role="dialog"
+                aria-modal="true" aria-labelledby="modalDocTitle">
+                <div class="doc-modal-container">
+                    <!-- Modal Header -->
+                    <div class="doc-modal-header">
+                        <div class="doc-modal-title-group">
+                            <span class="doc-modal-badge" id="modalDocTypeBadge">380 - INVOICE</span>
+                            <h3 class="doc-modal-title" id="modalDocTitle">INV.98007744.pdf</h3>
+                            <span class="doc-modal-meta" id="modalDocMeta">No: 98007744 &bull; Tanggal:
+                                10.09.2026</span>
+                        </div>
+                        <div class="doc-modal-actions">
+                            <input type="file" id="docModalFileInput" accept=".pdf,image/*" style="display: none;">
+                            <button type="button" class="btn btn-sm btn-secondary" id="btnModalUploadCustom"
+                                title="Pilih berkas PDF dari komputer">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                    <polyline points="17 8 12 3 7 8"></polyline>
+                                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                                </svg>
+                                Pilih File PDF
+                            </button>
+                            <a href="#" class="btn btn-sm btn-secondary" id="btnModalOpenTab" target="_blank"
+                                rel="noopener noreferrer" title="Buka di tab browser baru">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                                    <polyline points="15 3 21 3 21 9"></polyline>
+                                    <line x1="10" y1="14" x2="21" y2="3"></line>
+                                </svg>
+                                Tab Baru
+                            </a>
+                            <a href="#" class="btn btn-sm btn-primary-ceisa" id="btnModalDownload" download
+                                title="Unduh berkas dokumen">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                    <polyline points="7 10 12 15 17 10"></polyline>
+                                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                                </svg>
+                                Unduh
+                            </a>
+                            <button type="button" class="doc-modal-close-btn" id="btnModalCloseDoc"
+                                title="Tutup Viewer (Esc)">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2.5">
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Modal Body -->
+                    <div class="doc-modal-body">
+                        <!-- Loading State -->
+                        <div id="modalDocLoading" class="doc-modal-loading" style="display: none;">
+                            <div class="doc-spinner"></div>
+                            <span>Memuat dokumen pabean...</span>
+                        </div>
+
+                        <!-- Embedded PDF Viewer Frame -->
+                        <iframe id="docViewerIframe" class="doc-viewer-frame" src="about:blank"
+                            title="Pratinjau Dokumen Pabean"></iframe>
+
+                        <!-- Fallback / Uploader if file not yet loaded in browser -->
+                        <div id="modalDocFallback" class="doc-modal-fallback" style="display: none;">
+                            <div class="fallback-icon">📄</div>
+                            <h4 id="fallbackTitle">Pratinjau Berkas Dokumen</h4>
+                            <p id="fallbackDesc">
+                                Berkas <strong id="fallbackFileName">INV.98007744.pdf</strong> dapat dibuka
+                                langsung.<br>
+                                Pastikan server lokal aktif atau pilih berkas PDF dari komputer Anda.
+                            </p>
+                            <div class="fallback-btn-group" style="margin-top: 14px;">
+                                <button type="button" class="btn btn-primary-ceisa" id="btnFallbackSelectFile">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                        <polyline points="17 8 12 3 7 8"></polyline>
+                                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                                    </svg>
+                                    Pilih Berkas PDF Dari Komputer
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+        <div id="docParserModal" class="doc-modal-overlay" style="display: none;" role="dialog"
+            aria-modal="true" aria-labelledby="docParserTitle">
+            <div class="doc-parser-modal-container">
+                <!-- Modal Header -->
+                <div class="doc-parser-modal-header">
+                    <div class="doc-parser-header-info">
+                        <div class="doc-parser-badge-row">
+                            <span class="doc-parser-badge">Ray-OCR V.1</span>
+                            <span class="doc-parser-badge-secondary">Smart Customs Extractor</span>
+                        </div>
+                        <h2 class="doc-parser-title" id="docParserTitle">Pindai Dokumen Pabean Baru</h2>
+                        <p class="doc-parser-subtitle">
+                            Unggah dokumen pengapalan (Invoice, Packing List, B/L, dsb) untuk dianalisis dan diekstrak otomatis menjadi draft CEISA PEB.
+                        </p>
+                    </div>
+                    <button type="button" class="doc-modal-close-btn" id="btnCloseDocParserTop" title="Tutup / Kembali (Esc)">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Modal Body -->
+                <div class="doc-parser-modal-body">
+                    <!-- Drop Zone (Drag & Drop) -->
+                    <div class="doc-parser-dropzone" id="docParserDropzone">
+                        <input type="file" id="docParserFileInput" multiple accept=".pdf,.doc,.docx,.png,.jpg,.jpeg" style="display: none;">
+                        <div class="doc-parser-dropzone-icon">
+                            <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="17 8 12 3 7 8"></polyline>
+                                <line x1="12" y1="3" x2="12" y2="15"></line>
+                            </svg>
+                        </div>
+                        <div class="doc-parser-dropzone-text">
+                            <span class="dropzone-main-text">Tarik &amp; Lepaskan Dokumen di Sini</span>
+                            <span class="dropzone-sub-text">atau <button type="button" class="dropzone-browse-btn" id="btnBrowseDocParser">Pilih Berkas dari Komputer</button></span>
+                        </div>
+                        <div class="doc-parser-dropzone-hints">
+                            <span class="hint-tag">📄 PDF</span>
+                            <span class="hint-tag">🖼️ PNG / JPG</span>
+                            <span class="hint-sep">&bull;</span>
+                            <span>Mendukung multi-dokumen (Invoice, Packing List, B/L, Certificate)</span>
+                        </div>
+                    </div>
+
+                    <!-- File List Area -->
+                    <div class="doc-parser-files-wrapper" id="docParserFilesWrapper" style="display: none;">
+                        <div class="doc-parser-files-header">
+                            <span class="files-count-badge" id="docParserFilesCount">0 Dokumen Dipilih</span>
+                            <button type="button" class="btn-clear-files" id="btnClearDocParserFiles">Kosongkan Semua</button>
+                        </div>
+                        <div class="doc-parser-files-list" id="docParserFilesList">
+                            <!-- Populated dynamically via JS -->
+                        </div>
+                    </div>
+
+                    <!-- Processing / Scanning Progress View -->
+                    <div class="doc-parser-progress-box" id="docParserProgressBox" style="display: none;">
+                        <div class="doc-parser-spinner-row" id="docParserSpinnerRow">
+                            <div class="doc-spinner" id="docParserSpinner"></div>
+                            <div class="progress-status-texts" style="flex: 1;">
+                                <strong id="docParserStepTitle">Ray-OCR V.1 Menganalisis Dokumen...</strong>
+                                <span id="docParserStepDesc">Membaca berkas dan mengekstrak entitas pabean...</span>
+                            </div>
+                            <!-- Minimized Actions: Toggle Log & Re-upload -->
+                            <div class="parser-minimized-actions" id="parserMinimizedActions" style="display: none;">
+                                <button type="button" class="btn-toggle-parser-log" id="btnToggleParserLog" title="Lihat riwayat langkah proses">
+                                    <span>Riwayat Log</span>
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="log-chevron"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                                </button>
+                                <button type="button" class="btn-reupload-parser" id="btnReuploadParser" title="Pindai dokumen lain">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                                    <span>Ganti Berkas</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="doc-parser-progress-bar-track" id="docParserTrack">
+                            <div class="doc-parser-progress-bar-fill" id="docParserProgressFill" style="width: 0%;"></div>
+                        </div>
+                        <!-- Step log realtime -->
+                        <div class="doc-parser-step-log" id="docParserStepLog"></div>
+                        <!-- Error / Retry state -->
+                        <div class="doc-parser-error-box" id="docParserErrorBox" style="display:none; flex-direction:column; align-items:flex-start; gap:8px;">
+                            <div style="display:flex; align-items:center; gap:8px; width:100%;">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                                <span id="docParserErrorMsg" style="flex:1;">Terjadi kesalahan saat memproses dokumen.</span>
+                                <button type="button" class="btn btn-parser-retry" id="btnDocParserRetry">Coba Lagi</button>
+                            </div>
+                            <div id="docParserApiKeyRow" style="display:none; width:100%; gap:8px; align-items:center; background:#fef2f2; padding:8px 10px; border-radius:6px; border:1px solid #fecaca;">
+                                <input type="password" id="docParserApiKeyInput" placeholder="Masukkan Engine API Key (AIzaSy...)" style="flex:1; padding:6px 10px; border:1px solid #f87171; border-radius:4px; font-size:12px; background:#fff; outline:none;">
+                                <button type="button" class="btn btn-sm" id="btnSaveGeminiKey" style="background:#dc2626; color:#fff; padding:6px 12px; font-size:12px; font-weight:600; border-radius:4px; border:none; cursor:pointer;">Simpan &amp; Ulangi</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- HASIL AUDIT & VALIDASI KETERKAITAN DOKUMEN (SAFETY CHECK DI DALAM MODAL) -->
+                    <div class="modal-safecheck-card" id="modalSafeCheckContainer" style="display: none;">
+                        <div class="modal-safecheck-header">
+                            <span class="modal-safecheck-header-title">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.2">
+                                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                                </svg>
+                                Hasil Audit &amp; Validasi Keterkaitan Dokumen (SafeCheck)
+                            </span>
+                            <span id="modalSafeCheckStatusBadge" class="badge-safe-valid">Tervalidasi: 1 Shipment</span>
+                        </div>
+                        <div class="modal-safecheck-body">
+                            <!-- Banner Status & Skor -->
+                            <div id="modalSafeCheckBanner" class="modal-safecheck-banner">
+                                <div class="modal-safecheck-banner-icon">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                                        <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                                    </svg>
+                                </div>
+                                <div class="modal-safecheck-banner-content">
+                                    <div class="modal-safecheck-banner-title" id="modalSafeCheckTitle">Semua Dokumen Cocok &amp; Terverifikasi 1 Kesatuan Pengiriman</div>
+                                    <div class="modal-safecheck-banner-desc" id="modalSafeCheckSummary">
+                                        Semua dokumen saling berhubungan dan merupakan satu kesatuan shipment yang sama.
+                                    </div>
+                                </div>
+                                <div class="modal-safecheck-score-box">
+                                    <div class="modal-safecheck-score-val" id="modalSafeCheckScore">100%</div>
+                                    <div class="modal-safecheck-score-label">Keyakinan</div>
+                                </div>
+                            </div>
+
+                            <!-- Parameter yang Cocok (Grid 2-Kolom Compact) -->
+                            <div class="modal-safecheck-section">
+                                <label class="modal-safecheck-label">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                    Indikator Keselarasan Antar-Dokumen:
+                                </label>
+                                <ul id="modalSafeCheckMatchedList" class="modal-safecheck-list">
+                                    <!-- Populated via JS -->
+                                </ul>
+                            </div>
+
+                            <!-- Temuan Selisih (Bila Ada) -->
+                            <div id="modalSafeCheckWarningsBox" class="modal-safecheck-warnings-box" style="display: none;">
+                                <label class="modal-safecheck-label-warning">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                                    Temuan Ketidaksesuaian / Peringatan:
+                                </label>
+                                <ul id="modalSafeCheckWarningsList" class="modal-safecheck-warnings-list">
+                                    <!-- Populated via JS -->
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal Footer Actions: Start, Kembali ke halaman saat ini, Unggah JSON -->
+                <div class="doc-parser-modal-footer">
+                    <div class="footer-left-actions">
+                        <input type="file" id="docParserJsonInput" accept=".json" style="display: none;">
+                        <button type="button" class="btn btn-secondary-parser" id="btnDocParserUploadJson" title="Unggah berkas JSON hasil ekstraksi langsung">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="17 8 12 3 7 8"></polyline>
+                                <line x1="12" y1="3" x2="12" y2="15"></line>
+                            </svg>
+                            Unggah JSON
+                        </button>
+                    </div>
+                    <div class="footer-right-actions">
+                        <button type="button" class="btn btn-parser-start" id="btnDocParserStart" title="Mulai ekstraksi dan pemindaian dokumen">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                            </svg>
+                            Start / Mulai Scan
+                        </button>
+                        <button type="button" class="btn" id="btnDocParserContinue" style="display: none; background: #15803d; color: #ffffff; padding: 8px 18px; font-size: 13px; font-weight: 600; border-radius: 6px; border: none; cursor: pointer; align-items: center; gap: 6px;" title="Tutup pemindaian dan buka Formulir PEB">
+                            <span>Lanjutkan ke Formulir PEB</span>
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                                <polyline points="12 5 19 12 12 19"></polyline>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TOAST NOTIFICATION CONTAINER -->
+        <div class="toast-shelf" id="toastShelf">
+            <div id="toast" class="toast">Pemberitahuan Sistem</div>
+        </div>
+
+        <!-- FLOATING BACKGROUND PARSER WIDGET (POPUP DARI KANAN DENGAN CIRCULAR PROGRESS) -->
+        <div id="floatingParserWidget" class="floating-parser-widget" role="status" aria-live="polite">
+            <div class="floating-parser-card" id="btnOpenFloatingParser" title="Klik untuk membuka kembali proses Pemindaian Dokumen">
+                <!-- Circular Progress Ring -->
+                <div class="floating-circle-wrapper">
+                    <svg class="floating-circle-svg" viewBox="0 0 44 44">
+                        <circle class="circle-bg" cx="22" cy="22" r="18" />
+                        <circle class="circle-progress" id="floatingCircleProgress" cx="22" cy="22" r="18" stroke-dasharray="113.1" stroke-dashoffset="113.1" />
+                    </svg>
+                    <div class="floating-circle-inner" id="floatingCirclePercent">0%</div>
+                </div>
+
+                <!-- Info Status -->
+                <div class="floating-parser-info">
+                    <div class="floating-parser-header">
+                        <span class="floating-parser-live-dot" id="floatingLiveDot"></span>
+                        <span class="floating-parser-title" id="floatingParserTitle">Memproses Dokumen...</span>
+                    </div>
+                    <div class="floating-parser-desc" id="floatingParserDesc">Ray-OCR V.1 di latar belakang</div>
+                    <div class="floating-parser-hint">
+                        <span>Buka dialog pemindai</span>
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                    </div>
+                </div>
+
+                <!-- Quick Dismiss Button -->
+                <button type="button" class="floating-parser-dismiss" id="btnDismissFloatingParser" title="Sembunyikan popup ringkas ini">&times;</button>
+            </div>
+        </div>
+
+
+    <!-- SCRIPTS -->
+    <script src="config.js"></script>
+    <script src="sync.js"></script>
+    <script src="peb_dashboard.js"></script>
+    <script src="pib_dashboard.js"></script>
+</body>
+
+</html>

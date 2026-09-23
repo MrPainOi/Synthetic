@@ -13,6 +13,7 @@ const PORT = process.env.PORT || 5005;
 app.use(cors({ origin: '*' }));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+app.use(express.static(path.join(__dirname, '..')));
 
 // Setup folder temp/attachments
 const uploadDir = path.join(__dirname, 'temp', 'attachments');
@@ -149,6 +150,7 @@ app.post('/api/parse-documents', upload.array('files'), async (req, res) => {
 
     const uploadedFiles = req.files || [];
     const customKey = req.headers['x-gemini-key'] || req.body?.apiKey || null;
+    const mode = req.body?.mode || req.headers['x-customs-mode'] || 'ekspor';
 
     if (uploadedFiles.length === 0) {
         sendEvent({ type: 'error', message: 'Tidak ada berkas yang diterima server.' });
@@ -159,7 +161,7 @@ app.post('/api/parse-documents', upload.array('files'), async (req, res) => {
         path: f.path,
         originalName: f.originalname
     }));
-    console.log(`\n[API] Menerima ${fileItems.length} dokumen untuk diproses:`);
+    console.log(`\n[API] Menerima ${fileItems.length} dokumen untuk diproses [Mode: ${mode.toUpperCase()}]:`);
     uploadedFiles.forEach(f => console.log(`  - ${f.originalname} (${f.size} bytes)`));
 
     try {
@@ -167,16 +169,17 @@ app.post('/api/parse-documents', upload.array('files'), async (req, res) => {
             sendEvent({ type: 'progress', ...prog });
         };
 
-        const parsedData = await parseDocuments(fileItems, onProgress, customKey);
+        const parsedData = await parseDocuments(fileItems, onProgress, customKey, mode);
 
         if (!parsedData) {
             throw new Error('Hasil ekstraksi kosong atau gagal diproses oleh AI.');
         }
 
-        console.log(`[API] Berhasil mengekstrak data shipment untuk ${uploadedFiles.length} dokumen.`);
+        console.log(`[API] Berhasil mengekstrak data shipment untuk ${uploadedFiles.length} dokumen [Mode: ${mode}].`);
         sendEvent({
             type: 'result',
             data: parsedData,
+            mode: mode,
             fileNames: uploadedFiles.map(f => f.originalname)
         });
         res.end();
@@ -188,6 +191,60 @@ app.post('/api/parse-documents', upload.array('files'), async (req, res) => {
             message: err.message || 'Terjadi kesalahan saat memproses dokumen.'
         });
         res.end();
+    }
+});
+
+// Endpoint untuk menyimpan draft pabean dipisah per folder: khusus impor dan ekspor
+app.post('/api/save-draft', (req, res) => {
+    try {
+        const { mode, data, filename } = req.body || {};
+        const isImpor = (mode && (mode.toLowerCase().includes('impor') || mode.toLowerCase().includes('pib'))) ||
+            (data && (data.jenisDokumen === 'PIB' || data.isImport));
+        const subFolder = isImpor ? 'impor' : 'ekspor';
+        const prefix = isImpor ? 'PIB_Draft_' : 'PEB_Draft_';
+        const noAju = data?.nomorAju ? data.nomorAju.replace(/[^a-zA-Z0-9_-]/g, '') : Date.now();
+        const safeName = filename ? filename.replace(/[^a-zA-Z0-9._-]/g, '_') : `${prefix}${noAju}.json`;
+
+        // 1. Simpan di temp/drafts/<ekspor|impor>
+        const tempDir = path.join(__dirname, 'temp', 'drafts', subFolder);
+        fs.mkdirSync(tempDir, { recursive: true });
+        const tempPath = path.join(tempDir, safeName);
+        fs.writeFileSync(tempPath, JSON.stringify(data, null, 2));
+
+        // 2. Simpan juga di root workspace drafts/<ekspor|impor>
+        const rootDir = path.join(__dirname, '..', 'drafts', subFolder);
+        fs.mkdirSync(rootDir, { recursive: true });
+        const rootPath = path.join(rootDir, safeName);
+        fs.writeFileSync(rootPath, JSON.stringify(data, null, 2));
+
+        console.log(`[DRAFT SAVED] Folder: drafts/${subFolder}/ | File: ${safeName}`);
+        res.json({
+            success: true,
+            folder: `drafts/${subFolder}`,
+            filename: safeName,
+            localPath: rootPath
+        });
+    } catch (err) {
+        console.error('[SAVE-DRAFT ERROR]', err.message);
+        res.status(500).json({ error: 'Gagal menyimpan draft: ' + err.message });
+    }
+});
+
+// Endpoint untuk mengambil draft terbaru (misal untuk pemulihan otomatis data barang)
+app.get('/api/get-latest-draft', (req, res) => {
+    try {
+        const mode = req.query.mode === 'impor' ? 'impor' : 'ekspor';
+        const targetDir = path.join(__dirname, '..', 'drafts', mode);
+        if (!fs.existsSync(targetDir)) return res.json(null);
+        const files = fs.readdirSync(targetDir)
+            .filter(f => f.endsWith('.json'))
+            .map(f => ({ name: f, mtime: fs.statSync(path.join(targetDir, f)).mtime }))
+            .sort((a, b) => b.mtime - a.mtime);
+        if (files.length === 0) return res.json(null);
+        const latestContent = fs.readFileSync(path.join(targetDir, files[0].name), 'utf8');
+        res.json(JSON.parse(latestContent));
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
 });
 

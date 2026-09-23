@@ -14,10 +14,10 @@ function getAiClient(customKey) {
     return new GoogleGenAI({ apiKey: key.trim() });
 }
 
-async function parseDocuments(pdfInputs, onProgress = () => {}, customApiKey = null) {
+async function parseDocuments(pdfInputs, onProgress = () => {}, customApiKey = null, mode = 'ekspor') {
     const pdfPaths = pdfInputs;
-    console.log(`Memproses ${pdfInputs.length} dokumen sekaligus...`);
-    onProgress({ step: 'init', message: `Memproses ${pdfInputs.length} dokumen sekaligus...`, totalFiles: pdfInputs.length });
+    console.log(`Memproses ${pdfInputs.length} dokumen sekaligus [Mode: ${mode.toUpperCase()}]...`);
+    onProgress({ step: 'init', message: `Memproses ${pdfInputs.length} dokumen sekaligus [Mode: ${mode.toUpperCase()}]...`, totalFiles: pdfInputs.length });
     
     try {
         const ai = getAiClient(customApiKey);
@@ -397,18 +397,33 @@ PENTING:
             });
         }
 
-        // Simpan hasil draft PEB
-        const draftsDir = path.join(__dirname, 'temp', 'drafts');
+        // Tentukan folder penyimpanan: khusus impor atau ekspor
+        const isImpor = (mode && (mode.toLowerCase().includes('impor') || mode.toLowerCase().includes('pib') || mode.toLowerCase().includes('import'))) ||
+            (parsedData && (parsedData.jenisDokumen === 'PIB' || parsedData.isImport));
+        const subFolder = isImpor ? 'impor' : 'ekspor';
+        const docPrefix = isImpor ? 'Draft_PIB_' : 'Draft_PEB_';
+        const filename = `${docPrefix}${Date.now()}.json`;
+
+        // 1. Simpan di backend-service/temp/drafts/<ekspor|impor>
+        const draftsDir = path.join(__dirname, 'temp', 'drafts', subFolder);
         fs.mkdirSync(draftsDir, { recursive: true });
-        const filename = 'Combined_Draft_' + Date.now() + '.json';
         const draftPath = path.join(draftsDir, filename);
         fs.writeFileSync(draftPath, JSON.stringify(parsedData, null, 2));
+
+        // 2. Simpan juga di root workspace c:\Synthetic\drafts\<ekspor|impor> agar user mudah akses
+        const rootDraftsDir = path.join(__dirname, '..', 'drafts', subFolder);
+        fs.mkdirSync(rootDraftsDir, { recursive: true });
+        const rootDraftPath = path.join(rootDraftsDir, filename);
+        fs.writeFileSync(rootDraftPath, JSON.stringify(parsedData, null, 2));
         
-        console.log(`Berhasil mengekstrak data! Tersimpan di: ${draftPath}`);
+        console.log(`Berhasil mengekstrak data! Tersimpan di: ${draftPath} dan ${rootDraftPath}`);
         onProgress({
             step: 'complete',
             status: 'done',
-            message: `Ekstraksi dokumen selesai. Data siap dimuat ke formulir PEB.`
+            message: `Ekstraksi dokumen selesai. Data disimpan di folder drafts/${subFolder}/`,
+            savedFolder: `drafts/${subFolder}/`,
+            filename: filename,
+            subFolder: subFolder
         });
         return parsedData;
 
