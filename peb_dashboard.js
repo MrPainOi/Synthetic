@@ -2792,36 +2792,28 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnNavPib && btnNavPib.tagName !== 'A') btnNavPib.addEventListener('click', () => switchPortalModule('pib'));
     if (btnNavInspector && btnNavInspector.tagName !== 'A') btnNavInspector.addEventListener('click', () => switchPortalModule('inspector'));
 
-    // 1.1 CEISA 4.0 Sidebar Toggle (Expand / Collapse >> / <<)
+    // 1.1 CEISA 4.0 Sidebar Hover & Toggle (Otomatis terbuka saat kursor hover)
     const sidebarToggle = document.getElementById('ceisaSidebarToggle');
     const sidebar = document.getElementById('ceisaSidebar');
-    if (sidebarToggle && sidebar) {
-        sidebarToggle.addEventListener('click', () => {
-            sidebar.classList.toggle('expanded');
-            const isExpanded = sidebar.classList.contains('expanded');
-            sidebarToggle.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
-            try {
-                localStorage.setItem('ceisa_sidebar_expanded', isExpanded ? '1' : '0');
-            } catch (e) {}
+    if (sidebar) {
+        sidebar.addEventListener('mouseenter', () => {
+            sidebar.classList.add('expanded');
+            if (sidebarToggle) sidebarToggle.setAttribute('aria-expanded', 'true');
         });
 
-        // Menutup otomatis saat kursor keluar dari sidebar (mouseleave)
         sidebar.addEventListener('mouseleave', () => {
-            if (sidebar.classList.contains('expanded')) {
-                sidebar.classList.remove('expanded');
-                sidebarToggle.setAttribute('aria-expanded', 'false');
-                try {
-                    localStorage.setItem('ceisa_sidebar_expanded', '0');
-                } catch (e) {}
-            }
+            sidebar.classList.remove('expanded');
+            if (sidebarToggle) sidebarToggle.setAttribute('aria-expanded', 'false');
         });
 
-        try {
-            if (localStorage.getItem('ceisa_sidebar_expanded') === '1') {
-                sidebar.classList.add('expanded');
-                sidebarToggle.setAttribute('aria-expanded', 'true');
-            }
-        } catch (e) {}
+        if (sidebarToggle) {
+            sidebarToggle.addEventListener('click', (e) => {
+                e.stopPropagation();
+                sidebar.classList.toggle('expanded');
+                const isExpanded = sidebar.classList.contains('expanded');
+                sidebarToggle.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
+            });
+        }
     }
 
     // 2. Tentukan modul awal sesuai halaman yang aktif

@@ -1,0 +1,2980 @@
+{
+  "safeCheck": {
+    "isRelated": true,
+    "confidenceScore": 100,
+    "summary": "Dokumen Bill of Lading dan Commercial Invoice saling berhubungan dan merupakan satu kesatuan pengiriman (satu shipment yang sama) terbukti dari kesesuaian nomor invoice IHR2026000005364(26-6583), Shipper MURAT TICARET KABLO SANAYI A.S, Consignee PT VOLEX INDONESIA, serta rute pengapalan dari Singapore ke Sekupang, Indonesia.",
+    "matchedIdentifiers": [
+      "Nomor Invoice IHR2026000005364(26-6583) cocok antara Commercial Invoice dan Bill of Lading",
+      "Shipper MURAT TICARET KABLO SANAYI A.S terkonfirmasi sama di semua dokumen",
+      "Consignee PT VOLEX INDONESIA terkonfirmasi sama di semua dokumen",
+      "Pelabuhan Muat dan Bongkar (Singapore ke Sekupang, Indonesia) sesuai di semua dokumen"
+    ],
+    "discrepanciesOrWarnings": [],
+    "documentList": [
+      {
+        "fileName": "Toll Logistics Asia HBL - SKPE00118619.PDF",
+        "documentType": "BILL_OF_LADING",
+        "belongsToShipment": true,
+        "notes": "Non-Negotiable Bill of Lading untuk shipment SKPE00118619"
+      },
+      {
+        "fileName": "26-6583 PT VOLEX INDONESIA INVOICE 08.09.2026.pdf",
+        "documentType": "INVOICE",
+        "belongsToShipment": true,
+        "notes": "Commercial Invoice dan Packing List komprehensif untuk inv no IHR2026000005364(26-6583)"
+      }
+    ]
+  },
+  "blNumber": "SKPE00118619",
+  "blDate": "23-Sep-26",
+  "invoiceNumber": "IHR2026000005364(26-6583)",
+  "invoiceDate": "14-09-26",
+  "packingListNumber": null,
+  "packingListDate": null,
+  "containerNumber": null,
+  "shipperName": "MURAT TICARET KABLO SANAYI A.S",
+  "shipperAddress": "KOCASINAN BELEDIYE SANAYI SITESI\n34510 BAKIRKOY / ISTANBUL",
+  "consigneeName": "PT VOLEX INDONESIA",
+  "consigneeAddress": "KAWASAN INDUSTRI SEKUPANG KEL SUNGAI\nHARAPAN KEC SEKUPANG, BATAM - 29422\n29444\nINDONESIA",
+  "loadingPort": "SINGAPORE",
+  "dischargePort": "SEKUPANG, INDONESIA",
+  "totalKemasan": "24 PALLETS + 1 BOX",
+  "totalGrossWeightKGM": "2999.49",
+  "totalNetWeightKGM": "2631.64",
+  "items": [
+    {
+      "hsCode": "8544.49.95.00.00",
+      "uraianJenisBarang": "CABLE",
+      "jumlahDanSatuanBarang": "29,077.00 MT",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "4,166.73"
+    },
+    {
+      "hsCode": "8538.90.99.00.00",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "28,000.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "1,568.00"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "CABLE",
+      "jumlahDanSatuanBarang": "24,056.00 MT",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "2,622.10"
+    },
+    {
+      "hsCode": "8536.69.90.00.18",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "24,000.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "636.00"
+    },
+    {
+      "hsCode": "3923.50.90.00.00",
+      "uraianJenisBarang": "SEAL",
+      "jumlahDanSatuanBarang": "24,000.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "108.00"
+    },
+    {
+      "hsCode": "8536.90.10.00.00",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "24,000.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "508.80"
+    },
+    {
+      "hsCode": "8536.69.90.00.18",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "20,000.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "648.00"
+    },
+    {
+      "hsCode": "8536.69.90.00.18",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "16,000.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "892.80"
+    },
+    {
+      "hsCode": "3923.50.90.00.00",
+      "uraianJenisBarang": "SEAL",
+      "jumlahDanSatuanBarang": "15,000.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "100.50"
+    },
+    {
+      "hsCode": "3923.50.90.00.00",
+      "uraianJenisBarang": "SEAL",
+      "jumlahDanSatuanBarang": "15,000.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "510.00"
+    },
+    {
+      "hsCode": "8536.10.10.00.12",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "13,500.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "669.60"
+    },
+    {
+      "hsCode": "8536.90.10.00.00",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "13,500.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "256.50"
+    },
+    {
+      "hsCode": "8536.69.90.00.18",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "13,500.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "787.05"
+    },
+    {
+      "hsCode": "8544.49.95.00.00",
+      "uraianJenisBarang": "CABLE",
+      "jumlahDanSatuanBarang": "12,500.00 MT",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "1,373.75"
+    },
+    {
+      "hsCode": "8536.69.90.00.18",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "12,000.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "166.80"
+    },
+    {
+      "hsCode": "8536.90.10.00.00",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "12,000.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "406.80"
+    },
+    {
+      "hsCode": "8544.49.95.00.00",
+      "uraianJenisBarang": "CABLE",
+      "jumlahDanSatuanBarang": "11,016.00 MT",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "852.64"
+    },
+    {
+      "hsCode": "8536.90.10.00.00",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "11,000.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "411.40"
+    },
+    {
+      "hsCode": "8544.49.95.00.00",
+      "uraianJenisBarang": "CABLE",
+      "jumlahDanSatuanBarang": "10,522.00 MT",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "814.40"
+    },
+    {
+      "hsCode": "3923.50.90.00.00",
+      "uraianJenisBarang": "SEAL",
+      "jumlahDanSatuanBarang": "10,000.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "44.00"
+    },
+    {
+      "hsCode": "8536.90.10.00.00",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "10,000.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "404.00"
+    },
+    {
+      "hsCode": "3923.50.90.00.00",
+      "uraianJenisBarang": "SEAL",
+      "jumlahDanSatuanBarang": "10,000.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "142.00"
+    },
+    {
+      "hsCode": "8536.90.10.00.00",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "10,000.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "110.00"
+    },
+    {
+      "hsCode": "3923.50.90.00.00",
+      "uraianJenisBarang": "SEAL",
+      "jumlahDanSatuanBarang": "10,000.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "107.00"
+    },
+    {
+      "hsCode": "3923.50.90.00.00",
+      "uraianJenisBarang": "SEAL",
+      "jumlahDanSatuanBarang": "10,000.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "77.00"
+    },
+    {
+      "hsCode": "8536.90.10.00.00",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "9,000.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "254.70"
+    },
+    {
+      "hsCode": "8536.90.95.00.00",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "9,000.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "488.70"
+    },
+    {
+      "hsCode": "8536.90.95.00.00",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "9,000.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "488.70"
+    },
+    {
+      "hsCode": "8544.49.95.00.00",
+      "uraianJenisBarang": "CABLE",
+      "jumlahDanSatuanBarang": "8,911.00 MT",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "1,859.73"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "8,500.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "1,134.75"
+    },
+    {
+      "hsCode": "8536.69.90.00.18",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "8,000.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "173.60"
+    },
+    {
+      "hsCode": "3926.90.97.90.29",
+      "uraianJenisBarang": "LOCK",
+      "jumlahDanSatuanBarang": "8,000.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "193.60"
+    },
+    {
+      "hsCode": "3919.10.19.00.00",
+      "uraianJenisBarang": "TAPE",
+      "jumlahDanSatuanBarang": "7,800.00 MT",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "113.88"
+    },
+    {
+      "hsCode": "8536.90.10.00.00",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "7,500.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "1,156.50"
+    },
+    {
+      "hsCode": "8536.90.10.00.00",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "7,200.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "486.72"
+    },
+    {
+      "hsCode": "8536.69.90.00.18",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "7,000.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "317.10"
+    },
+    {
+      "hsCode": "8536.90.10.00.00",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "7,000.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "896.70"
+    },
+    {
+      "hsCode": "8536.90.10.00.00",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "7,000.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "240.10"
+    },
+    {
+      "hsCode": "8536.90.10.00.00",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "6,000.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "118.20"
+    },
+    {
+      "hsCode": "8538.90.91.00.00",
+      "uraianJenisBarang": "SEAL",
+      "jumlahDanSatuanBarang": "6,000.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "53.40"
+    },
+    {
+      "hsCode": "3923.50.90.00.00",
+      "uraianJenisBarang": "SEAL",
+      "jumlahDanSatuanBarang": "6,000.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "27.00"
+    },
+    {
+      "hsCode": "3926.90.97.90.29",
+      "uraianJenisBarang": "LOCK",
+      "jumlahDanSatuanBarang": "6,000.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "273.00"
+    },
+    {
+      "hsCode": "3926.90.97.90.29",
+      "uraianJenisBarang": "LOCK",
+      "jumlahDanSatuanBarang": "5,000.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "225.00"
+    },
+    {
+      "hsCode": "8536.90.10.00.00",
+      "uraianJenisBarang": "LOCK",
+      "jumlahDanSatuanBarang": "5,000.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "363.50"
+    },
+    {
+      "hsCode": "8536.69.90.00.18",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "5,000.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "139.50"
+    },
+    {
+      "hsCode": "3926.90.97.90.18",
+      "uraianJenisBarang": "SEAL",
+      "jumlahDanSatuanBarang": "5,000.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "122.00"
+    },
+    {
+      "hsCode": "3926.90.97.90.18",
+      "uraianJenisBarang": "SEAL",
+      "jumlahDanSatuanBarang": "5,000.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "308.50"
+    },
+    {
+      "hsCode": "3926.90.97.90.29",
+      "uraianJenisBarang": "SEAL",
+      "jumlahDanSatuanBarang": "5,000.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "49.50"
+    },
+    {
+      "hsCode": "3923.50.90.00.00",
+      "uraianJenisBarang": "SEAL",
+      "jumlahDanSatuanBarang": "5,000.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "49.00"
+    },
+    {
+      "hsCode": "3917.32.00.80.00",
+      "uraianJenisBarang": "TUBE",
+      "jumlahDanSatuanBarang": "5,000.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "247.50"
+    },
+    {
+      "hsCode": "8536.90.10.00.00",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "4,500.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "218.25"
+    },
+    {
+      "hsCode": "8536.90.10.00.00",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "4,000.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "135.60"
+    },
+    {
+      "hsCode": "8538.90.99.00.00",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "4,000.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "224.00"
+    },
+    {
+      "hsCode": "3926.90.97.90.29",
+      "uraianJenisBarang": "LOCK",
+      "jumlahDanSatuanBarang": "4,000.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "170.40"
+    },
+    {
+      "hsCode": "8536.90.10.00.00",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "4,000.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "376.40"
+    },
+    {
+      "hsCode": "3923.50.90.00.00",
+      "uraianJenisBarang": "SEAL",
+      "jumlahDanSatuanBarang": "4,000.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "60.80"
+    },
+    {
+      "hsCode": "8538.90.99.00.00",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "4,000.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "224.00"
+    },
+    {
+      "hsCode": "8536.90.95.00.00",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "4,000.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "217.20"
+    },
+    {
+      "hsCode": "8536.90.10.00.00",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "4,000.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "38.80"
+    },
+    {
+      "hsCode": "8538.90.99.00.00",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "4,000.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "1,319.20"
+    },
+    {
+      "hsCode": "8536.69.90.00.18",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "4,000.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "226.40"
+    },
+    {
+      "hsCode": "8536.90.10.00.00",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "3,500.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "102.55"
+    },
+    {
+      "hsCode": "8536.90.10.00.00",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "3,500.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "189.00"
+    },
+    {
+      "hsCode": "8536.90.10.00.00",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "3,300.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "119.46"
+    },
+    {
+      "hsCode": "8538.90.99.00.00",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "3,200.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "193.28"
+    },
+    {
+      "hsCode": "8544.49.95.00.00",
+      "uraianJenisBarang": "CABLE",
+      "jumlahDanSatuanBarang": "3,000.00 MT",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "9,983.40"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "2,850.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "965.58"
+    },
+    {
+      "hsCode": "8536.90.10.00.00",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "2,800.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "100.80"
+    },
+    {
+      "hsCode": "8544.49.95.00.00",
+      "uraianJenisBarang": "CABLE",
+      "jumlahDanSatuanBarang": "2,200.00 MT",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "1,222.98"
+    },
+    {
+      "hsCode": "8544.49.95.00.00",
+      "uraianJenisBarang": "CABLE",
+      "jumlahDanSatuanBarang": "2,200.00 MT",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "182.16"
+    },
+    {
+      "hsCode": "3917.32.00.80.00",
+      "uraianJenisBarang": "TUBE",
+      "jumlahDanSatuanBarang": "2,000.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "246.40"
+    },
+    {
+      "hsCode": "3917.32.00.80.00",
+      "uraianJenisBarang": "TUBE",
+      "jumlahDanSatuanBarang": "2,000.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "48.00"
+    },
+    {
+      "hsCode": "3926.90.97.90.29",
+      "uraianJenisBarang": "LOCK",
+      "jumlahDanSatuanBarang": "2,000.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "151.00"
+    },
+    {
+      "hsCode": "8538.90.99.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "2,000.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "750.00"
+    },
+    {
+      "hsCode": "3923.50.90.00.00",
+      "uraianJenisBarang": "SEAL",
+      "jumlahDanSatuanBarang": "1,850.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "35.15"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "1,800.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "176.40"
+    },
+    {
+      "hsCode": "3923.50.90.00.00",
+      "uraianJenisBarang": "SEAL",
+      "jumlahDanSatuanBarang": "1,600.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "23.52"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "1,600.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "216.80"
+    },
+    {
+      "hsCode": "8536.90.10.00.00",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "1,600.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "18.24"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "1,500.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "15.30"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "1,500.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "300.00"
+    },
+    {
+      "hsCode": "5903.90.91.90.00",
+      "uraianJenisBarang": "TAPE",
+      "jumlahDanSatuanBarang": "1,300.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "60.45"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "1,200.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "189.84"
+    },
+    {
+      "hsCode": "8544.49.95.00.00",
+      "uraianJenisBarang": "CABLE",
+      "jumlahDanSatuanBarang": "1,050.00 MT",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "303.35"
+    },
+    {
+      "hsCode": "4016.93.00.22.00",
+      "uraianJenisBarang": "SEAL",
+      "jumlahDanSatuanBarang": "1,000.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "25.70"
+    },
+    {
+      "hsCode": "3917.32.00.80.00",
+      "uraianJenisBarang": "TUBE",
+      "jumlahDanSatuanBarang": "1,000.00 MT",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "31.70"
+    },
+    {
+      "hsCode": "3923.50.90.00.00",
+      "uraianJenisBarang": "SEAL",
+      "jumlahDanSatuanBarang": "1,000.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "13.10"
+    },
+    {
+      "hsCode": "3923.50.90.00.00",
+      "uraianJenisBarang": "SEAL",
+      "jumlahDanSatuanBarang": "1,000.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "16.40"
+    },
+    {
+      "hsCode": "8536.90.10.00.00",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "1,000.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "69.50"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "SEAL",
+      "jumlahDanSatuanBarang": "1,000.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "73.10"
+    },
+    {
+      "hsCode": "3926.90.97.90.29",
+      "uraianJenisBarang": "LOCK",
+      "jumlahDanSatuanBarang": "1,000.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "99.50"
+    },
+    {
+      "hsCode": "3923.50.90.00.00",
+      "uraianJenisBarang": "SEAL",
+      "jumlahDanSatuanBarang": "1,000.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "36.30"
+    },
+    {
+      "hsCode": "8544.49.95.00.00",
+      "uraianJenisBarang": "CABLE",
+      "jumlahDanSatuanBarang": "1,000.00 MT",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "844.80"
+    },
+    {
+      "hsCode": "5903.90.91.90.00",
+      "uraianJenisBarang": "TAPE",
+      "jumlahDanSatuanBarang": "950.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "44.18"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "SEAL",
+      "jumlahDanSatuanBarang": "900.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "34.02"
+    },
+    {
+      "hsCode": "8544.49.95.00.00",
+      "uraianJenisBarang": "CABLE",
+      "jumlahDanSatuanBarang": "900.00 MT",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "193.77"
+    },
+    {
+      "hsCode": "3926.90.97.90.29",
+      "uraianJenisBarang": "GROMMET",
+      "jumlahDanSatuanBarang": "900.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "58.95"
+    },
+    {
+      "hsCode": "8536.41.90.00.00",
+      "uraianJenisBarang": "GASKET",
+      "jumlahDanSatuanBarang": "850.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "55.76"
+    },
+    {
+      "hsCode": "8536.41.90.00.00",
+      "uraianJenisBarang": "GASKET",
+      "jumlahDanSatuanBarang": "800.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "62.80"
+    },
+    {
+      "hsCode": "8536.90.10.00.00",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "800.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "67.12"
+    },
+    {
+      "hsCode": "8544.49.95.00.00",
+      "uraianJenisBarang": "CABLE",
+      "jumlahDanSatuanBarang": "775.00 MT",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "115.71"
+    },
+    {
+      "hsCode": "8536.10.10.00.12",
+      "uraianJenisBarang": "GASKET",
+      "jumlahDanSatuanBarang": "750.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "49.20"
+    },
+    {
+      "hsCode": "3923.50.90.00.00",
+      "uraianJenisBarang": "COVER",
+      "jumlahDanSatuanBarang": "700.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "105.84"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "700.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "470.82"
+    },
+    {
+      "hsCode": "8544.49.95.00.00",
+      "uraianJenisBarang": "CABLE",
+      "jumlahDanSatuanBarang": "700.00 MT",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "241.85"
+    },
+    {
+      "hsCode": "8544.49.95.00.00",
+      "uraianJenisBarang": "CABLE",
+      "jumlahDanSatuanBarang": "700.00 MT",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "80.15"
+    },
+    {
+      "hsCode": "3919.10.19.00.00",
+      "uraianJenisBarang": "TAPE",
+      "jumlahDanSatuanBarang": "650.00 MT",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "5.01"
+    },
+    {
+      "hsCode": "3926.90.97.90.29",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "600.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "476.64"
+    },
+    {
+      "hsCode": "8544.49.95.00.00",
+      "uraianJenisBarang": "CABLE",
+      "jumlahDanSatuanBarang": "600.00 MT",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "264.90"
+    },
+    {
+      "hsCode": "8536.90.10.00.00",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "600.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "82.02"
+    },
+    {
+      "hsCode": "8538.10.00.00.00",
+      "uraianJenisBarang": "GASKET",
+      "jumlahDanSatuanBarang": "600.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "70.32"
+    },
+    {
+      "hsCode": "8536.90.10.00.00",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "600.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "332.46"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "600.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "33.06"
+    },
+    {
+      "hsCode": "7318.15.95.00.11",
+      "uraianJenisBarang": "SCREW",
+      "jumlahDanSatuanBarang": "600.00 MT",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "15.72"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "500.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "78.50"
+    },
+    {
+      "hsCode": "3926.90.97.90.29",
+      "uraianJenisBarang": "LOCK",
+      "jumlahDanSatuanBarang": "500.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "13.15"
+    },
+    {
+      "hsCode": "3926.90.97.90.29",
+      "uraianJenisBarang": "LOCK",
+      "jumlahDanSatuanBarang": "500.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "175.75"
+    },
+    {
+      "hsCode": "8538.10.00.00.00",
+      "uraianJenisBarang": "FUSE",
+      "jumlahDanSatuanBarang": "500.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "659.50"
+    },
+    {
+      "hsCode": "3926.90.97.90.29",
+      "uraianJenisBarang": "LOCK",
+      "jumlahDanSatuanBarang": "500.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "57.95"
+    },
+    {
+      "hsCode": "3923.50.90.00.00",
+      "uraianJenisBarang": "COVER",
+      "jumlahDanSatuanBarang": "500.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "77.35"
+    },
+    {
+      "hsCode": "3926.90.97.90.29",
+      "uraianJenisBarang": "LOCK",
+      "jumlahDanSatuanBarang": "500.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "24.20"
+    },
+    {
+      "hsCode": "3926.90.97.90.29",
+      "uraianJenisBarang": "LOCK",
+      "jumlahDanSatuanBarang": "500.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "34.85"
+    },
+    {
+      "hsCode": "3926.90.97.90.29",
+      "uraianJenisBarang": "LOCK",
+      "jumlahDanSatuanBarang": "500.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "104.55"
+    },
+    {
+      "hsCode": "3926.90.97.90.29",
+      "uraianJenisBarang": "LOCK",
+      "jumlahDanSatuanBarang": "500.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "57.40"
+    },
+    {
+      "hsCode": "8536.90.10.00.00",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "500.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "30.40"
+    },
+    {
+      "hsCode": "8536.90.10.00.00",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "500.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "44.80"
+    },
+    {
+      "hsCode": "8544.49.95.00.00",
+      "uraianJenisBarang": "CABLE",
+      "jumlahDanSatuanBarang": "475.00 MT",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "70.92"
+    },
+    {
+      "hsCode": "8536.69.90.00.18",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "450.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "15.39"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "450.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "359.64"
+    },
+    {
+      "hsCode": "8544.49.95.00.00",
+      "uraianJenisBarang": "CABLE",
+      "jumlahDanSatuanBarang": "415.00 MT",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "588.06"
+    },
+    {
+      "hsCode": "3926.90.97.90.29",
+      "uraianJenisBarang": "BRACKET",
+      "jumlahDanSatuanBarang": "400.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "421.56"
+    },
+    {
+      "hsCode": "3926.90.97.90.29",
+      "uraianJenisBarang": "LOCK",
+      "jumlahDanSatuanBarang": "400.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "14.24"
+    },
+    {
+      "hsCode": "8544.49.95.00.00",
+      "uraianJenisBarang": "CABLE",
+      "jumlahDanSatuanBarang": "400.00 MT",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "176.60"
+    },
+    {
+      "hsCode": "3923.50.90.00.00",
+      "uraianJenisBarang": "COVER",
+      "jumlahDanSatuanBarang": "400.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "136.60"
+    },
+    {
+      "hsCode": "8544.49.95.00.00",
+      "uraianJenisBarang": "CABLE",
+      "jumlahDanSatuanBarang": "400.00 MT",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "57.32"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "400.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "222.64"
+    },
+    {
+      "hsCode": "3926.90.97.90.29",
+      "uraianJenisBarang": "GROMMET",
+      "jumlahDanSatuanBarang": "400.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "79.88"
+    },
+    {
+      "hsCode": "3926.90.97.90.18",
+      "uraianJenisBarang": "LOCK",
+      "jumlahDanSatuanBarang": "380.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "6.69"
+    },
+    {
+      "hsCode": "3926.90.97.90.29",
+      "uraianJenisBarang": "LOCK",
+      "jumlahDanSatuanBarang": "350.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "11.90"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "350.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "80.96"
+    },
+    {
+      "hsCode": "8536.90.10.00.00",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "300.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "30.45"
+    },
+    {
+      "hsCode": "8541.10.00.00.00",
+      "uraianJenisBarang": "DIOT",
+      "jumlahDanSatuanBarang": "300.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "24.21"
+    },
+    {
+      "hsCode": "8536.90.10.00.00",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "300.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "21.21"
+    },
+    {
+      "hsCode": "8536.69.90.00.18",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "300.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "20.49"
+    },
+    {
+      "hsCode": "8536.69.90.00.18",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "300.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "14.37"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "300.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "90.90"
+    },
+    {
+      "hsCode": "8536.41.90.00.00",
+      "uraianJenisBarang": "GASKET",
+      "jumlahDanSatuanBarang": "300.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "27.78"
+    },
+    {
+      "hsCode": "3923.50.90.00.00",
+      "uraianJenisBarang": "COVER",
+      "jumlahDanSatuanBarang": "300.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "82.83"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "300.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "978.90"
+    },
+    {
+      "hsCode": "3923.50.90.00.00",
+      "uraianJenisBarang": "COVER",
+      "jumlahDanSatuanBarang": "300.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "144.45"
+    },
+    {
+      "hsCode": "3917.32.00.80.00",
+      "uraianJenisBarang": "SPIRAL",
+      "jumlahDanSatuanBarang": "300.00 MT",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "251.52"
+    },
+    {
+      "hsCode": "3919.10.12.00.00",
+      "uraianJenisBarang": "TAPE",
+      "jumlahDanSatuanBarang": "300.00 MT",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "4.86"
+    },
+    {
+      "hsCode": "8536.90.10.00.00",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "300.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "19.65"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "300.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "331.86"
+    },
+    {
+      "hsCode": "8536.90.10.00.00",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "300.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "3.54"
+    },
+    {
+      "hsCode": "8536.10.10.00.12",
+      "uraianJenisBarang": "GASKET",
+      "jumlahDanSatuanBarang": "300.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "23.55"
+    },
+    {
+      "hsCode": "8536.69.90.00.18",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "300.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "10.20"
+    },
+    {
+      "hsCode": "8538.10.00.00.00",
+      "uraianJenisBarang": "GASKET",
+      "jumlahDanSatuanBarang": "300.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "19.68"
+    },
+    {
+      "hsCode": "3926.90.97.90.29",
+      "uraianJenisBarang": "LOCK",
+      "jumlahDanSatuanBarang": "300.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "29.85"
+    },
+    {
+      "hsCode": "8536.69.90.00.18",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "300.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "16.62"
+    },
+    {
+      "hsCode": "8536.69.90.00.18",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "300.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "21.33"
+    },
+    {
+      "hsCode": "8536.90.10.00.00",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "300.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "14.88"
+    },
+    {
+      "hsCode": "8536.90.10.00.00",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "300.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "24.60"
+    },
+    {
+      "hsCode": "8538.90.99.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "300.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "488.61"
+    },
+    {
+      "hsCode": "7318.15.95.00.11",
+      "uraianJenisBarang": "SCREW",
+      "jumlahDanSatuanBarang": "300.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "4.92"
+    },
+    {
+      "hsCode": "7318.16.92.00.00",
+      "uraianJenisBarang": "NUT",
+      "jumlahDanSatuanBarang": "300.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "12.42"
+    },
+    {
+      "hsCode": "3926.90.97.90.29",
+      "uraianJenisBarang": "LOCK",
+      "jumlahDanSatuanBarang": "300.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "22.41"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "300.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "461.46"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "250.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "84.78"
+    },
+    {
+      "hsCode": "4016.93.00.22.00",
+      "uraianJenisBarang": "GASKET",
+      "jumlahDanSatuanBarang": "250.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "45.68"
+    },
+    {
+      "hsCode": "8536.41.90.00.00",
+      "uraianJenisBarang": "FUSE",
+      "jumlahDanSatuanBarang": "250.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "142.95"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "250.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "375.08"
+    },
+    {
+      "hsCode": "8544.49.95.00.00",
+      "uraianJenisBarang": "CABLE",
+      "jumlahDanSatuanBarang": "240.00 MT",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "549.36"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "230.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "212.73"
+    },
+    {
+      "hsCode": "8544.49.95.00.00",
+      "uraianJenisBarang": "CABLE",
+      "jumlahDanSatuanBarang": "205.00 MT",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "24.72"
+    },
+    {
+      "hsCode": "3926.90.97.90.29",
+      "uraianJenisBarang": "LOCK",
+      "jumlahDanSatuanBarang": "200.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "14.82"
+    },
+    {
+      "hsCode": "3926.90.97.90.29",
+      "uraianJenisBarang": "LOCK",
+      "jumlahDanSatuanBarang": "200.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "9.56"
+    },
+    {
+      "hsCode": "3923.50.90.00.00",
+      "uraianJenisBarang": "SEAL",
+      "jumlahDanSatuanBarang": "200.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "3.28"
+    },
+    {
+      "hsCode": "3926.90.97.90.29",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "200.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "53.58"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "200.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "30.70"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "200.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "30.70"
+    },
+    {
+      "hsCode": "7318.16.92.00.00",
+      "uraianJenisBarang": "NUT",
+      "jumlahDanSatuanBarang": "200.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "4.14"
+    },
+    {
+      "hsCode": "3917.39.00.80.00",
+      "uraianJenisBarang": "SPIRAL",
+      "jumlahDanSatuanBarang": "200.00 MT",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "43.96"
+    },
+    {
+      "hsCode": "3919.10.19.00.00",
+      "uraianJenisBarang": "TAPE",
+      "jumlahDanSatuanBarang": "200.00 MT",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "5.92"
+    },
+    {
+      "hsCode": "8533.21.00.00.00",
+      "uraianJenisBarang": "RESISTANCE",
+      "jumlahDanSatuanBarang": "200.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "2.66"
+    },
+    {
+      "hsCode": "8544.49.95.00.00",
+      "uraianJenisBarang": "CABLE",
+      "jumlahDanSatuanBarang": "200.00 MT",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "24.12"
+    },
+    {
+      "hsCode": "3926.90.97.90.29",
+      "uraianJenisBarang": "LOCK",
+      "jumlahDanSatuanBarang": "200.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "10.60"
+    },
+    {
+      "hsCode": "3926.90.97.90.29",
+      "uraianJenisBarang": "LOCK",
+      "jumlahDanSatuanBarang": "200.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "19.42"
+    },
+    {
+      "hsCode": "3926.90.97.90.29",
+      "uraianJenisBarang": "SOCKET",
+      "jumlahDanSatuanBarang": "200.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "6.10"
+    },
+    {
+      "hsCode": "3926.90.97.90.29",
+      "uraianJenisBarang": "LOCK",
+      "jumlahDanSatuanBarang": "200.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "7.12"
+    },
+    {
+      "hsCode": "3917.39.00.80.00",
+      "uraianJenisBarang": "SPIRAL",
+      "jumlahDanSatuanBarang": "200.00 MT",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "45.26"
+    },
+    {
+      "hsCode": "8536.90.10.00.00",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "190.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "8.72"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "189.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "535.63"
+    },
+    {
+      "hsCode": "8533.21.00.00.00",
+      "uraianJenisBarang": "CLAMP",
+      "jumlahDanSatuanBarang": "165.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "428.04"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "150.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "295.92"
+    },
+    {
+      "hsCode": "5911.90.99.00.19",
+      "uraianJenisBarang": "TUBE",
+      "jumlahDanSatuanBarang": "150.00 MT",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "109.62"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "150.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "35.16"
+    },
+    {
+      "hsCode": "8544.49.95.00.00",
+      "uraianJenisBarang": "CABLE",
+      "jumlahDanSatuanBarang": "150.00 MT",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "168.41"
+    },
+    {
+      "hsCode": "8538.90.99.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "150.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "105.23"
+    },
+    {
+      "hsCode": "3926.90.97.90.29",
+      "uraianJenisBarang": "LOCK",
+      "jumlahDanSatuanBarang": "150.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "7.52"
+    },
+    {
+      "hsCode": "3926.90.97.90.29",
+      "uraianJenisBarang": "CABLE TIE",
+      "jumlahDanSatuanBarang": "150.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "8.67"
+    },
+    {
+      "hsCode": "3919.10.12.00.00",
+      "uraianJenisBarang": "TAPE",
+      "jumlahDanSatuanBarang": "150.00 MT",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "1.46"
+    },
+    {
+      "hsCode": "3919.10.19.00.00",
+      "uraianJenisBarang": "TAPE",
+      "jumlahDanSatuanBarang": "150.00 MT",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "1.71"
+    },
+    {
+      "hsCode": "3506.10.00.10.00",
+      "uraianJenisBarang": "BOLT HOLDER",
+      "jumlahDanSatuanBarang": "150.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "1,430.63"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "150.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "3.57"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "150.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "9.15"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "150.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "128.81"
+    },
+    {
+      "hsCode": "8538.90.91.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "150.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "228.54"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "150.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "173.93"
+    },
+    {
+      "hsCode": "7318.16.39.00.00",
+      "uraianJenisBarang": "NUT",
+      "jumlahDanSatuanBarang": "150.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "79.10"
+    },
+    {
+      "hsCode": "8544.49.95.00.00",
+      "uraianJenisBarang": "CABLE",
+      "jumlahDanSatuanBarang": "150.00 MT",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "44.67"
+    },
+    {
+      "hsCode": "8544.49.95.00.00",
+      "uraianJenisBarang": "CABLE",
+      "jumlahDanSatuanBarang": "150.00 MT",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "16.49"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "150.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "119.43"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "150.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "109.32"
+    },
+    {
+      "hsCode": "8544.49.95.00.00",
+      "uraianJenisBarang": "GASKET",
+      "jumlahDanSatuanBarang": "150.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "9.84"
+    },
+    {
+      "hsCode": "3926.90.97.90.18",
+      "uraianJenisBarang": "LOCK",
+      "jumlahDanSatuanBarang": "150.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "9.09"
+    },
+    {
+      "hsCode": "3926.90.97.90.29",
+      "uraianJenisBarang": "SEGMANLAR",
+      "jumlahDanSatuanBarang": "150.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "114.60"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "150.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "76.38"
+    },
+    {
+      "hsCode": "3917.40.00.00.12",
+      "uraianJenisBarang": "ADAPTER",
+      "jumlahDanSatuanBarang": "150.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "174.14"
+    },
+    {
+      "hsCode": "8536.90.10.00.00",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "150.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "9.50"
+    },
+    {
+      "hsCode": "8536.90.10.00.00",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "150.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "66.27"
+    },
+    {
+      "hsCode": "3923.50.90.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "150.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "768.96"
+    },
+    {
+      "hsCode": "3923.50.90.00.00",
+      "uraianJenisBarang": "COVER",
+      "jumlahDanSatuanBarang": "150.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "189.83"
+    },
+    {
+      "hsCode": "8544.49.95.00.00",
+      "uraianJenisBarang": "CABLE",
+      "jumlahDanSatuanBarang": "150.00 MT",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "40.88"
+    },
+    {
+      "hsCode": "4016.99.97.00.19",
+      "uraianJenisBarang": "GROMMET",
+      "jumlahDanSatuanBarang": "150.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "50.19"
+    },
+    {
+      "hsCode": "7318.22.00.00.00",
+      "uraianJenisBarang": "WASHER",
+      "jumlahDanSatuanBarang": "150.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "3.74"
+    },
+    {
+      "hsCode": "4016.93.00.22.00",
+      "uraianJenisBarang": "GASKET",
+      "jumlahDanSatuanBarang": "150.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "31.07"
+    },
+    {
+      "hsCode": "3926.90.97.90.29",
+      "uraianJenisBarang": "METAL PLATE",
+      "jumlahDanSatuanBarang": "150.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "249.74"
+    },
+    {
+      "hsCode": "3926.90.97.90.29",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "150.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "32.70"
+    },
+    {
+      "hsCode": "3917.32.00.80.00",
+      "uraianJenisBarang": "SPIRAL",
+      "jumlahDanSatuanBarang": "145.00 MT",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "94.21"
+    },
+    {
+      "hsCode": "3923.50.90.00.00",
+      "uraianJenisBarang": "SEAL",
+      "jumlahDanSatuanBarang": "140.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "2.88"
+    },
+    {
+      "hsCode": "3917.32.00.80.00",
+      "uraianJenisBarang": "SPIRAL",
+      "jumlahDanSatuanBarang": "106.31 MT",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "69.07"
+    },
+    {
+      "hsCode": "3917.32.00.80.00",
+      "uraianJenisBarang": "TUBE",
+      "jumlahDanSatuanBarang": "120.00 MT",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "3,064.74"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "120.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "14.27"
+    },
+    {
+      "hsCode": "3926.90.97.90.18",
+      "uraianJenisBarang": "LOCK",
+      "jumlahDanSatuanBarang": "120.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "2.11"
+    },
+    {
+      "hsCode": "3923.50.90.00.00",
+      "uraianJenisBarang": "COVER",
+      "jumlahDanSatuanBarang": "100.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "110.25"
+    },
+    {
+      "hsCode": "8536.90.95.00.00",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "100.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "18.58"
+    },
+    {
+      "hsCode": "8536.90.10.00.00",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "100.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "8.09"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "100.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "103.31"
+    },
+    {
+      "hsCode": "3926.90.97.90.29",
+      "uraianJenisBarang": "GROMMET",
+      "jumlahDanSatuanBarang": "100.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "7.11"
+    },
+    {
+      "hsCode": "3923.50.90.00.00",
+      "uraianJenisBarang": "COVER",
+      "jumlahDanSatuanBarang": "100.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "63.17"
+    },
+    {
+      "hsCode": "3919.10.19.00.00",
+      "uraianJenisBarang": "TAPE",
+      "jumlahDanSatuanBarang": "100.00 MT",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "1.62"
+    },
+    {
+      "hsCode": "3917.32.00.80.00",
+      "uraianJenisBarang": "TUBE",
+      "jumlahDanSatuanBarang": "100.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "10.31"
+    },
+    {
+      "hsCode": "8538.10.00.00.00",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "100.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "11.14"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "100.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "70.07"
+    },
+    {
+      "hsCode": "4016.99.97.00.19",
+      "uraianJenisBarang": "GROMMET",
+      "jumlahDanSatuanBarang": "100.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "10.90"
+    },
+    {
+      "hsCode": "3926.90.97.90.29",
+      "uraianJenisBarang": "GROMMET",
+      "jumlahDanSatuanBarang": "100.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "3.19"
+    },
+    {
+      "hsCode": "3923.29.10.00.19",
+      "uraianJenisBarang": "BAG",
+      "jumlahDanSatuanBarang": "100.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "0.22"
+    },
+    {
+      "hsCode": "8541.10.00.00.00",
+      "uraianJenisBarang": "DIOT",
+      "jumlahDanSatuanBarang": "100.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "5.55"
+    },
+    {
+      "hsCode": "8544.49.93.19.19",
+      "uraianJenisBarang": "TUBE",
+      "jumlahDanSatuanBarang": "100.00 MT",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "136.18"
+    },
+    {
+      "hsCode": "3926.90.97.90.29",
+      "uraianJenisBarang": "ADAPTER",
+      "jumlahDanSatuanBarang": "100.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "24.87"
+    },
+    {
+      "hsCode": "8544.49.95.00.00",
+      "uraianJenisBarang": "CABLE",
+      "jumlahDanSatuanBarang": "100.00 MT",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "10.90"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "100.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "196.20"
+    },
+    {
+      "hsCode": "8538.90.99.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "100.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "96.32"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "100.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "27.25"
+    },
+    {
+      "hsCode": "3917.40.00.00.12",
+      "uraianJenisBarang": "ADAPTER",
+      "jumlahDanSatuanBarang": "100.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "48.36"
+    },
+    {
+      "hsCode": "3926.90.97.90.29",
+      "uraianJenisBarang": "ADAPTER",
+      "jumlahDanSatuanBarang": "100.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "21.89"
+    },
+    {
+      "hsCode": "3917.40.00.00.12",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "100.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "4.79"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "100.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "73.79"
+    },
+    {
+      "hsCode": "3926.90.97.90.18",
+      "uraianJenisBarang": "LOCK",
+      "jumlahDanSatuanBarang": "100.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "9.71"
+    },
+    {
+      "hsCode": "3917.40.00.00.19",
+      "uraianJenisBarang": "ADAPTER",
+      "jumlahDanSatuanBarang": "100.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "17.05"
+    },
+    {
+      "hsCode": "3917.40.00.00.12",
+      "uraianJenisBarang": "ADAPTER",
+      "jumlahDanSatuanBarang": "100.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "38.22"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "100.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "445.62"
+    },
+    {
+      "hsCode": "8536.69.90.00.18",
+      "uraianJenisBarang": "SOCKET",
+      "jumlahDanSatuanBarang": "100.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "30.57"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "100.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "150.03"
+    },
+    {
+      "hsCode": "8536.90.10.00.00",
+      "uraianJenisBarang": "TERMINAL",
+      "jumlahDanSatuanBarang": "100.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "34.88"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "100.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "97.46"
+    },
+    {
+      "hsCode": "3919.10.19.00.00",
+      "uraianJenisBarang": "TAPE",
+      "jumlahDanSatuanBarang": "100.00 MT",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "19.62"
+    },
+    {
+      "hsCode": "3917.40.00.00.12",
+      "uraianJenisBarang": "ADAPTER",
+      "jumlahDanSatuanBarang": "100.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "53.75"
+    },
+    {
+      "hsCode": "3926.90.97.90.18",
+      "uraianJenisBarang": "LOCK",
+      "jumlahDanSatuanBarang": "100.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "10.68"
+    },
+    {
+      "hsCode": "3917.40.00.00.12",
+      "uraianJenisBarang": "ADAPTER",
+      "jumlahDanSatuanBarang": "65.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "9.71"
+    },
+    {
+      "hsCode": "3926.90.97.90.29",
+      "uraianJenisBarang": "BRACKET",
+      "jumlahDanSatuanBarang": "64.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "828.33"
+    },
+    {
+      "hsCode": "3923.50.90.00.00",
+      "uraianJenisBarang": "COVER",
+      "jumlahDanSatuanBarang": "50.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "23.44"
+    },
+    {
+      "hsCode": "8544.49.95.00.00",
+      "uraianJenisBarang": "CABLE",
+      "jumlahDanSatuanBarang": "50.00 MT",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "5.73"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "50.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "117.25"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "50.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "45.72"
+    },
+    {
+      "hsCode": "3917.40.00.00.19",
+      "uraianJenisBarang": "ADAPTER",
+      "jumlahDanSatuanBarang": "50.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "40.20"
+    },
+    {
+      "hsCode": "3923.50.90.00.00",
+      "uraianJenisBarang": "COVER",
+      "jumlahDanSatuanBarang": "50.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "8.42"
+    },
+    {
+      "hsCode": "3923.50.90.00.00",
+      "uraianJenisBarang": "COVER",
+      "jumlahDanSatuanBarang": "50.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "9.79"
+    },
+    {
+      "hsCode": "3919.10.19.00.00",
+      "uraianJenisBarang": "TAPE",
+      "jumlahDanSatuanBarang": "50.00 MT",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "0.42"
+    },
+    {
+      "hsCode": "5911.90.99.00.19",
+      "uraianJenisBarang": "TUBE",
+      "jumlahDanSatuanBarang": "50.00 MT",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "28.81"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "TUBE",
+      "jumlahDanSatuanBarang": "50.00 MT",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "60.02"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "50.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "20.50"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "50.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "285.44"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "50.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "143.81"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "50.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "25.43"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "50.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "59.94"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "50.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "253.67"
+    },
+    {
+      "hsCode": "8544.49.95.00.00",
+      "uraianJenisBarang": "CABLE",
+      "jumlahDanSatuanBarang": "50.00 MT",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "3.87"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "50.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "22.85"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "50.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "177.51"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "50.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "214.79"
+    },
+    {
+      "hsCode": "3917.32.00.80.00",
+      "uraianJenisBarang": "TUBE",
+      "jumlahDanSatuanBarang": "50.00 MT",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "32.51"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "50.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "302.12"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "50.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "342.90"
+    },
+    {
+      "hsCode": "3926.90.97.90.29",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "50.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "13.66"
+    },
+    {
+      "hsCode": "3926.90.97.90.29",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "50.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "13.18"
+    },
+    {
+      "hsCode": "8538.10.00.00.00",
+      "uraianJenisBarang": "LOCK",
+      "jumlahDanSatuanBarang": "50.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "5.23"
+    },
+    {
+      "hsCode": "3926.90.97.90.29",
+      "uraianJenisBarang": "LOCK",
+      "jumlahDanSatuanBarang": "50.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "43.23"
+    },
+    {
+      "hsCode": "8536.41.90.00.00",
+      "uraianJenisBarang": "SEGMANLAR",
+      "jumlahDanSatuanBarang": "50.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "17.80"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "50.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "299.36"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "50.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "24.16"
+    },
+    {
+      "hsCode": "8544.42.90.00.19",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "50.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "452.88"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "50.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "82.17"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "50.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "133.01"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "50.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "292.85"
+    },
+    {
+      "hsCode": "8538.90.91.00.00",
+      "uraianJenisBarang": "FERRITE CLAMP",
+      "jumlahDanSatuanBarang": "50.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "398.01"
+    },
+    {
+      "hsCode": "3926.90.97.90.29",
+      "uraianJenisBarang": "ADAPTER",
+      "jumlahDanSatuanBarang": "50.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "4.23"
+    },
+    {
+      "hsCode": "3926.90.97.90.29",
+      "uraianJenisBarang": "FIX RING",
+      "jumlahDanSatuanBarang": "50.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "39.20"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "SEGMANLAR",
+      "jumlahDanSatuanBarang": "50.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "17.83"
+    },
+    {
+      "hsCode": "3917.40.00.00.12",
+      "uraianJenisBarang": "ADAPTER",
+      "jumlahDanSatuanBarang": "50.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "26.88"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "50.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "439.18"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "50.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "226.80"
+    },
+    {
+      "hsCode": "3926.90.97.90.29",
+      "uraianJenisBarang": "BRACKET",
+      "jumlahDanSatuanBarang": "50.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "558.69"
+    },
+    {
+      "hsCode": "8533.21.00.00.11",
+      "uraianJenisBarang": "RESISTANCE",
+      "jumlahDanSatuanBarang": "50.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "5.45"
+    },
+    {
+      "hsCode": "3923.40.90.00.19",
+      "uraianJenisBarang": "TUBE",
+      "jumlahDanSatuanBarang": "50.00 MT",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "323.17"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "50.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "48.80"
+    },
+    {
+      "hsCode": "3926.90.97.90.29",
+      "uraianJenisBarang": "LOCK",
+      "jumlahDanSatuanBarang": "50.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "3.56"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "LOCK",
+      "jumlahDanSatuanBarang": "50.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "1.92"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "50.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "149.21"
+    },
+    {
+      "hsCode": "3926.90.97.90.29",
+      "uraianJenisBarang": "BRACKET",
+      "jumlahDanSatuanBarang": "36.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "465.93"
+    },
+    {
+      "hsCode": "8547.20.00.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "30.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "3.57"
+    },
+    {
+      "hsCode": "8538.90.99.00.00",
+      "uraianJenisBarang": "CONNECTOR",
+      "jumlahDanSatuanBarang": "25.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "17.54"
+    },
+    {
+      "hsCode": "3917.32.00.80.00",
+      "uraianJenisBarang": "SPIRAL",
+      "jumlahDanSatuanBarang": "10.00 MT",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "9.20"
+    },
+    {
+      "hsCode": "3923.40.90.00.19",
+      "uraianJenisBarang": "REEL",
+      "jumlahDanSatuanBarang": "7.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "139.23"
+    },
+    {
+      "hsCode": "3923.40.90.00.19",
+      "uraianJenisBarang": "REEL",
+      "jumlahDanSatuanBarang": "3.00 PCS",
+      "kemasan": "24 PALLETS + 1 BOX",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "41.70"
+    }
+  ]
+}

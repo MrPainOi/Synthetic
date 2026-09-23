@@ -88,9 +88,14 @@ body {
     background-color: var(--ceisa-header-bg);
     color: var(--text-inverse);
     border-bottom: 2px solid #2563eb;
-    position: sticky;
+    position: fixed;
     top: 0;
-    z-index: 100;
+    left: 0;
+    right: 0;
+    width: 100%;
+    min-height: 48px;
+    z-index: 1000;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .portal-header-inner {
@@ -177,6 +182,8 @@ body {
     background-color: var(--surface-bg);
     position: relative;
     box-sizing: border-box;
+    margin-top: 48px;
+    padding-left: 50px; /* Alokasi ruang tetap untuk sidebar yang collapsed agar elemen tidak bergeser */
 }
 
 .ceisa-sidebar {
@@ -188,21 +195,36 @@ body {
     align-items: center;
     padding: 8px 0 24px 0;
     flex-shrink: 0;
-    transition: width 0.22s cubic-bezier(0.4, 0, 0.2, 1);
-    position: sticky;
+    transition: width 0.22s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.22s ease, padding 0.22s ease;
+    position: fixed;
     top: 48px;
+    left: 0;
+    bottom: 0;
     height: calc(100vh - 48px);
     overflow-y: auto;
     overflow-x: hidden;
-    z-index: 90;
-    box-shadow: 1px 0 3px rgba(0, 0, 0, 0.02);
+    z-index: 950;
+    box-shadow: 1px 0 3px rgba(0, 0, 0, 0.04);
     box-sizing: border-box;
 }
 
+.ceisa-sidebar::-webkit-scrollbar {
+    width: 4px;
+}
+
+.ceisa-sidebar::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+
+/* Otomatis terbuka saat kursor di-hover atau diberi class expanded (Overlay menimpa, tidak menggeser elemen) */
+.ceisa-sidebar:hover,
 .ceisa-sidebar.expanded {
-    width: 210px;
+    width: 216px;
     align-items: stretch;
     padding: 8px 10px 24px 10px;
+    box-shadow: 6px 0 25px rgba(15, 23, 42, 0.18);
+    background: #ffffff;
 }
 
 /* Sidebar Top Header Container with Title in Marked Spot */
@@ -216,6 +238,7 @@ body {
     box-sizing: border-box;
 }
 
+.ceisa-sidebar:hover .ceisa-sidebar-header,
 .ceisa-sidebar.expanded .ceisa-sidebar-header {
     justify-content: space-between;
     padding: 0 2px 8px 4px;
@@ -228,6 +251,7 @@ body {
     min-width: 0;
 }
 
+.ceisa-sidebar:hover .ceisa-sidebar-brand-box,
 .ceisa-sidebar.expanded .ceisa-sidebar-brand-box {
     display: flex;
 }
@@ -270,6 +294,7 @@ body {
     color: #3b82f6;
 }
 
+.ceisa-sidebar:hover .ceisa-sidebar-toggle,
 .ceisa-sidebar.expanded .ceisa-sidebar-toggle {
     transform: rotate(180deg);
 }
@@ -282,6 +307,7 @@ body {
     gap: 2px;
 }
 
+.ceisa-sidebar:hover .ceisa-sidebar-nav,
 .ceisa-sidebar.expanded .ceisa-sidebar-nav {
     align-items: stretch;
 }
@@ -316,6 +342,7 @@ body {
     box-shadow: inset 0 0 0 1px #bfdbfe;
 }
 
+.ceisa-sidebar:hover .ceisa-sidebar-item,
 .ceisa-sidebar.expanded .ceisa-sidebar-item {
     width: 100%;
     height: 36px;
@@ -343,17 +370,24 @@ body {
     text-align: left;
 }
 
+.ceisa-sidebar:hover .sidebar-label,
 .ceisa-sidebar.expanded .sidebar-label {
     display: inline-block;
 }
 
+.ceisa-sidebar:hover .ceisa-sidebar-item.active .sidebar-label,
 .ceisa-sidebar.expanded .ceisa-sidebar-item.active .sidebar-label {
     color: #1e40af;
     font-weight: 700;
 }
 
-/* Floating tooltip when collapsed */
-.ceisa-sidebar:not(.expanded) .ceisa-sidebar-item::after {
+/* Saat hover, sembunyikan popup tooltip hitam karena teks label sudah tampil di dalam sidebar item */
+.ceisa-sidebar:hover .ceisa-sidebar-item::after {
+    display: none !important;
+}
+
+/* Floating tooltip when collapsed and NOT hovered */
+.ceisa-sidebar:not(:hover):not(.expanded) .ceisa-sidebar-item::after {
     content: attr(data-tooltip);
     position: absolute;
     left: calc(100% + 8px);
@@ -373,7 +407,7 @@ body {
     z-index: 1000;
 }
 
-.ceisa-sidebar:not(.expanded) .ceisa-sidebar-item:hover::after {
+.ceisa-sidebar:not(:hover):not(.expanded) .ceisa-sidebar-item:hover::after {
     opacity: 1;
 }
 

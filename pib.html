@@ -713,37 +713,29 @@
 
                     <!-- TAB 7: BARANG PIB (AUTHENTIC CEISA 4.0 ITEM-BY-ITEM VIEW) -->
                     <section id="pib-tab-barang" class="tab-content-panel">
-                        <!-- Top Summary & Jump Toolbar -->
-                        <div class="ceisa-item-toolbar" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; background: #ffffff; border: 1px solid var(--border-color); padding: 8px 14px; border-radius: 6px;">
-                            <div style="display: flex; align-items: center; gap: 12px;">
-                                <span class="badge-draft-status" id="pibItemCountBadge" style="font-weight: 700; font-size: 12.5px;">0 Barang Terdeteksi</span>
-                                <span style="font-size: 12px; color: var(--text-muted);">|</span>
-                                <div style="display: flex; align-items: center; gap: 6px;">
-                                    <span style="font-size: 12px; color: #475569;">Loncat ke No:</span>
-                                    <input type="number" id="pibJumpItemInput" min="1" max="1" value="1" style="width: 65px; height: 26px; padding: 2px 6px; font-size: 12px; border: 1px solid #cbd5e1; border-radius: 4px; text-align: center;">
-                                    <button type="button" class="btn btn-ceisa-sub btn-sm" id="btnPibJumpItem" style="padding: 2px 10px; font-size: 11.5px;">Buka</button>
+                        <!-- 1. VIEW DAFTAR / LIST BARANG IMPOR (Tampil Pertama Sesuai CEISA 4.0) -->
+                        <div id="pibItemListView" class="ceisa-form-card" style="margin-bottom: 16px;">
+                            <!-- Header List View -->
+                            <div class="ceisa-card-header" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: #ffffff; border-bottom: 1px solid #e2e8f0; flex-wrap: wrap; gap: 10px;">
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <span class="ceisa-card-title" style="font-size: 14px; font-weight: 700; color: #0f172a; margin: 0;">Daftar Barang Impor (BC 2.0)</span>
+                                    <span class="badge-draft-status" id="pibItemCountBadge" style="font-weight: 700; font-size: 12px; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe;">0 Barang Terdaftar</span>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                                    <div style="position: relative; display: flex; align-items: center;">
+                                        <input type="text" id="pibSummarySearch" placeholder="Cari Pos Tarif / Uraian..." style="height: 30px; padding: 2px 10px 2px 28px; font-size: 12px; border: 1px solid #cbd5e1; border-radius: 4px; width: 230px;">
+                                        <svg style="position: absolute; left: 8px; color: #94a3b8; pointer-events: none;" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                                    </div>
+                                    <button type="button" class="btn btn-ceisa-primary btn-sm" id="btnPibAddItem" style="background: #2563eb; color: #ffffff; padding: 6px 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; border-radius: 4px; border: none; cursor: pointer;">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                        Tambah Barang
+                                    </button>
                                 </div>
                             </div>
-                            <div style="display: flex; align-items: center; gap: 8px;">
-                                <button type="button" class="btn btn-ceisa-sub btn-sm" id="btnTogglePibSummaryTable" title="Tampilkan / Sembunyikan Tabel Rangkuman Semua Barang">
-                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
-                                    <span id="lblToggleSummaryTable">📋 Tampilkan Tabel Rangkuman</span>
-                                </button>
-                                <button type="button" class="btn btn-ceisa-sub btn-sm" id="btnPibAddItem" title="Tambah Barang Baru">
-                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                                    Tambah Barang
-                                </button>
-                            </div>
-                        </div>
 
-                        <!-- Collapsible Summary Table (Toggleable) -->
-                        <div id="pibSummaryTableWrapper" class="ceisa-form-card" style="display: none; margin-bottom: 16px;">
-                            <div class="ceisa-card-header" style="display: flex; justify-content: space-between; align-items: center;">
-                                <span class="ceisa-card-title">Tabel Rangkuman Seluruh Barang Impor</span>
-                                <input type="text" id="pibSummarySearch" placeholder="Cari HS atau Uraian..." style="height: 26px; padding: 2px 8px; font-size: 11.5px; border: 1px solid #cbd5e1; border-radius: 4px; width: 220px;">
-                            </div>
+                            <!-- Body List View / Tabel Rangkuman Barang -->
                             <div class="ceisa-card-body" style="padding: 0;">
-                                <div class="ceisa-table-container" style="max-height: 280px; overflow-y: auto;">
+                                <div class="ceisa-table-container" style="max-height: 480px; overflow-y: auto;">
                                     <table class="ceisa-table">
                                         <thead>
                                             <tr>
@@ -754,7 +746,7 @@
                                                 <th style="width: 130px; text-align: right;">Jumlah / Sat</th>
                                                 <th style="width: 130px; text-align: right;">Amount FOB ($)</th>
                                                 <th style="width: 75px; text-align: center;">BM (%)</th>
-                                                <th style="width: 80px; text-align: center;">Aksi</th>
+                                                <th style="width: 100px; text-align: center;">Aksi</th>
                                             </tr>
                                         </thead>
                                         <tbody id="pibItemsTableBody">
@@ -763,17 +755,30 @@
                                     </table>
                                 </div>
                             </div>
+                            <div style="padding: 8px 16px; background: #f8fafc; border-top: 1px solid #e2e8f0; font-size: 11.5px; color: #64748b; display: flex; justify-content: space-between; align-items: center;">
+                                <span>💡 Klik pada baris barang atau tekan tombol <b>Ubah</b> untuk membuka formulir editor barang.</span>
+                            </div>
                         </div>
 
-                        <!-- AUTHENTIC CEISA 4.0 ITEM DETAIL CARD -->
-                        <div class="ceisa-form-card" id="pibItemDetailCard">
-                            <!-- Stepper & Top Actions -->
-                            <div class="ceisa-card-header" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; background: #ffffff; border-bottom: 1px solid #e2e8f0;">
-                                <div style="display: flex; align-items: center; gap: 8px;">
+                        <!-- 2. VIEW EDITOR / DETAIL FORM BARANG IMPOR (Tampil Saat Membuka / Menambah Barang) -->
+                        <div class="ceisa-form-card" id="pibItemDetailCard" style="display: none; margin-bottom: 16px;">
+                            <!-- Header Form Editor dengan Tombol Kembali ke Daftar & Stepper -->
+                            <div class="ceisa-card-header" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; background: #ffffff; border-bottom: 1px solid #e2e8f0; flex-wrap: wrap; gap: 8px;">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <button type="button" class="btn btn-ceisa-sub btn-sm" id="btnPibBackToList" title="Kembali ke Daftar Barang" style="background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; padding: 5px 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; border-radius: 4px;">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                                        Daftar Barang
+                                    </button>
+                                    <span style="font-size: 12px; color: var(--text-muted);">|</span>
                                     <div class="ceisa-stepper-box">
                                         <button type="button" class="ceisa-stepper-btn" id="btnPibItemPrev" title="Barang Sebelumnya">&lt;</button>
                                         <button type="button" class="ceisa-stepper-btn" id="btnPibItemNext" title="Barang Selanjutnya">&gt;</button>
                                         <span class="ceisa-stepper-counter" id="lblPibItemPager">1/1</span>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 4px; font-size: 12px; color: #475569;">
+                                        <span>Ke No:</span>
+                                        <input type="number" id="pibJumpItemInput" min="1" max="1" value="1" style="width: 55px; height: 26px; padding: 2px 4px; font-size: 12px; border: 1px solid #cbd5e1; border-radius: 4px; text-align: center;">
+                                        <button type="button" class="btn btn-ceisa-sub btn-sm" id="btnPibJumpItem" style="padding: 2px 8px; font-size: 11.5px;">Buka</button>
                                     </div>
                                 </div>
                                 <div style="display: flex; gap: 8px; align-items: center;">
@@ -781,8 +786,7 @@
                                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
                                         Simpan
                                     </button>
-                                    <button type="button" class="btn-ceisa-close" id="btnPibItemTutup" title="Hapus / Reset Item Ini">
-                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+                                    <button type="button" class="btn btn-ceisa-sub btn-sm" id="btnPibItemTutup" title="Tutup dan Kembali ke Daftar Barang" style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 6px 14px; font-weight: 600; cursor: pointer; border-radius: 4px;">
                                         Tutup
                                     </button>
                                 </div>

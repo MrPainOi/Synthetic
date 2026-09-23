@@ -193,6 +193,10 @@ function switchPibTab(tabId) {
     }
 
     window._activePibTab = tabId;
+
+    if (tabId === 'pib-tab-barang') {
+        showPibItemListView();
+    }
 }
 
 function handlePibTabNext() {
@@ -595,8 +599,7 @@ function loadPibDraftData(data, shouldSave = true) {
             quantity: parseFloat(parsed.qty.replace(/\./g, '').replace(/,/g, '.')) || 0
         };
     }) : [];
-    renderPibActiveItem(0);
-    renderPibSummaryTable();
+    showPibItemListView();
 
     // Auto-calculate Pungutan
     calculatePibPungutan();
@@ -879,14 +882,45 @@ function savePibActiveItemFromForm() {
     updatePibSummaryRow(idx);
 }
 
-// RENDER TABEL RANGKUMAN SELURUH BARANG IMPOR (324 ITEMS)
+// VIEW CONTROLLERS UNTUK TAB BARANG IMPOR (LIST FIRST -> EDITOR)
+window._pibViewMode = 'list';
+
+function showPibItemListView() {
+    const listView = document.getElementById('pibItemListView');
+    const detailCard = document.getElementById('pibItemDetailCard');
+    if (listView) listView.style.display = 'block';
+    if (detailCard) detailCard.style.display = 'none';
+    window._pibViewMode = 'list';
+    renderPibSummaryTable();
+    highlightPibSummaryTableRow(window._currentPibItemIdx);
+}
+
+function openPibItemEditor(idx = 0) {
+    if (window._pibViewMode === 'editor' && typeof savePibActiveItemFromForm === 'function') {
+        savePibActiveItemFromForm();
+    }
+    const listView = document.getElementById('pibItemListView');
+    const detailCard = document.getElementById('pibItemDetailCard');
+    if (listView) listView.style.display = 'none';
+    if (detailCard) detailCard.style.display = 'block';
+    window._pibViewMode = 'editor';
+    renderPibActiveItem(idx);
+    detailCard?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// RENDER TABEL RANGKUMAN SELURUH BARANG IMPOR (LIST VIEW)
 function renderPibSummaryTable(filterText = '') {
     const tbody = document.getElementById('pibItemsTableBody');
     if (!tbody) return;
     tbody.innerHTML = '';
 
+    const badge = document.getElementById('pibItemCountBadge');
+    if (badge) {
+        badge.textContent = `${window._pibItems?.length || 0} Barang Terdaftar`;
+    }
+
     if (!window._pibItems || window._pibItems.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 20px;">Belum ada rincian barang impor.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 32px 20px;">Belum ada rincian barang impor. Tekan tombol <b>+ Tambah Barang</b> di atas untuk menambahkan.</td></tr>`;
         return;
     }
 
@@ -920,8 +954,8 @@ function renderPibSummaryTable(filterText = '') {
             <td style="text-align: right; font-family: var(--font-mono); font-size: 11.5px; font-weight: 600;">$${escapePibHtml(amtVal)}</td>
             <td style="text-align: center; font-size: 11.5px;">${tarifBm}%</td>
             <td style="text-align: center; white-space: nowrap;">
-                <button type="button" class="btn btn-ceisa-sub btn-xs btn-open-pib-item" data-idx="${idx}" style="padding: 1px 8px; font-size: 11px;">Buka</button>
-                <button type="button" class="btn-del-pib-summary-row" data-idx="${idx}" title="Hapus Barang" style="background: none; border: none; color: #ef4444; font-size: 14px; cursor: pointer; padding: 0 4px; margin-left: 4px;">&times;</button>
+                <button type="button" class="btn btn-ceisa-sub btn-xs btn-open-pib-item" data-idx="${idx}" style="padding: 2px 10px; font-size: 11.5px; font-weight: 600; border-radius: 4px; border: 1px solid #93c5fd; background: #eff6ff; color: #1e40af; cursor: pointer;">Ubah</button>
+                <button type="button" class="btn-del-pib-summary-row" data-idx="${idx}" title="Hapus Barang" style="background: none; border: none; color: #ef4444; font-size: 15px; cursor: pointer; padding: 0 4px; margin-left: 6px;">&times;</button>
             </td>
         `;
 
@@ -929,9 +963,7 @@ function renderPibSummaryTable(filterText = '') {
         if (btnOpen) {
             btnOpen.addEventListener('click', (e) => {
                 e.stopPropagation();
-                savePibActiveItemFromForm();
-                renderPibActiveItem(idx);
-                document.getElementById('pibItemDetailCard')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                openPibItemEditor(idx);
             });
         }
 
@@ -944,8 +976,7 @@ function renderPibSummaryTable(filterText = '') {
         }
 
         tr.addEventListener('click', () => {
-            savePibActiveItemFromForm();
-            renderPibActiveItem(idx);
+            openPibItemEditor(idx);
         });
 
         tbody.appendChild(tr);
@@ -998,8 +1029,11 @@ function deletePibItemAt(idx) {
     } else if (window._currentPibItemIdx >= window._pibItems.length) {
         window._currentPibItemIdx = window._pibItems.length - 1;
     }
-    renderPibActiveItem(window._currentPibItemIdx);
-    renderPibSummaryTable();
+    if (window._pibViewMode === 'editor') {
+        renderPibActiveItem(window._currentPibItemIdx);
+    } else {
+        renderPibSummaryTable();
+    }
     triggerPibAutoSave();
     if (typeof showToast === 'function') {
         showToast('Barang berhasil dihapus', 'info');
@@ -1331,33 +1365,18 @@ function initPibDashboard() {
     const btnJumpItem = document.getElementById('btnPibJumpItem');
     const inpJumpItem = document.getElementById('pibJumpItemInput');
     const doJumpItem = () => {
-        savePibActiveItemFromForm();
+        if (window._pibViewMode === 'editor' && typeof savePibActiveItemFromForm === 'function') {
+            savePibActiveItemFromForm();
+        }
         const val = parseInt(inpJumpItem?.value, 10);
         if (!isNaN(val) && val >= 1 && val <= (window._pibItems?.length || 1)) {
-            renderPibActiveItem(val - 1);
+            openPibItemEditor(val - 1);
         }
     };
     if (btnJumpItem) btnJumpItem.addEventListener('click', doJumpItem);
     if (inpJumpItem) {
         inpJumpItem.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') doJumpItem();
-        });
-    }
-
-    const btnToggleTable = document.getElementById('btnTogglePibSummaryTable');
-    const tableWrapper = document.getElementById('pibSummaryTableWrapper');
-    const lblToggle = document.getElementById('lblToggleSummaryTable');
-    if (btnToggleTable && tableWrapper) {
-        btnToggleTable.addEventListener('click', () => {
-            const isHidden = tableWrapper.style.display === 'none' || tableWrapper.style.display === '';
-            tableWrapper.style.display = isHidden ? 'block' : 'none';
-            if (lblToggle) {
-                lblToggle.textContent = isHidden ? '📋 Sembunyikan Tabel Rangkuman' : '📋 Tampilkan Tabel Rangkuman';
-            }
-            if (isHidden) {
-                renderPibSummaryTable();
-                highlightPibSummaryTableRow(window._currentPibItemIdx);
-            }
         });
     }
 
@@ -1379,17 +1398,28 @@ function initPibDashboard() {
         });
     }
 
+    const btnBackToList = document.getElementById('btnPibBackToList');
+    if (btnBackToList) {
+        btnBackToList.addEventListener('click', () => {
+            savePibActiveItemFromForm();
+            showPibItemListView();
+        });
+    }
+
     const btnTutupItem = document.getElementById('btnPibItemTutup');
     if (btnTutupItem) {
         btnTutupItem.addEventListener('click', () => {
-            deletePibItemAt(window._currentPibItemIdx);
+            savePibActiveItemFromForm();
+            showPibItemListView();
         });
     }
 
     const btnAddItem = document.getElementById('btnPibAddItem');
     if (btnAddItem) {
         btnAddItem.addEventListener('click', () => {
-            savePibActiveItemFromForm();
+            if (window._pibViewMode === 'editor' && typeof savePibActiveItemFromForm === 'function') {
+                savePibActiveItemFromForm();
+            }
             const country = document.getElementById('pibSupplierCountry')?.value || 'CN - CHINA';
             if (!Array.isArray(window._pibItems)) window._pibItems = [];
             window._pibItems.push({
@@ -1400,11 +1430,10 @@ function initPibDashboard() {
                 amount: '0.00',
                 kemasan: '1 PX - PALLET'
             });
-            renderPibActiveItem(window._pibItems.length - 1);
-            renderPibSummaryTable();
+            openPibItemEditor(window._pibItems.length - 1);
             triggerPibAutoSave();
             if (typeof showToast === 'function') {
-                showToast(`Barang No. ${window._pibItems.length} ditambahkan!`, 'info');
+                showToast(`Barang No. ${window._pibItems.length} ditambahkan! Lengkapi rincian barang.`, 'info');
             }
         });
     }
