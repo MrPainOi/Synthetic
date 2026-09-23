@@ -43,14 +43,15 @@ if not exist "%~dp0backend-service\node_modules" (
 echo.
 
 echo [4/4] Mendaftarkan Auto-Launcher ke Google Chrome & Edge...
-set "JSON_PATH=%~dp0launcher\com.ceisa.server_launcher.json"
+set "BAT_PATH=%~dp0launcher\launcher.bat"
+set "BAT_PATH=%BAT_PATH:\=/%"
 
 :: Buat JSON manifest dengan path absolut yang valid
 (
 echo {
 echo   "name": "com.ceisa.server_launcher",
 echo   "description": "CEISA Document Parser Backend Server Launcher",
-echo   "path": "%~dp0launcher\launcher.bat",
+echo   "path": "%BAT_PATH%",
 echo   "type": "stdio",
 echo   "allowed_origins": [
 echo     "chrome-extension://geogeopfnkjopjgpfdnfnikfpecdodhe/"

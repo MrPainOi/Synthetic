@@ -2070,7 +2070,7 @@ function initDocumentParserModal() {
                     const btnCopy = document.getElementById('btnCopySetupCmd');
                     if (btnCopy) {
                         btnCopy.onclick = () => {
-                            const cmd = 'powershell -ExecutionPolicy Bypass -Command "Set-ExecutionPolicy RemoteSigned -Scope CurrentUser -Force"; cd c:\\Synthetic\\backend-service; npm install; npm start';
+                            const cmd = 'powershell -ExecutionPolicy Bypass -Command "Set-ExecutionPolicy RemoteSigned -Scope CurrentUser -Force"; cd d:\\Synthetic\\Synthetic\\backend-service; npm install; npm start';
                             navigator.clipboard.writeText(cmd).then(() => {
                                 btnCopy.textContent = '✅ Berhasil Disalin ke Clipboard!';
                                 setTimeout(() => {
