@@ -4,25 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script>
-        (function() {
-            try {
-                var theme = localStorage.getItem('ceisa_theme') || 'dark';
-                var isDark = theme === 'dark';
-                var bg = isDark ? '#080d16' : '#f8fafc';
-                var cs = isDark ? 'dark' : 'light';
-                
-                document.documentElement.setAttribute('data-theme', theme);
-                document.documentElement.style.backgroundColor = bg;
-                document.documentElement.style.colorScheme = cs;
-                
-                var style = document.createElement('style');
-                style.id = 'ceisa-theme-critical';
-                style.textContent = 'html, body { background-color: ' + bg + ' !important; color-scheme: ' + cs + ' !important; }';
-                document.head.appendChild(style);
-            } catch (e) {}
-        })();
-    </script>
+    <script src="theme-init.js"></script>
     <title>CEISA 4.0 - Modul Draft PIB</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
