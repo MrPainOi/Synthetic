@@ -1,35 +1,25 @@
 <!DOCTYPE html>
-<html lang="id" data-theme="dark" style="background-color: #080d16; color-scheme: dark;">
+<html lang="id">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="color-scheme" content="dark light">
-    <meta name="theme-color" content="#080d16">
-    <style>
-        :root, html, body {
-            background-color: #080d16 !important;
-            color-scheme: dark;
-        }
-        html[data-theme="light"], html[data-theme="light"] body {
-            background-color: #f8fafc !important;
-            color-scheme: light;
-        }
-    </style>
     <script>
         (function() {
             try {
                 var theme = localStorage.getItem('ceisa_theme') || 'dark';
+                var isDark = theme === 'dark';
+                var bg = isDark ? '#080d16' : '#f8fafc';
+                var cs = isDark ? 'dark' : 'light';
+                
                 document.documentElement.setAttribute('data-theme', theme);
-                if (theme === 'light') {
-                    document.documentElement.style.backgroundColor = '#f8fafc';
-                    document.documentElement.style.colorScheme = 'light';
-                    var meta = document.querySelector('meta[name="theme-color"]');
-                    if (meta) meta.setAttribute('content', '#f8fafc');
-                } else {
-                    document.documentElement.style.backgroundColor = '#080d16';
-                    document.documentElement.style.colorScheme = 'dark';
-                }
+                document.documentElement.style.backgroundColor = bg;
+                document.documentElement.style.colorScheme = cs;
+                
+                var style = document.createElement('style');
+                style.id = 'ceisa-theme-critical';
+                style.textContent = 'html, body { background-color: ' + bg + ' !important; color-scheme: ' + cs + ' !important; }';
+                document.head.appendChild(style);
             } catch (e) {}
         })();
     </script>
@@ -40,7 +30,7 @@
     <link rel="stylesheet" href="dashboard.css">
 </head>
 
-<body style="background-color: #080d16;">
+<body>
 
     <!-- TOP PORTAL HEADER -->
     <header class="portal-header">

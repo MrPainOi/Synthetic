@@ -608,12 +608,16 @@ function applyCeisaTheme(theme) {
         localStorage.setItem('ceisa_theme', theme);
     } catch (_) {}
 
-    if (theme === 'dark') {
-        document.documentElement.style.backgroundColor = '#080d16';
-        document.documentElement.style.colorScheme = 'dark';
-    } else {
-        document.documentElement.style.backgroundColor = '#f8fafc';
-        document.documentElement.style.colorScheme = 'light';
+    const isDark = theme === 'dark';
+    const bg = isDark ? '#080d16' : '#f8fafc';
+    const cs = isDark ? 'dark' : 'light';
+
+    document.documentElement.style.backgroundColor = bg;
+    document.documentElement.style.colorScheme = cs;
+
+    const criticalStyle = document.getElementById('ceisa-theme-critical');
+    if (criticalStyle) {
+        criticalStyle.textContent = 'html, body { background-color: ' + bg + ' !important; color-scheme: ' + cs + ' !important; }';
     }
 
     const toggleBtns = document.querySelectorAll('#themeToggleBtn, .ceisa-theme-toggle');

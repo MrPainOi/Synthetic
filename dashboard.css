@@ -83,8 +83,6 @@ html {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     overflow-x: hidden;
-    background-color: #080d16;
-    color-scheme: dark;
 }
 
 html[data-theme="dark"] {
