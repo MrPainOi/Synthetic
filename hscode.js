@@ -561,6 +561,56 @@ function getCombinedBtkiDatabase() {
     return merged;
 }
 
+// 2.2 BACKEND SEARCH - Cari langsung dari SQLite (8000+ pos tarif)
+let _backendSearchTimeout = null;
+let _backendSearchAbort = null;
+
+async function searchFromBackend(query) {
+    try {
+        if (_backendSearchAbort) {
+            _backendSearchAbort.abort();
+        }
+        _backendSearchAbort = new AbortController();
+
+        const url = `http://localhost:5005/api/hscode/search?q=${encodeURIComponent(query)}&limit=50`;
+        const res = await fetch(url, {
+            signal: _backendSearchAbort.signal,
+            headers: { 'Cache-Control': 'max-age=300' }
+        });
+        if (!res.ok) return [];
+        const data = await res.json();
+        if (!data.success || !Array.isArray(data.data)) return [];
+
+        // Konversi format SQLite ke format BTKI
+        return data.data.map(row => ({
+            hsCode: row.code_formatted || row.code,
+            formattedCode: row.code_formatted || row.code,
+            bab: String(row.chapter || row.code.substring(0, 2)).padStart(2, '0'),
+            babTitle: row.chapter_title_id || '',
+            uraianId: row.description_id || row.description_en || '',
+            uraianEn: row.description_en || '',
+            satuan: 'KGM',
+            bmMfn: row.bm_mfn || 0,
+            bmPreferensi: { atiga: `${row.bm_mfn||0}%`, acfta: `${row.bm_mfn||0}%`, rcep: `${row.bm_mfn||0}%` },
+            ppn: row.ppn || 11,
+            pphApi: row.pph_api || 2.5,
+            pphNonApi: row.pph_nonapi || 7.5,
+            beaKeluar: '0%',
+            lartasImpor: row.lartas === 1,
+            lartasKategori: row.lartas === 1 ? 'CEK INSW UNTUK DETAIL LARTAS' : 'BEBAS TATA NIAGA (POST BORDER / TIDAK ADA LARTAS)',
+            lartasInstansi: '-',
+            lartasDasarHukum: '-',
+            lartasDokumen: [],
+            lartasEkspor: false,
+            keywords: [],
+            _source: 'sqlite'
+        }));
+    } catch (e) {
+        if (e.name !== 'AbortError') console.warn('[HSCODE] Backend search error:', e.message);
+        return [];
+    }
+}
+
 // 2.2 DYNAMIC LOOKUP VIA BACKEND (BTKI 2022/2027 ENGINE)
 let isLookingUpOnline = false;
 async function triggerDynamicLookup(query) {
@@ -705,62 +755,83 @@ function performSearch(recordRecent = false) {
     if (isLookingUpOnline) return;
 
     const query = currentSearchQuery.toLowerCase();
-    const cleanDigits = query.replace(/[^0-9]/g, "");
+    const cleanDigits = query.replace(/[^0-9]/g, '');
 
     const database = getCombinedBtkiDatabase();
     const filtered = database.filter(item => {
-        // Category filtering
-        if (currentCategoryFilter !== "all") {
-            if (currentCategoryFilter === "85" && item.bab !== "85") return false;
-            if (currentCategoryFilter === "84" && item.bab !== "84") return false;
-            if (currentCategoryFilter === "72" && item.bab !== "72" && item.bab !== "73") return false;
-            if (currentCategoryFilter === "39" && item.bab !== "39" && item.bab !== "28" && item.bab !== "29") return false;
-            if (currentCategoryFilter === "87" && item.bab !== "87" && item.bab !== "40") return false;
-            if (currentCategoryFilter === "10" && item.bab !== "10" && item.bab !== "15" && item.bab !== "09") return false;
-            if (currentCategoryFilter === "61" && item.bab !== "61" && item.bab !== "62") return false;
-            if (currentCategoryFilter === "30" && item.bab !== "30" && item.bab !== "90") return false;
+        if (currentCategoryFilter !== 'all') {
+            if (currentCategoryFilter === '85' && item.bab !== '85') return false;
+            if (currentCategoryFilter === '84' && item.bab !== '84') return false;
+            if (currentCategoryFilter === '72' && item.bab !== '72' && item.bab !== '73') return false;
+            if (currentCategoryFilter === '39' && item.bab !== '39' && item.bab !== '28' && item.bab !== '29') return false;
+            if (currentCategoryFilter === '87' && item.bab !== '87' && item.bab !== '40') return false;
+            if (currentCategoryFilter === '10' && item.bab !== '10' && item.bab !== '15' && item.bab !== '09') return false;
+            if (currentCategoryFilter === '61' && item.bab !== '61' && item.bab !== '62') return false;
+            if (currentCategoryFilter === '30' && item.bab !== '30' && item.bab !== '90') return false;
         }
-
         if (!query) return true;
-
-        // HS Code matching
-        const itemDigits = item.hsCode.replace(/[^0-9]/g, "");
+        const itemDigits = item.hsCode.replace(/[^0-9]/g, '');
         if (cleanDigits.length >= 2 && itemDigits.includes(cleanDigits)) return true;
-
-        // Text matching
         if (item.uraianId && item.uraianId.toLowerCase().includes(query)) return true;
         if (item.uraianEn && item.uraianEn.toLowerCase().includes(query)) return true;
         if (item.babTitle && item.babTitle.toLowerCase().includes(query)) return true;
-
-        // Keyword matching
-        if (item.keywords && item.keywords.some(k => k.toLowerCase().includes(query) || query.includes(k.toLowerCase()))) {
-            return true;
-        }
-
+        if (item.keywords && item.keywords.some(k => k.toLowerCase().includes(query) || query.includes(k.toLowerCase()))) return true;
         return false;
     });
 
     renderResultsList(filtered);
 
-    // Auto-select first result if current active is not in list
     if (filtered.length > 0) {
         const stillSelected = filtered.find(f => f.hsCode === (activeSelectedHsCode ? activeSelectedHsCode.hsCode : null));
         selectHsCodeItem(stillSelected || filtered[0]);
-    } else {
+    } else if (!query) {
         renderEmptyDetail();
     }
 
-    if (recordRecent && query) {
-        saveRecentSearch(query);
+    if (recordRecent && query) saveRecentSearch(query);
+
+    // Async: cari juga dari SQLite backend (8260+ pos tarif)
+    if (query && query.length >= 2) {
+        clearTimeout(_backendSearchTimeout);
+        _backendSearchTimeout = setTimeout(async () => {
+            const backendResults = await searchFromBackend(query);
+            if (!backendResults || backendResults.length === 0) {
+                if (filtered.length === 0) renderEmptyStateWithInsw(currentSearchQuery);
+                return;
+            }
+            const existingCodes = new Set(filtered.map(f => f.hsCode.replace(/\D/g, '')));
+            const newItems = backendResults
+                .filter(b => !existingCodes.has(b.hsCode.replace(/\D/g, '')))
+                .filter(item => currentCategoryFilter === 'all' || item.bab === currentCategoryFilter);
+            const combined = [...filtered, ...newItems];
+            if (combined.length !== filtered.length) {
+                renderResultsList(combined);
+                if (filtered.length === 0 && combined.length > 0) {
+                    const sel = combined.find(f => f.hsCode === (activeSelectedHsCode ? activeSelectedHsCode.hsCode : null));
+                    selectHsCodeItem(sel || combined[0]);
+                }
+            } else {
+                const countEl = document.getElementById('hsResultsCount');
+                if (countEl && combined.length > 0) countEl.textContent = combined.length + ' Pos Tarif Ditemukan';
+                if (combined.length === 0) renderEmptyStateWithInsw(currentSearchQuery);
+            }
+        }, 350);
     }
 }
-
 // 5. RENDER RESULTS LIST (LEFT COLUMN)
 function renderResultsList(items) {
     const listEl = document.getElementById("hsResultsList");
     const countEl = document.getElementById("hsResultsCount");
 
-    if (countEl) countEl.textContent = `${items.length} Pos Tarif Ditemukan`;
+    const sqliteCount = items.filter(i => i._source === 'sqlite').length;
+    const localCount = items.length - sqliteCount;
+    if (countEl) {
+        if (sqliteCount > 0 && localCount > 0) {
+            countEl.textContent = `${items.length} Pos Tarif (${localCount} BTKI + ${sqliteCount} WCO)`;
+        } else {
+            countEl.textContent = `${items.length} Pos Tarif Ditemukan`;
+        }
+    }
     if (!listEl) return;
 
     listEl.innerHTML = "";
@@ -781,14 +852,17 @@ function renderResultsList(items) {
             : `<span class="badge-lartas-no">BEBAS</span>`;
 
         const bmText = typeof item.bmMfn === "number" ? `BM ${item.bmMfn}%` : item.bmMfn;
+        const sourceBadge = item._source === 'sqlite'
+            ? `<span style="font-size:9px;background:#e0f2fe;color:#0284c7;border-radius:3px;padding:1px 4px;margin-left:4px;">WCO</span>`
+            : '';
 
         card.innerHTML = `
             <div class="hscode-card-top">
-                <span class="hscode-card-code">${item.formattedCode}</span>
+                <span class="hscode-card-code">${item.formattedCode}${sourceBadge}</span>
                 ${lartasBadge}
             </div>
-            <div class="hscode-card-desc" title="${escapeHtml(item.uraianId)}">
-                ${escapeHtml(item.uraianId)}
+            <div class="hscode-card-desc" title="${escapeHtml(item.uraianId || item.uraianEn)}">
+                ${escapeHtml(item.uraianId || item.uraianEn)}
             </div>
             <div class="hscode-card-meta">
                 <span class="badge-duty-rate">${bmText}</span>

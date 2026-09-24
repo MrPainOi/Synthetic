@@ -249,8 +249,17 @@ app.get('/api/get-latest-draft', (req, res) => {
 });
 
 // Endpoint untuk mencari dan mengklasifikasikan HS Code secara dinamis (BTKI & LARTAS)
-const { lookupHsCode, loadCache } = require('./hscode_service');
+const {
+    lookupHsCode,
+    loadCache,
+    searchByCode,
+    searchByText,
+    autocomplete,
+    getChapterCodes,
+    getDatabaseStats
+} = require('./hscode_service');
 
+// POST /api/hscode/lookup - Lookup lengkap via AI + cache
 app.post('/api/hscode/lookup', async (req, res) => {
     try {
         const query = req.body?.query || req.query?.query;
@@ -266,10 +275,80 @@ app.post('/api/hscode/lookup', async (req, res) => {
     }
 });
 
+// GET /api/hscode/cache - Lihat cache Gemini
 app.get('/api/hscode/cache', (req, res) => {
     try {
         const cache = loadCache();
         res.json({ success: true, data: cache });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// GET /api/hscode/search?q=... - Pencarian cepat dari database SQLite lokal
+app.get('/api/hscode/search', (req, res) => {
+    try {
+        const q = req.query.q || '';
+        const limit = Math.min(parseInt(req.query.limit || '20'), 100);
+        if (!q || q.trim().length < 2) {
+            return res.status(400).json({ error: 'Parameter q minimal 2 karakter.' });
+        }
+        const results = searchByText(q.trim(), limit);
+        res.json({ success: true, total: results.length, data: results });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// GET /api/hscode/autocomplete?q=... - Autocomplete untuk input HS Code
+app.get('/api/hscode/autocomplete', (req, res) => {
+    try {
+        const q = req.query.q || '';
+        const limit = Math.min(parseInt(req.query.limit || '10'), 50);
+        if (!q || q.trim().length < 2) {
+            return res.json({ success: true, data: [] });
+        }
+        const results = autocomplete(q.trim(), limit);
+        res.json({ success: true, data: results });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// GET /api/hscode/code/:code - Lookup langsung by kode
+app.get('/api/hscode/code/:code', (req, res) => {
+    try {
+        const code = req.params.code.replace(/\D/g, '');
+        if (!code || code.length < 2) {
+            return res.status(400).json({ error: 'Kode HS tidak valid.' });
+        }
+        const result = searchByCode(code);
+        if (!result) {
+            return res.status(404).json({ error: `HS Code ${code} tidak ditemukan di database lokal.` });
+        }
+        res.json({ success: true, data: result });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// GET /api/hscode/chapter/:chapter - Semua kode dalam satu chapter
+app.get('/api/hscode/chapter/:chapter', (req, res) => {
+    try {
+        const chapter = String(req.params.chapter).padStart(2, '0');
+        const level = parseInt(req.query.level || '6');
+        const results = getChapterCodes(chapter, level);
+        res.json({ success: true, chapter, total: results.length, data: results });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// GET /api/hscode/stats - Statistik database
+app.get('/api/hscode/stats', (req, res) => {
+    try {
+        const stats = getDatabaseStats();
+        res.json({ success: true, data: stats });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }

@@ -7,6 +7,7 @@
     "start": "node server.js",
     "parser": "node document_parser.js",
     "fetcher": "node email_fetcher.js",
+    "import-hscode": "node import_hscode.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -15,6 +16,7 @@
   "type": "commonjs",
   "dependencies": {
     "@google/genai": "^2.21.0",
+    "better-sqlite3": "^13.0.3",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",

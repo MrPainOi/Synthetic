@@ -6,7 +6,7 @@ echo ================================================================
 echo    CEISA INSPECTOR - SETUP OTOMATIS UNTUK PC BARU
 echo ================================================================
 echo.
-echo [1/4] Mengatur PowerShell Execution Policy ke RemoteSigned...
+echo [1/5] Mengatur PowerShell Execution Policy ke RemoteSigned...
 powershell -ExecutionPolicy Bypass -Command "Set-ExecutionPolicy RemoteSigned -Scope CurrentUser -Force"
 if %errorlevel% equ 0 (
     echo       [OK] PowerShell Execution Policy berhasil diatur ke RemoteSigned.
@@ -15,7 +15,7 @@ if %errorlevel% equ 0 (
 )
 echo.
 
-echo [2/4] Memeriksa instalasi Node.js...
+echo [2/5] Memeriksa instalasi Node.js...
 where node >nul 2>nul
 if %errorlevel% neq 0 (
     echo.
@@ -30,7 +30,7 @@ if %errorlevel% neq 0 (
 )
 echo.
 
-echo [3/4] Memeriksa dependensi backend-service...
+echo [3/5] Memeriksa dependensi backend-service...
 if not exist "%~dp0backend-service\node_modules" (
     echo       Menginstall modul dependensi (npm install)...
     cd /d "%~dp0backend-service"
@@ -42,7 +42,21 @@ if not exist "%~dp0backend-service\node_modules" (
 )
 echo.
 
-echo [4/4] Mendaftarkan Auto-Launcher ke Google Chrome & Edge...
+echo [4/5] Mengimpor database HS Code BTKI (8000+ pos tarif WCO)...
+if not exist "%~dp0backend-service\temp\hscode.db" (
+    echo       Mengunduh & menyimpan semua pos tarif HS Code ke database lokal...
+    echo       (Membutuhkan koneksi internet - proses sekitar 15-30 detik)
+    cd /d "%~dp0backend-service"
+    call node import_hscode.js
+    cd /d "%~dp0"
+    echo       [OK] Database HS Code berhasil diimpor!
+) else (
+    echo       [OK] Database HS Code sudah tersedia (hscode.db).
+    echo       Untuk memperbarui: jalankan "npm run import-hscode" di folder backend-service
+)
+echo.
+
+echo [5/5] Mendaftarkan Auto-Launcher ke Google Chrome & Edge...
 set "JSON_PATH=%~dp0launcher\com.ceisa.server_launcher.json"
 
 :: Buat JSON manifest portabel (menggunakan relative path launcher.bat agar berlaku di drive C, D, maupun lainnya)
@@ -78,6 +92,7 @@ echo Sekarang ketika Anda menekan tombol "Start / Mulai Scan" di
 echo Web Dashboard atau Ekstensi CEISA:
 echo - Server akan otomatis menyala di latar belakang (tanpa terminal)
 echo - Script npm tidak akan diblokir oleh PowerShell
+echo - Database HS Code dengan 8000+ pos tarif WCO tersedia offline
 echo.
 echo Menekan sembarang tombol akan menyalakan server sekarang dan keluar...
 pause >nul
