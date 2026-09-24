@@ -4,6 +4,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script>
+        (function() {
+            try {
+                var theme = localStorage.getItem('ceisa_theme') || 'dark';
+                document.documentElement.setAttribute('data-theme', theme);
+                if (theme === 'dark') {
+                    document.documentElement.style.backgroundColor = '#080d16';
+                    document.documentElement.style.colorScheme = 'dark';
+                } else {
+                    document.documentElement.style.backgroundColor = '#f8fafc';
+                    document.documentElement.style.colorScheme = 'light';
+                }
+            } catch (e) {}
+        })();
+    </script>
     <title>CEISA 4.0 - HS Code Checker & BTKI</title>
     <link rel="stylesheet" href="dashboard.css">
 </head>

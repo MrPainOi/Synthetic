@@ -591,9 +591,12 @@ async function discoverWifiServer() {
 // UNIVERSAL THEME MANAGER (DARK / LIGHT MODE PERSISTENCE)
 // ------------------------------------------------------------
 function initCeisaTheme() {
-    let savedTheme = 'light';
+    let savedTheme = 'dark';
     try {
-        savedTheme = localStorage.getItem('ceisa_theme') || 'light';
+        savedTheme = localStorage.getItem('ceisa_theme');
+        if (!savedTheme) {
+            savedTheme = (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'dark';
+        }
     } catch (_) {}
     applyCeisaTheme(savedTheme);
 }
@@ -604,6 +607,14 @@ function applyCeisaTheme(theme) {
     try {
         localStorage.setItem('ceisa_theme', theme);
     } catch (_) {}
+
+    if (theme === 'dark') {
+        document.documentElement.style.backgroundColor = '#080d16';
+        document.documentElement.style.colorScheme = 'dark';
+    } else {
+        document.documentElement.style.backgroundColor = '#f8fafc';
+        document.documentElement.style.colorScheme = 'light';
+    }
 
     const toggleBtns = document.querySelectorAll('#themeToggleBtn, .ceisa-theme-toggle');
     toggleBtns.forEach(btn => {
