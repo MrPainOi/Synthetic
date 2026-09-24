@@ -22,6 +22,10 @@ function switchPortalModule(moduleName) {
         window.location.href = 'dashboard.html';
         return;
     }
+    if (moduleName === 'hscode') {
+        window.location.href = 'hscode.html';
+        return;
+    }
 
     try {
         sessionStorage.setItem('ceisa_active_portal_module', moduleName);
@@ -3219,5 +3223,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 12. Initialize 9-Tab Stepper State
         switchCeisaTab('tab-header');
+
+        // 13. Check if payload from HS Code Checker exists
+        try {
+            const hsPayloadRaw = localStorage.getItem('ceisa_apply_to_peb');
+            if (hsPayloadRaw) {
+                localStorage.removeItem('ceisa_apply_to_peb');
+                const hsPayload = JSON.parse(hsPayloadRaw);
+                switchCeisaTab('tab-barang');
+                const hsInput = document.querySelector('#tab-barang input[placeholder*="Pos Tarif"], #tab-barang input[name*="hs"], #tab-barang .hs-code-input');
+                const descInput = document.querySelector('#tab-barang textarea[placeholder*="Uraian"], #tab-barang input[placeholder*="Uraian"]');
+                if (hsInput) hsInput.value = hsPayload.hsCode;
+                if (descInput) descInput.value = hsPayload.uraian;
+                showToast(`Pos Tarif ${hsPayload.hsCode} berhasil diterapkan ke Draft PEB!`, 'success');
+            }
+        } catch (e) {}
     }
 });

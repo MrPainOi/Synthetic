@@ -942,19 +942,19 @@ function renderPibSummaryTable(filterText = '') {
         tr.setAttribute('data-item-index', idx);
         tr.style.cursor = 'pointer';
         if (idx === window._currentPibItemIdx) {
-            tr.style.backgroundColor = '#eff6ff';
+            tr.classList.add('selected-row');
         }
 
         tr.innerHTML = `
             <td style="text-align: center; font-family: var(--font-mono); font-size: 11px; font-weight: 600; color: var(--text-muted);">${idx + 1}</td>
-            <td style="font-family: var(--font-mono); font-size: 11.5px; font-weight: 600; color: #1e40af;">${escapePibHtml(hsCode)}</td>
+            <td class="cell-pib-hscode">${escapePibHtml(hsCode)}</td>
             <td style="font-size: 12px; max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapePibHtml(desc)}">${escapePibHtml(desc)}</td>
             <td style="text-align: center; font-size: 11.5px; font-weight: 600;">${escapePibHtml(country)}</td>
             <td style="text-align: right; font-family: var(--font-mono); font-size: 11.5px;">${escapePibHtml(qtyInfo.qty)} ${escapePibHtml(qtyInfo.unit)}</td>
             <td style="text-align: right; font-family: var(--font-mono); font-size: 11.5px; font-weight: 600;">$${escapePibHtml(amtVal)}</td>
             <td style="text-align: center; font-size: 11.5px;">${tarifBm}%</td>
             <td style="text-align: center; white-space: nowrap;">
-                <button type="button" class="btn btn-ceisa-sub btn-xs btn-open-pib-item" data-idx="${idx}" style="padding: 2px 10px; font-size: 11.5px; font-weight: 600; border-radius: 4px; border: 1px solid #93c5fd; background: #eff6ff; color: #1e40af; cursor: pointer;">Ubah</button>
+                <button type="button" class="btn btn-ceisa-sub btn-xs btn-open-pib-item" data-idx="${idx}">Ubah</button>
                 <button type="button" class="btn-del-pib-summary-row" data-idx="${idx}" title="Hapus Barang" style="background: none; border: none; color: #ef4444; font-size: 15px; cursor: pointer; padding: 0 4px; margin-left: 6px;">&times;</button>
             </td>
         `;
@@ -988,11 +988,9 @@ function highlightPibSummaryTableRow(activeIdx) {
     rows.forEach(r => {
         const idx = parseInt(r.getAttribute('data-item-index'), 10);
         if (idx === activeIdx) {
-            r.style.backgroundColor = '#eff6ff';
-            r.style.outline = '1px solid #93c5fd';
+            r.classList.add('selected-row');
         } else {
-            r.style.backgroundColor = '';
-            r.style.outline = '';
+            r.classList.remove('selected-row');
         }
     });
 }
@@ -1494,6 +1492,35 @@ function initPibDashboard() {
 
     // 11. Initial Draft Restore & Calculation
     restorePibDraftState();
+
+    // 12. Check if payload from HS Code Checker exists
+    try {
+        const pibPayloadRaw = localStorage.getItem('ceisa_apply_to_pib');
+        if (pibPayloadRaw) {
+            localStorage.removeItem('ceisa_apply_to_pib');
+            const pibPayload = JSON.parse(pibPayloadRaw);
+            switchPibTab('pib-tab-barang');
+
+            const hsInput = document.getElementById('pibItemHsCode');
+            const uraianInput = document.getElementById('pibItemUraian');
+            const unitInput = document.getElementById('pibItemUnit');
+            const tarifBmInput = document.getElementById('pibTarifBm');
+
+            if (hsInput) hsInput.value = pibPayload.hsCode;
+            if (uraianInput) uraianInput.value = pibPayload.uraian;
+            if (unitInput && pibPayload.satuan) unitInput.value = pibPayload.satuan;
+            if (tarifBmInput && pibPayload.bmRate !== undefined) tarifBmInput.value = pibPayload.bmRate;
+
+            savePibActiveItemFromForm();
+            calculatePibPungutan();
+            renderPibSummaryTable();
+            triggerPibAutoSave();
+
+            if (typeof showToast === 'function') {
+                showToast(`Pos Tarif ${pibPayload.hsCode} berhasil diterapkan ke Draft PIB!`, 'success');
+            }
+        }
+    } catch (e) {}
 }
 
 // DOM Ready initialization

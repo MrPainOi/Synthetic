@@ -586,3 +586,60 @@ async function discoverWifiServer() {
         }, 2500);
     }
 })();
+
+// ------------------------------------------------------------
+// UNIVERSAL THEME MANAGER (DARK / LIGHT MODE PERSISTENCE)
+// ------------------------------------------------------------
+function initCeisaTheme() {
+    let savedTheme = 'light';
+    try {
+        savedTheme = localStorage.getItem('ceisa_theme') || 'light';
+    } catch (_) {}
+    applyCeisaTheme(savedTheme);
+}
+
+function applyCeisaTheme(theme) {
+    if (typeof document === 'undefined') return;
+    document.documentElement.setAttribute('data-theme', theme);
+    try {
+        localStorage.setItem('ceisa_theme', theme);
+    } catch (_) {}
+
+    const toggleBtns = document.querySelectorAll('#themeToggleBtn, .ceisa-theme-toggle');
+    toggleBtns.forEach(btn => {
+        const label = btn.querySelector('.theme-label');
+        if (label) {
+            label.textContent = theme === 'dark' ? 'Mode Terang' : 'Mode Gelap';
+        }
+        btn.setAttribute('title', theme === 'dark' ? 'Beralih ke Mode Terang' : 'Beralih ke Mode Gelap');
+    });
+}
+
+function toggleCeisaTheme() {
+    const current = document.documentElement.getAttribute('data-theme') || 'light';
+    const next = current === 'dark' ? 'light' : 'dark';
+    applyCeisaTheme(next);
+}
+
+if (typeof document !== 'undefined') {
+    initCeisaTheme();
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+            initCeisaTheme();
+            setupThemeToggleListeners();
+        });
+    } else {
+        setupThemeToggleListeners();
+    }
+}
+
+function setupThemeToggleListeners() {
+    document.addEventListener('click', (e) => {
+        const toggleBtn = e.target.closest('#themeToggleBtn, .ceisa-theme-toggle');
+        if (toggleBtn) {
+            e.preventDefault();
+            toggleCeisaTheme();
+        }
+    });
+}
+

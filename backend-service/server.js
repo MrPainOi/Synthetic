@@ -248,6 +248,33 @@ app.get('/api/get-latest-draft', (req, res) => {
     }
 });
 
+// Endpoint untuk mencari dan mengklasifikasikan HS Code secara dinamis (BTKI & LARTAS)
+const { lookupHsCode, loadCache } = require('./hscode_service');
+
+app.post('/api/hscode/lookup', async (req, res) => {
+    try {
+        const query = req.body?.query || req.query?.query;
+        const customKey = req.headers['x-gemini-key'] || req.body?.apiKey;
+        if (!query || !query.trim()) {
+            return res.status(400).json({ error: 'Parameter query diperlukan.' });
+        }
+        const data = await lookupHsCode(query, customKey);
+        res.json({ success: true, data });
+    } catch (err) {
+        console.error('[HSCODE-LOOKUP ERROR]', err.message);
+        res.status(500).json({ error: 'Gagal lookup pos tarif: ' + err.message });
+    }
+});
+
+app.get('/api/hscode/cache', (req, res) => {
+    try {
+        const cache = loadCache();
+        res.json({ success: true, data: cache });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 const server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`=======================================================`);
     console.log(`🚀 CEISA Document Parser Server AKTIF di port ${PORT}`);

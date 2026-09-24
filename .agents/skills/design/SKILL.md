@@ -16,7 +16,7 @@ Unified design skill: brand, tokens, UI, logo, CIP, slides, banners, social phot
 
 - Brand identity, voice, assets
 - Design system tokens and specs
-- UI styling with shadcn/ui + Tailwind
+- UI styling and craft with Hallmark
 - Logo design and AI generation
 - Corporate identity program (CIP) deliverables
 - Presentations and pitch decks
@@ -29,7 +29,7 @@ Unified design skill: brand, tokens, UI, logo, CIP, slides, banners, social phot
 |------|-----------|---------|
 | Brand identity, voice, assets | `brand` | External skill |
 | Tokens, specs, CSS vars | `design-system` | External skill |
-| shadcn/ui, Tailwind, code | `ui-styling` | External skill |
+| UI craft, anti-slop frontend code | `hallmark` | External skill |
 | Logo creation, AI generation | Logo (built-in) | `references/logo-design.md` |
 | CIP mockups, deliverables | CIP (built-in) | `references/cip-design.md` |
 | Presentations, pitch decks | Slides (built-in) | `references/slides.md` |
