@@ -1,29 +1,46 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" data-theme="dark" style="background-color: #080d16; color-scheme: dark;">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark light">
+    <meta name="theme-color" content="#080d16">
+    <style>
+        :root, html, body {
+            background-color: #080d16 !important;
+            color-scheme: dark;
+        }
+        html[data-theme="light"], html[data-theme="light"] body {
+            background-color: #f8fafc !important;
+            color-scheme: light;
+        }
+    </style>
     <script>
         (function() {
             try {
                 var theme = localStorage.getItem('ceisa_theme') || 'dark';
                 document.documentElement.setAttribute('data-theme', theme);
-                if (theme === 'dark') {
-                    document.documentElement.style.backgroundColor = '#080d16';
-                    document.documentElement.style.colorScheme = 'dark';
-                } else {
+                if (theme === 'light') {
                     document.documentElement.style.backgroundColor = '#f8fafc';
                     document.documentElement.style.colorScheme = 'light';
+                    var meta = document.querySelector('meta[name="theme-color"]');
+                    if (meta) meta.setAttribute('content', '#f8fafc');
+                } else {
+                    document.documentElement.style.backgroundColor = '#080d16';
+                    document.documentElement.style.colorScheme = 'dark';
                 }
             } catch (e) {}
         })();
     </script>
     <title>CEISA 4.0 - Modul Draft PIB</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="dashboard.css">
 </head>
 
-<body>
+<body style="background-color: #080d16;">
 
     <!-- TOP PORTAL HEADER -->
     <header class="portal-header">

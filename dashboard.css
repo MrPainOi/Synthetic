@@ -1,10 +1,12 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
-
 /* ==========================================================================
    PORTAL TERPADU CEISA 4.0 - DIREKTORAT JENDERAL BEA DAN CUKAI (DJBC)
    Tactile Anti-AI-Slop Executive Design System
    Modern, High-Contrast, Ambient Lighting, 3D Physics & Micro-Interactions
    ========================================================================== */
+
+@view-transition {
+    navigation: auto;
+}
 
 :root {
     /* DJBC Official Customs Theme Palette */
@@ -81,8 +83,8 @@ html {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     overflow-x: hidden;
-    background-color: var(--surface-bg, #f8fafc);
-    color-scheme: light;
+    background-color: #080d16;
+    color-scheme: dark;
 }
 
 html[data-theme="dark"] {
