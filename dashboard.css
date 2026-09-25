@@ -535,20 +535,24 @@ body {
     background-color: #cbd5e1;
 }
 
-/* Sidebar Bottom Footer: Theme Toggle (Light / Dark) */
+/* Sidebar Bottom Footer: WiFi Share + Theme Toggle */
 .ceisa-sidebar-footer {
     margin-top: auto;
     width: 100%;
     display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
     justify-content: center;
-    padding: 10px 4px 4px 4px;
+    padding: 10px 4px 8px 4px;
     border-top: 1px solid var(--border-color);
     box-sizing: border-box;
 }
 
 .ceisa-sidebar:hover .ceisa-sidebar-footer,
 .ceisa-sidebar.expanded .ceisa-sidebar-footer {
-    padding: 10px 4px 4px 4px;
+    padding: 10px 4px 8px 4px;
+    align-items: stretch;
     justify-content: stretch;
 }
 
@@ -624,6 +628,31 @@ body {
 }
 
 .ceisa-sidebar:not(:hover):not(.expanded) .ceisa-theme-toggle:hover::after {
+    opacity: 1;
+    transform: translateY(-50%) translateX(2px);
+}
+
+.ceisa-sidebar:not(:hover):not(.expanded) .ceisa-wifi-share-btn::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    left: calc(100% + 10px);
+    top: 50%;
+    transform: translateY(-50%);
+    background: #0f172a;
+    color: #ffffff;
+    font-size: 11.5px;
+    font-weight: 600;
+    padding: 5px 10px;
+    border-radius: var(--radius-sm);
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.18s ease, transform 0.18s ease;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+}
+
+.ceisa-sidebar:not(:hover):not(.expanded) .ceisa-wifi-share-btn:hover::after {
     opacity: 1;
     transform: translateY(-50%) translateX(2px);
 }
@@ -5290,8 +5319,78 @@ textarea.form-control {
    ==================================================================== */
 /* ====================================================================
    CEISA 4.0 HS CODE CHECKER & BTKI ENGINE STYLING
-   Tactile High-Craft Design System
+   Pinned Viewport Architecture (Zero Window Scroll, Zero Blank Voids)
    ==================================================================== */
+body.hscode-page {
+    height: 100vh;
+    max-height: 100vh;
+    overflow: hidden !important;
+    padding-bottom: 0 !important;
+}
+
+body.hscode-page .ceisa-portal-layout {
+    height: calc(100vh - 50px);
+    min-height: calc(100vh - 50px);
+    max-height: calc(100vh - 50px);
+    overflow: hidden;
+}
+
+body.hscode-page .ceisa-portal-content {
+    height: 100%;
+    max-height: 100%;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+body.hscode-page .doc-title-strip {
+    flex-shrink: 0;
+    padding: 8px 24px;
+}
+
+body.hscode-page .hscode-container {
+    flex: 1;
+    min-height: 0;
+    height: auto;
+    padding: 10px 24px 14px 24px;
+    gap: 12px;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+body.hscode-page .hscode-search-header-card {
+    padding: 12px 18px;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+body.hscode-page .hscode-split-layout {
+    flex: 1;
+    min-height: 0;
+    gap: 14px;
+    height: 100%;
+}
+
+body.hscode-page .hscode-results-col {
+    height: 100%;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+body.hscode-page .hscode-card-list {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+body.hscode-page .hscode-detail-col {
+    height: 100%;
+    min-height: 0;
+    overflow-y: auto;
+}
+
 .hscode-container {
     padding: 18px 24px;
     display: flex;
@@ -5783,6 +5882,483 @@ textarea.form-control {
     border: 1px dashed #cbd5e1;
     border-radius: 8px;
     margin: 12px;
+}
+
+/* ==========================================================================
+   HALLMARK PRECISION CUSTOM INPUTS & CUSTOM SELECT SYSTEM
+   Tactile Anti-AI-Slop Form Controls with Native 2-Way Sync
+   ========================================================================== */
+
+/* Universal Form Group & Labels */
+.form-group-ceisa {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+.form-label-ceisa {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.form-label-ceisa span.req {
+    color: var(--color-red-text);
+}
+
+/* Base Form Control */
+.form-control-ceisa {
+    width: 100%;
+    height: 38px;
+    font-family: var(--font-sans);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-primary);
+    background-color: var(--surface-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: 8px 12px;
+    outline: none;
+    box-sizing: border-box;
+    transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.form-control-ceisa:hover {
+    border-color: var(--border-strong);
+}
+
+.form-control-ceisa:focus {
+    border-color: var(--ceisa-blue);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+}
+
+.form-control-ceisa[type="number"] {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    letter-spacing: -0.2px;
+}
+
+/* Precision Input Group (Prefix + Field + Suffix) */
+.ceisa-input-group {
+    display: flex;
+    align-items: stretch;
+    width: 100%;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background-color: var(--surface-card);
+    transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+    overflow: hidden;
+    height: 38px;
+    box-sizing: border-box;
+}
+
+.ceisa-input-group:hover {
+    border-color: var(--border-strong);
+}
+
+.ceisa-input-group:focus-within {
+    border-color: var(--ceisa-blue);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+}
+
+.ceisa-input-prefix,
+.ceisa-input-suffix {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 11px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    background-color: var(--surface-subtle);
+    border-right: 1px solid var(--border-color);
+    user-select: none;
+    flex-shrink: 0;
+}
+
+.ceisa-input-suffix {
+    border-right: none;
+    border-left: 1px solid var(--border-color);
+}
+
+.ceisa-themed-input {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    padding: 7px 11px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    background: transparent;
+    border: none;
+    outline: none;
+    box-sizing: border-box;
+}
+
+/* Result Display Box (e.g. Nilai CIF Rupiah) */
+.ceisa-result-box {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 38px;
+    padding: 0 12px;
+    background-color: var(--surface-subtle);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--ceisa-blue);
+    box-sizing: border-box;
+}
+
+.ceisa-result-box .calc-cif-rp {
+    letter-spacing: -0.2px;
+}
+
+/* Global Native Select Fallback - never show ugly OS default arrow */
+select.form-control-ceisa,
+select.form-control {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    cursor: pointer;
+    padding-right: 32px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 14px 14px;
+}
+
+/* ==========================================================================
+   CUSTOM DROPDOWN (CEISA CUSTOM SELECT)
+   ========================================================================== */
+.ceisa-custom-select {
+    position: relative;
+    width: 100%;
+    user-select: none;
+}
+
+.ceisa-select-trigger {
+    width: 100%;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 7px 12px;
+    background-color: var(--surface-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    outline: none;
+    text-align: left;
+    transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+    box-sizing: border-box;
+}
+
+.ceisa-select-trigger:hover {
+    border-color: var(--border-strong);
+    background-color: var(--surface-hover);
+}
+
+.ceisa-custom-select.is-open .ceisa-select-trigger,
+.ceisa-select-trigger:focus-visible {
+    border-color: var(--ceisa-blue);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+}
+
+.ceisa-select-current {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.ceisa-select-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 600;
+}
+
+.ceisa-select-badge {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 4px;
+    background-color: var(--color-green-bg);
+    color: var(--color-green-text);
+    border: 1px solid var(--color-green-border);
+    flex-shrink: 0;
+    line-height: 1.2;
+}
+
+.ceisa-select-badge.warn {
+    background-color: var(--color-orange-bg);
+    color: var(--color-orange-text);
+    border-color: var(--color-orange-border);
+}
+
+.ceisa-select-badge.success {
+    background-color: var(--color-green-bg);
+    color: var(--color-green-text);
+    border-color: var(--color-green-border);
+}
+
+.ceisa-select-chevron {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), color 0.15s ease;
+    flex-shrink: 0;
+}
+
+.ceisa-custom-select.is-open .ceisa-select-chevron {
+    transform: rotate(180deg);
+    color: var(--ceisa-blue);
+}
+
+/* Floating Dropdown Menu */
+.ceisa-select-dropdown {
+    position: absolute;
+    top: calc(100% + 5px);
+    left: 0;
+    right: 0;
+    z-index: 1050;
+    background-color: var(--surface-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-floating);
+    padding: 5px;
+    display: none;
+    max-height: 280px;
+    overflow-y: auto;
+    animation: ceisaSelectFadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes ceisaSelectFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-6px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.ceisa-custom-select.is-open .ceisa-select-dropdown {
+    display: block;
+}
+
+.ceisa-select-search-wrap {
+    padding: 4px;
+    border-bottom: 1px solid var(--border-subtle);
+    margin-bottom: 4px;
+}
+
+.ceisa-select-search-input {
+    width: 100%;
+    height: 32px;
+    padding: 6px 10px;
+    font-family: var(--font-sans);
+    font-size: 12px;
+    background: var(--surface-subtle);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-xs);
+    color: var(--text-primary);
+    outline: none;
+    box-sizing: border-box;
+}
+
+.ceisa-select-search-input:focus {
+    border-color: var(--ceisa-blue);
+}
+
+.ceisa-select-options {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.ceisa-select-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 7px 10px;
+    border-radius: var(--radius-xs);
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.ceisa-select-option:hover,
+.ceisa-select-option.is-highlighted {
+    background-color: var(--surface-subtle);
+    color: var(--ceisa-blue);
+}
+
+.ceisa-select-option.is-selected {
+    background-color: var(--ceisa-blue-light);
+    color: var(--ceisa-blue-dark);
+    font-weight: 700;
+}
+
+.ceisa-select-option-text {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ceisa-select-option-check {
+    display: none;
+    color: var(--ceisa-blue);
+    flex-shrink: 0;
+}
+
+.ceisa-select-option.is-selected .ceisa-select-option-check {
+    display: inline-flex;
+}
+
+.ceisa-select-native-hidden {
+    position: absolute !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    width: 1px !important;
+    height: 1px !important;
+    margin: -1px !important;
+    padding: 0 !important;
+    border: 0 !important;
+    clip: rect(0, 0, 0, 0) !important;
+    overflow: hidden !important;
+}
+
+/* ==========================================================================
+   DARK MODE OVERRIDES FOR CUSTOM INPUTS & CUSTOM SELECT
+   ========================================================================== */
+[data-theme="dark"] .form-control-ceisa {
+    background-color: #0b1220;
+    border-color: #1e293b;
+    color: #f8fafc;
+}
+
+[data-theme="dark"] .form-control-ceisa:hover {
+    border-color: #334155;
+}
+
+[data-theme="dark"] .form-control-ceisa:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+}
+
+[data-theme="dark"] .ceisa-input-group {
+    background-color: #0b1220;
+    border-color: #1e293b;
+}
+
+[data-theme="dark"] .ceisa-input-group:hover {
+    border-color: #334155;
+}
+
+[data-theme="dark"] .ceisa-input-group:focus-within {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+}
+
+[data-theme="dark"] .ceisa-input-prefix,
+[data-theme="dark"] .ceisa-input-suffix {
+    background-color: #131d31;
+    border-color: #1e293b;
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .ceisa-themed-input {
+    color: #f8fafc;
+}
+
+[data-theme="dark"] .ceisa-result-box {
+    background-color: #111a2d;
+    border-color: #1e293b;
+    color: #60a5fa;
+}
+
+[data-theme="dark"] .ceisa-select-trigger {
+    background-color: #0b1220;
+    border-color: #1e293b;
+    color: #f8fafc;
+}
+
+[data-theme="dark"] .ceisa-select-trigger:hover {
+    background-color: #111a2d;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .ceisa-custom-select.is-open .ceisa-select-trigger,
+[data-theme="dark"] .ceisa-select-trigger:focus-visible {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+}
+
+[data-theme="dark"] .ceisa-select-dropdown {
+    background-color: #0d1525;
+    border-color: #1e293b;
+    box-shadow: 0 16px 36px -4px rgba(0, 0, 0, 0.65), 0 0 0 1px #1e293b;
+}
+
+[data-theme="dark"] .ceisa-select-search-wrap {
+    border-bottom-color: #1e293b;
+}
+
+[data-theme="dark"] .ceisa-select-search-input {
+    background-color: #131d31;
+    border-color: #1e293b;
+    color: #f8fafc;
+}
+
+[data-theme="dark"] .ceisa-select-search-input:focus {
+    border-color: #3b82f6;
+}
+
+[data-theme="dark"] .ceisa-select-option:hover,
+[data-theme="dark"] .ceisa-select-option.is-highlighted {
+    background-color: #18243c;
+    color: #60a5fa;
+}
+
+[data-theme="dark"] .ceisa-select-option.is-selected {
+    background-color: rgba(59, 130, 246, 0.2);
+    color: #93c5fd;
+}
+
+[data-theme="dark"] select.form-control-ceisa,
+[data-theme="dark"] select.form-control {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-color: #0b1220;
+    border-color: #1e293b;
+    color: #f8fafc;
 }
 
 

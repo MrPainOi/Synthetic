@@ -9,3 +9,18 @@ const CEISA_CONFIG = {
     SUPABASE_URL: "https://grvwcvcpxemqyjprbdtr.supabase.co",
     SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdydndjdmNweGVtcXlqcHJiZHRyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk5MTU4MjcsImV4cCI6MjEwNTQ5MTgyN30.sm_cp0G9Xta95vPj3urguZ5tLGlJeQLRXklANTdCwE4"
 };
+
+// Resolver dinamis URL backend CEISA (berlaku untuk localhost, IP WiFi/LAN, HP/laptop lain)
+window.getCeisaBackendUrl = function (path = '') {
+    let base = 'http://localhost:5005';
+    try {
+        if (typeof window !== 'undefined' && window.location && window.location.protocol.startsWith('http')) {
+            base = `${window.location.protocol}//${window.location.hostname}:5005`;
+        }
+    } catch (_) {}
+    if (path) {
+        if (!path.startsWith('/')) path = '/' + path;
+        return `${base}${path}`;
+    }
+    return base;
+};

@@ -102,9 +102,19 @@ Kembalikan HANYA format JSON murni tanpa markdown/backticks (\`\`\`json):
   },
   "blNumber": "Nomor Bill of Lading / B/L / Sea Waybill",
   "blDate": "Tanggal Bill of Lading / Shipped on Board Date",
-  "invoiceNumber": "Nomor Commercial Invoice (pisahkan koma jika multi-invoice)",
-  "invoiceDate": "Tanggal Invoice",
-  "packingListNumber": "Nomor Packing List / PL jika ada",
+  "invoiceNumber": "Nomor SEMUA Invoice lengkap (WAJIB gabungkan SEMUA nomor invoice yang ada dipisahkan koma, misal: '335223, 335226, SMV.B2609043, 335227, SMV.B2609044')",
+  "invoiceDate": "Tanggal Invoice (jika berbeda-beda, tuliskan tanggal utama atau pisahkan koma)",
+  "invoices": [
+    {
+      "invoiceNumber": "Nomor Invoice persis di dokumen",
+      "invoiceDate": "Tanggal Invoice",
+      "amount": "Nominal total invoice",
+      "currency": "Mata uang (IDR, USD, dll)",
+      "containerNumber": "Nomor kontainer terkait jika tertera",
+      "type": "COMMERCIAL / SAMPLE_STORE_IN / OTHER"
+    }
+  ],
+  "packingListNumber": "Nomor SEMUA Packing List yang bersesuaian (WAJIB gabungkan SEMUA nomor PL dipisahkan koma, misal: '335223, 335226, SMV.B2609043, 335227, SMV.B2609044')",
   "packingListDate": "Tanggal Packing List jika ada",
   "containerNumber": "Nomor Kontainer / Peti Kemas (pisahkan koma jika lebih dari satu)",
   "shipperName": "Nama Lengkap Eksportir",
@@ -130,6 +140,14 @@ Kembalikan HANYA format JSON murni tanpa markdown/backticks (\`\`\`json):
 }
 
 PENTING:
+- ATURAN KHUSUS MULTI-INVOICE & INVOICE SAMPLE/STORE-IN/FOC:
+  * WAJIB periksa SETIAP HALAMAN dokumen dari awal sampai akhir secara seksama!
+  * Seringkali dokumen pengiriman memuat lembar Fax Transmission, Booking Confirmation, atau Shipping Instruction di halaman awal (misal Page 1). BACA BAIK-BAIK bagian rincian kontainer di lembar tersebut karena seringkali mencantumkan LEBIH DARI SATU INVOICE per kontainer (misal: Container CIMU 0654754 memuat Invoice 335226 DAN Invoice SMV.B2609043; Container TLHU 8158388 memuat Invoice 335227 DAN Invoice SMV.B2609044)!
+  * Invoice tambahan seperti invoice sample product atau store-in (misal awalan kode SMV.B..., SAMPLE, STORE-IN, FOC) adalah DOKUMEN PABEAN RESMI DARI SHIPMENT INI. SEMUANYA WAJIB DIDETEKSI dan dicantumkan pada field 'invoiceNumber' dan array 'invoices'!
+  * JANGAN PERNAH menyaring atau mengabaikan invoice sample/store-in atau invoice dengan nominal kecil!
+  * Pada 'invoiceNumber': Tuliskan SEMUA nomor invoice yang ditemukan, dipisahkan koma dan spasi (contoh: '335223, 335226, SMV.B2609043, 335227, SMV.B2609044').
+  * Pada 'items': WAJIB ekstrak seluruh baris barang dari SEMUA invoice yang ada tanpa terlewat, termasuk barang dari invoice sample/store-in!
+  * Untuk field 'packingListNumber': jika Packing List memakai nomor pengiriman/shipment no atau nomor invoice (seperti Shipment No. 335223, SMV.B2609043, dst.), WAJIB cantumkan semua nomor tersebut dipisahkan koma. JANGAN isi null jika ada lembar Packing List di dalam berkas!
 - Pada 'uraianJenisBarang': HANYA tuliskan nama atau uraian komoditas barangnya saja. JANGAN sertakan nomor part (part no) maupun customer part no (misal jangan sertakan angka dalam kurung seperti (575000 / W000103691)).
 - ATURAN KEMASAN BARANG KHUSUS PT. VALEO AC INDONESIA:
   Nilai kemasan untuk SETIAP baris barang di dalam list ('items') nilainya SAMA SEMUA per Packing List, BUKAN per baris atau dibagi-bagi!
@@ -214,7 +232,24 @@ PENTING:
             });
         }
 
-        // Auto-alokasi berat barang HANYA KHUSUS untuk dokumen SINAR ASIA (PT. SINAR ASIA PACK)
+        // Sinkronisasi Multi-Invoice & Packing List
+        if (Array.isArray(parsedData.invoices) && parsedData.invoices.length > 0) {
+            const allInvNums = parsedData.invoices
+                .map(inv => String(inv.invoiceNumber || '').trim())
+                .filter(Boolean);
+            if (allInvNums.length > 0) {
+                const currentStr = String(parsedData.invoiceNumber || '');
+                const missing = allInvNums.filter(n => !currentStr.includes(n));
+                if (missing.length > 0 || !parsedData.invoiceNumber) {
+                    parsedData.invoiceNumber = allInvNums.join(', ');
+                }
+            }
+        }
+
+        // Jika packingListNumber kosong/null padahal ada invoiceNumber
+        if (!parsedData.packingListNumber && parsedData.invoiceNumber) {
+            parsedData.packingListNumber = parsedData.invoiceNumber;
+        }
         const isSinarAsia = Boolean(
             (parsedData.shipperName && /sinar\s*asia/i.test(parsedData.shipperName)) ||
             (parsedData.safeCheck?.matchedIdentifiers && parsedData.safeCheck.matchedIdentifiers.some(m => /sinar\s*asia/i.test(m))) ||

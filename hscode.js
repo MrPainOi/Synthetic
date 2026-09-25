@@ -3,6 +3,24 @@
 // 100% External, Chrome Extension CSP Compliant
 // ====================================================================
 
+// Helper resolver URL backend dinamis (Localhost vs WiFi IP / HP)
+function getBackendUrl(path = '') {
+    if (typeof window.getCeisaBackendUrl === 'function') {
+        return window.getCeisaBackendUrl(path);
+    }
+    let base = 'http://localhost:5005';
+    try {
+        if (typeof window !== 'undefined' && window.location && window.location.protocol.startsWith('http')) {
+            base = `${window.location.protocol}//${window.location.hostname}:5005`;
+        }
+    } catch (_) {}
+    if (path) {
+        if (!path.startsWith('/')) path = '/' + path;
+        return `${base}${path}`;
+    }
+    return base;
+}
+
 // DATASET BUKU TARIF KEPABEANAN INDONESIA (BTKI 2022/2027) & LARTAS RESMI
 const BTKI_DATABASE = [
     {
@@ -572,7 +590,7 @@ async function searchFromBackend(query) {
         }
         _backendSearchAbort = new AbortController();
 
-        const url = `http://localhost:5005/api/hscode/search?q=${encodeURIComponent(query)}&limit=50`;
+        const url = `${getBackendUrl('/api/hscode/search')}?q=${encodeURIComponent(query)}&limit=50`;
         const res = await fetch(url, {
             signal: _backendSearchAbort.signal,
             headers: { 'Cache-Control': 'max-age=300' }
@@ -637,7 +655,7 @@ async function triggerDynamicLookup(query) {
     }
 
     try {
-        const res = await fetch("http://localhost:5005/api/hscode/lookup", {
+        const res = await fetch(getBackendUrl('/api/hscode/lookup'), {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ query: query.trim() })

@@ -4,6 +4,7 @@ const cors = require('cors');
 const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 const { parseDocuments } = require('./document_parser');
 
 const app = express();
@@ -14,6 +15,11 @@ app.use(cors({ origin: '*' }));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(express.static(path.join(__dirname, '..')));
+
+// Redirect root to primary module (PIB)
+app.get('/', (req, res) => {
+    res.redirect('/pib.html');
+});
 
 // Setup folder temp/attachments
 const uploadDir = path.join(__dirname, 'temp', 'attachments');
@@ -101,6 +107,33 @@ app.get('/api/status', (req, res) => {
     });
 });
 
+// Network Info - Mendapatkan semua IP lokal untuk WiFi Sharing
+app.get('/api/network-info', (req, res) => {
+    const interfaces = os.networkInterfaces();
+    const localIPs = [];
+
+    for (const [name, addrs] of Object.entries(interfaces)) {
+        if (!addrs) continue;
+        for (const addr of addrs) {
+            // Hanya IPv4, non-loopback
+            if (addr.family === 'IPv4' && !addr.internal) {
+                localIPs.push({
+                    name,
+                    address: addr.address,
+                    url: `http://${addr.address}:${PORT}`
+                });
+            }
+        }
+    }
+
+    res.json({
+        success: true,
+        port: PORT,
+        localIPs,
+        pages: ['/', '/pib.html', '/peb.html', '/hscode.html', '/dashboard.html']
+    });
+});
+
 // Update / Simpan Gemini API Key ke .env
 app.post('/api/config-key', (req, res) => {
     const { apiKey } = req.body || {};
@@ -169,7 +202,9 @@ app.post('/api/parse-documents', upload.array('files'), async (req, res) => {
             sendEvent({ type: 'progress', ...prog });
         };
 
-        const parsedData = await parseDocuments(fileItems, onProgress, customKey, mode);
+        delete require.cache[require.resolve('./document_parser')];
+        const { parseDocuments: dynamicParse } = require('./document_parser');
+        const parsedData = await dynamicParse(fileItems, onProgress, customKey, mode);
 
         if (!parsedData) {
             throw new Error('Hasil ekstraksi kosong atau gagal diproses oleh AI.');
@@ -354,11 +389,23 @@ app.get('/api/hscode/stats', (req, res) => {
     }
 });
 
+// POST /api/shutdown - Matikan server secara graceful (dari UI toggle)
+app.post('/api/shutdown', (req, res) => {
+    res.json({ success: true, message: 'Server dimatikan. Jalankan START_SERVER.bat untuk menghidupkan kembali.' });
+    console.log('[SHUTDOWN] Server dimatikan via API oleh pengguna.');
+    setTimeout(() => {
+        server.close(() => {
+            console.log('[SHUTDOWN] Server berhenti.');
+            process.exit(0);
+        });
+    }, 500);
+});
+
 const server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`=======================================================`);
-    console.log(`🚀 CEISA Document Parser Server AKTIF di port ${PORT}`);
-    console.log(`📡 Endpoint API: http://localhost:${PORT}/api/parse-documents`);
-    console.log(`🔑 Status API Key: ${process.env.GEMINI_API_KEY ? 'Terpasang' : 'BELUM DISET'}`);
+    console.log(`CEISA Document Parser Server AKTIF di port ${PORT}`);
+    console.log(`Endpoint API: http://localhost:${PORT}/api/parse-documents`);
+    console.log(`Status API Key: ${process.env.GEMINI_API_KEY ? 'Terpasang' : 'BELUM DISET'}`);
     console.log(`=======================================================`);
 });
 

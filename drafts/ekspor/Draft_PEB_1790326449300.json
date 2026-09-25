@@ -1,0 +1,58 @@
+{
+  "safeCheck": {
+    "isRelated": true,
+    "confidenceScore": 100,
+    "summary": "Dokumen terdiri dari satu kesatuan Commercial Invoice / Packing List gabungan dengan nomor 0012089 dari shipper PT TDK Electronics Indonesia kepada consignee TDK Corporation.",
+    "matchedIdentifiers": [
+      "Nomor Invoice 0012089 sesuai pada dokumen",
+      "Shipper PT TDK ELECTRONICS INDONESIA dan Consignee TDK Corporation konsisten",
+      "Total kuantitas, nilai, dan berat sesuai dengan rincian palet"
+    ],
+    "discrepanciesOrWarnings": [],
+    "documentList": [
+      {
+        "fileName": "SUMMARY SEA JAPAN-AKITA 25.09.26 (LCL).pdf",
+        "documentType": "INVOICE",
+        "belongsToShipment": true,
+        "notes": "Invoice dan Packing List gabungan"
+      }
+    ]
+  },
+  "blNumber": null,
+  "blDate": null,
+  "invoiceNumber": "0012089",
+  "invoiceDate": "26/09/2026",
+  "invoices": [
+    {
+      "invoiceNumber": "0012089",
+      "invoiceDate": "26/09/2026",
+      "amount": "94,828.41",
+      "currency": "USD",
+      "containerNumber": null,
+      "type": "COMMERCIAL"
+    }
+  ],
+  "packingListNumber": "0012089",
+  "packingListDate": "26/09/2026",
+  "containerNumber": null,
+  "shipperName": "PT TDK ELECTRONICS INDONESIA",
+  "shipperAddress": "Jalan EPCOS Jaya Blok B1-10 Kawasan Industri Panbil Muka Kuning Pulau Batam 29433",
+  "consigneeName": "TDK Corporation",
+  "consigneeAddress": "PIC: Ms. Yayoi Kimura 2-5-1, Nihonbashi, Chuo-ku, 1036128 Tokyo JAPAN",
+  "loadingPort": null,
+  "dischargePort": null,
+  "totalKemasan": "05 PALLETS",
+  "totalGrossWeightKGM": "834.098 KGS",
+  "totalNetWeightKGM": null,
+  "items": [
+    {
+      "hsCode": "85332100",
+      "uraianJenisBarang": "Fixed electrical resistors for a power handling capacity <= 20 W (excl. heating resistors)",
+      "jumlahDanSatuanBarang": "89,100 EA",
+      "kemasan": "05 PALLETS",
+      "beratBersih": null,
+      "beratKotor": "834.098 KGS",
+      "amount": "94,828.41"
+    }
+  ]
+}

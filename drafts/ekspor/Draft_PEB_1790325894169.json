@@ -1,0 +1,66 @@
+{
+  "safeCheck": {
+    "isRelated": true,
+    "confidenceScore": 100,
+    "summary": "Commercial Invoice dan Packing List memiliki nomor, tanggal, pihak-pihak (shipper dan consignee), rute, serta deskripsi dan kuantitas barang yang sepenuhnya identik dan konsisten sebagai satu kesatuan shipment.",
+    "matchedIdentifiers": [
+      "Nomor Packing List dan Invoice cocok: 310012002549HS",
+      "Nomor Kontrak cocok: 310012002549HS-CS11032026IN",
+      "Shipper dan Consignee sama persis",
+      "Pelabuhan Muat dan Bongkar sama persis",
+      "Kuantitas, berat, dan spesifikasi barang identik"
+    ],
+    "discrepanciesOrWarnings": [],
+    "documentList": [
+      {
+        "fileName": "310012002549HS PL.pdf",
+        "documentType": "PACKING_LIST",
+        "belongsToShipment": true,
+        "notes": "Packing List pengiriman barang steel sheet"
+      },
+      {
+        "fileName": "310012002549HS INV.pdf",
+        "documentType": "INVOICE",
+        "belongsToShipment": true,
+        "notes": "Commercial Invoice pengiriman barang steel sheet"
+      }
+    ]
+  },
+  "blNumber": null,
+  "blDate": null,
+  "invoiceNumber": "310012002549HS",
+  "invoiceDate": "APRIL 18, 2026",
+  "invoices": [
+    {
+      "invoiceNumber": "310012002549HS",
+      "invoiceDate": "APRIL 18, 2026",
+      "amount": "45,454.92",
+      "currency": "USD",
+      "containerNumber": null,
+      "type": "COMMERCIAL"
+    }
+  ],
+  "packingListNumber": "310012002549HS",
+  "packingListDate": "APRIL 18, 2026",
+  "containerNumber": null,
+  "shipperName": "HOA SEN GROUP",
+  "shipperAddress": "No. 9 Truong Nhu Buong Boulevard, Song Than II Industrial Park, Di An Ward, Di An City, Binh Duong Province, Vietnam",
+  "consigneeName": "PT CITRA SUBLINDO ADITAMA",
+  "consigneeAddress": "KOMPLEK CITRA BUANA CENTRE PARK, BLOK A NO.10A, KAMPUNG PELITA, BATAM - 29454 - INDONESIA",
+  "loadingPort": "HO CHI MINH PORT, VIETNAM",
+  "dischargePort": "BATAM PORT, INDONESIA",
+  "totalKemasan": "11 COILS",
+  "totalGrossWeightKGM": "41.260",
+  "totalNetWeightKGM": "40.840",
+  "items": [
+    {
+      "hsCode": "72107013",
+      "uraianJenisBarang": "PRIME PRE-PAINTED 55% ALU ZINC ALLOY COATED STEEL SHEET IN COIL",
+      "jumlahDanSatuanBarang": "11 COILS",
+      "kemasan": "11 COILS",
+      "beratBersih": "40.840",
+      "beratKotor": "41.260",
+      "amount": "45,454.92"
+    }
+  ]
+}

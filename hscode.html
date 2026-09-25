@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="dashboard.css">
 </head>
 
-<body>
+<body class="hscode-page">
 
     <!-- TOP PORTAL HEADER -->
     <header class="portal-header">
@@ -316,22 +316,30 @@
                                 <div class="hscode-calc-body">
                                     <div class="form-group-ceisa">
                                         <label class="form-label-ceisa">Nilai Pabean (CIF USD)</label>
-                                        <input type="number" id="calcCifAmount" class="form-control-ceisa" value="1000" min="0" step="10">
+                                        <div class="ceisa-input-group">
+                                            <span class="ceisa-input-prefix">USD</span>
+                                            <input type="number" id="calcCifAmount" class="ceisa-themed-input" value="1000" min="0" step="10">
+                                        </div>
                                     </div>
                                     <div class="form-group-ceisa">
                                         <label class="form-label-ceisa">Kurs NDPBM Kemenkeu (IDR)</label>
-                                        <input type="number" id="calcExchangeRate" class="form-control-ceisa" value="16300" min="1000">
+                                        <div class="ceisa-input-group">
+                                            <span class="ceisa-input-prefix">IDR</span>
+                                            <input type="number" id="calcExchangeRate" class="ceisa-themed-input" value="16300" min="1000" step="50">
+                                        </div>
                                     </div>
                                     <div class="form-group-ceisa">
                                         <label class="form-label-ceisa">Status Importir</label>
-                                        <select id="calcImportirStatus" class="form-control-ceisa">
-                                            <option value="api" selected>Memiliki API (PPh 2.5%)</option>
-                                            <option value="non_api">Non-API (PPh 7.5%)</option>
+                                        <select id="calcImportirStatus" class="form-control-ceisa" data-custom-select="true">
+                                            <option value="api" selected data-badge="PPh 2.5%">Memiliki API</option>
+                                            <option value="non_api" data-badge="PPh 7.5%">Non-API</option>
                                         </select>
                                     </div>
                                     <div class="form-group-ceisa">
                                         <label class="form-label-ceisa">Nilai CIF Rupiah</label>
-                                        <div id="calcResCifRp" class="calc-cif-rp" style="font-size: 13px; font-weight: 700; padding-top: 6px;">Rp 16.300.000</div>
+                                        <div class="ceisa-result-box">
+                                            <span id="calcResCifRp" class="calc-cif-rp">Rp 16.300.000</span>
+                                        </div>
                                     </div>
 
                                     <!-- Duty Breakdown -->
@@ -407,6 +415,8 @@
     <!-- SCRIPTS -->
     <script src="config.js"></script>
     <script src="sync.js"></script>
+    <script src="custom-select.js"></script>
+    <script src="wifi-share.js"></script>
     <script src="hscode.js"></script>
 </body>
 

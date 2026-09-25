@@ -3,6 +3,24 @@
 // pib_dashboard.js - 100% External, Chrome Extension CSP Compliant
 // ====================================================================
 
+// Helper resolver URL backend dinamis (Localhost vs WiFi IP / HP)
+function getBackendUrl(path = '') {
+    if (typeof window.getCeisaBackendUrl === 'function') {
+        return window.getCeisaBackendUrl(path);
+    }
+    let base = 'http://localhost:5005';
+    try {
+        if (typeof window !== 'undefined' && window.location && window.location.protocol.startsWith('http')) {
+            base = `${window.location.protocol}//${window.location.hostname}:5005`;
+        }
+    } catch (_) {}
+    if (path) {
+        if (!path.startsWith('/')) path = '/' + path;
+        return `${base}${path}`;
+    }
+    return base;
+}
+
 // 9-TAB DEFINITION FOR PIB (BC 2.0)
 const PIB_TAB_ORDER = [
     'pib-tab-header',
@@ -437,7 +455,7 @@ function restorePibDraftState() {
 
             // Jika saved draft belum memiliki rincian barang, ambil dari draft JSON server
             if (!data.items || data.items.length === 0) {
-                fetch('http://localhost:5005/api/get-latest-draft?mode=impor')
+                fetch(getBackendUrl('/api/get-latest-draft?mode=impor'))
                     .then(res => res.json())
                     .then(latest => {
                         if (latest && Array.isArray(latest.items) && latest.items.length > 0) {
@@ -456,7 +474,7 @@ function restorePibDraftState() {
         console.warn('Restore PIB draft error:', e);
     }
     // Default fallback: check server for latest impor draft first
-    fetch('http://localhost:5005/api/get-latest-draft?mode=impor')
+    fetch(getBackendUrl('/api/get-latest-draft?mode=impor'))
         .then(res => res.json())
         .then(latest => {
             if (latest && (latest.items || latest.invoiceNumber)) {
@@ -1157,7 +1175,7 @@ function exportPibJson() {
 
     // Simpan juga ke backend server di folder drafts/impor/
     try {
-        fetch('http://localhost:5005/api/save-draft', {
+        fetch(getBackendUrl('/api/save-draft'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

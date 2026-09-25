@@ -3,6 +3,24 @@
 // peb_dashboard.js - 100% External, Chrome Extension CSP Compliant
 // ====================================================================
 
+// Helper resolver URL backend dinamis (Localhost vs WiFi IP / HP)
+function getBackendUrl(path = '') {
+    if (typeof window.getCeisaBackendUrl === 'function') {
+        return window.getCeisaBackendUrl(path);
+    }
+    let base = 'http://localhost:5005';
+    try {
+        if (typeof window !== 'undefined' && window.location && window.location.protocol.startsWith('http')) {
+            base = `${window.location.protocol}//${window.location.hostname}:5005`;
+        }
+    } catch (_) {}
+    if (path) {
+        if (!path.startsWith('/')) path = '/' + path;
+        return `${base}${path}`;
+    }
+    return base;
+}
+
 // MASTER PORTAL MODULE SWITCHER (CEISA 4.0 SIDEBAR & WORKSPACE)
 function switchPortalModule(moduleName) {
     const pebView = document.getElementById('module-peb');
@@ -204,7 +222,7 @@ function exportJsonDraft() {
 
     // Simpan juga ke backend server di folder drafts/ekspor/
     try {
-        fetch('http://localhost:5005/api/save-draft', {
+        fetch(getBackendUrl('/api/save-draft'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -831,33 +849,119 @@ function renderDocumentsTable(data = {}) {
         });
     }
 
-    // Invoice
-    rows.push({
-        id: 'row-invoice',
-        code: '380 - INVOICE',
-        docType: '380 - INVOICE (KOMERSIAL)',
-        inputId: 'invoiceNumber',
-        dateId: 'invoiceDate',
-        btnId: 'btnOpenDocInvoice',
-        tagId: 'tagFileInvoice',
-        number: invNum,
-        date: invDate,
-        fileName: invFile
-    });
+    // 1. Dokumen Invoice (380 - Mendukung Multi-Invoice)
+    if (Array.isArray(data.invoices) && data.invoices.length > 1) {
+        data.invoices.forEach((inv, i) => {
+            const num = inv.invoiceNumber || '';
+            const dt = inv.invoiceDate || invDate;
+            const isFirst = i === 0;
+            rows.push({
+                id: isFirst ? 'row-invoice' : `row-invoice-${i}`,
+                code: '380 - INVOICE',
+                docType: inv.type === 'SAMPLE_STORE_IN' ? '380 - INVOICE (SAMPLE/STORE-IN)' : '380 - INVOICE (KOMERSIAL)',
+                inputId: isFirst ? 'invoiceNumber' : `invoiceNumber_${i}`,
+                dateId: isFirst ? 'invoiceDate' : `invoiceDate_${i}`,
+                btnId: isFirst ? 'btnOpenDocInvoice' : `btnOpenDocInvoice_${i}`,
+                tagId: isFirst ? 'tagFileInvoice' : `tagFileInvoice_${i}`,
+                number: num,
+                date: dt,
+                fileName: invFile
+            });
+        });
+    } else if (invNum.includes(',')) {
+        const splitInvs = invNum.split(',').map(s => s.trim()).filter(Boolean);
+        if (splitInvs.length > 1) {
+            splitInvs.forEach((num, i) => {
+                const isFirst = i === 0;
+                rows.push({
+                    id: isFirst ? 'row-invoice' : `row-invoice-${i}`,
+                    code: '380 - INVOICE',
+                    docType: '380 - INVOICE (KOMERSIAL)',
+                    inputId: isFirst ? 'invoiceNumber' : `invoiceNumber_${i}`,
+                    dateId: isFirst ? 'invoiceDate' : `invoiceDate_${i}`,
+                    btnId: isFirst ? 'btnOpenDocInvoice' : `btnOpenDocInvoice_${i}`,
+                    tagId: isFirst ? 'tagFileInvoice' : `tagFileInvoice_${i}`,
+                    number: num,
+                    date: invDate,
+                    fileName: invFile
+                });
+            });
+        } else {
+            rows.push({
+                id: 'row-invoice',
+                code: '380 - INVOICE',
+                docType: '380 - INVOICE (KOMERSIAL)',
+                inputId: 'invoiceNumber',
+                dateId: 'invoiceDate',
+                btnId: 'btnOpenDocInvoice',
+                tagId: 'tagFileInvoice',
+                number: invNum,
+                date: invDate,
+                fileName: invFile
+            });
+        }
+    } else {
+        rows.push({
+            id: 'row-invoice',
+            code: '380 - INVOICE',
+            docType: '380 - INVOICE (KOMERSIAL)',
+            inputId: 'invoiceNumber',
+            dateId: 'invoiceDate',
+            btnId: 'btnOpenDocInvoice',
+            tagId: 'tagFileInvoice',
+            number: invNum,
+            date: invDate,
+            fileName: invFile
+        });
+    }
 
-    // Packing List
-    rows.push({
-        id: 'row-packinglist',
-        code: '217 - PACKING LIST',
-        docType: '217 - PACKING LIST (DAFTAR KEMASAN)',
-        inputId: 'packingListNumber',
-        dateId: 'packingListDate',
-        btnId: 'btnOpenDocPackingList',
-        tagId: 'tagFilePackingList',
-        number: plNum,
-        date: plDate,
-        fileName: plFile
-    });
+    // 2. Dokumen Packing List (217 - Mendukung Multi-PL)
+    if (plNum.includes(',')) {
+        const splitPls = plNum.split(',').map(s => s.trim()).filter(Boolean);
+        if (splitPls.length > 1) {
+            splitPls.forEach((num, i) => {
+                const isFirst = i === 0;
+                rows.push({
+                    id: isFirst ? 'row-packinglist' : `row-packinglist-${i}`,
+                    code: '217 - PACKING LIST',
+                    docType: '217 - PACKING LIST (DAFTAR KEMASAN)',
+                    inputId: isFirst ? 'packingListNumber' : `packingListNumber_${i}`,
+                    dateId: isFirst ? 'packingListDate' : `packingListDate_${i}`,
+                    btnId: isFirst ? 'btnOpenDocPackingList' : `btnOpenDocPackingList_${i}`,
+                    tagId: isFirst ? 'tagFilePackingList' : `tagFilePackingList_${i}`,
+                    number: num,
+                    date: plDate,
+                    fileName: plFile
+                });
+            });
+        } else {
+            rows.push({
+                id: 'row-packinglist',
+                code: '217 - PACKING LIST',
+                docType: '217 - PACKING LIST (DAFTAR KEMASAN)',
+                inputId: 'packingListNumber',
+                dateId: 'packingListDate',
+                btnId: 'btnOpenDocPackingList',
+                tagId: 'tagFilePackingList',
+                number: plNum,
+                date: plDate,
+                fileName: plFile
+            });
+        }
+    } else {
+        rows.push({
+            id: 'row-packinglist',
+            code: '217 - PACKING LIST',
+            docType: '217 - PACKING LIST (DAFTAR KEMASAN)',
+            inputId: 'packingListNumber',
+            dateId: 'packingListDate',
+            btnId: 'btnOpenDocPackingList',
+            tagId: 'tagFilePackingList',
+            number: plNum,
+            date: plDate,
+            fileName: plFile
+        });
+    }
 
     // Jika BL belum ada di rows tetapi ada blNum
     if (!rows.some(r => r.id === 'row-bl') && blNum) {
@@ -1625,7 +1729,7 @@ function openCeisaDocViewer({ docType, fileName, docNumber, docDate }) {
     }
 
     // 6. Coba ambil dari server lokal (port 5005) dengan parameter filter docType yang akurat
-    const serverUrl = `http://localhost:5005/api/documents/${encodeURIComponent(finalFileName)}?docType=${encodeURIComponent(docType || '')}`;
+    const serverUrl = `${getBackendUrl('/api/documents')}/${encodeURIComponent(finalFileName)}?docType=${encodeURIComponent(docType || '')}`;
     const relativeUrl = `attachments/${encodeURIComponent(finalFileName)}`;
 
     fetch(serverUrl, { method: 'HEAD' })
@@ -2260,11 +2364,48 @@ function initDocumentParserModal() {
         if (spinner) spinner.style.display = 'none';
         if (progressFill) progressFill.style.width = '100%';
         progressFill.style.background = '#ef4444';
-        if (stepTitle) stepTitle.textContent = isSetupError ? 'Server Belum Aktif / Perlu Setup PC' : 'Proses Gagal';
+
+        const isRemoteDevice = typeof window !== 'undefined' && window.location && 
+            window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+
+        if (stepTitle) {
+            if (isRemoteDevice) {
+                stepTitle.textContent = 'Server di PC Host Belum Aktif';
+            } else {
+                stepTitle.textContent = isSetupError ? 'Server Belum Aktif / Perlu Setup PC' : 'Proses Gagal';
+            }
+        }
         if (stepDesc) stepDesc.textContent = '';
 
         if (errorMsg) {
-            if (isSetupError) {
+            if (isRemoteDevice) {
+                errorMsg.innerHTML = `
+                    <div style="font-size: 13px; line-height: 1.5; color: #f87171; text-align: left; width: 100%;">
+                        <strong style="color: #fca5a5; font-size: 14px; display: block; margin-bottom: 4px;">⚠️ Tidak dapat terhubung ke Server Host (${window.location.hostname || 'PC'})</strong>
+                        <p style="margin: 4px 0 10px 0; color: #cbd5e1; font-size: 12.5px;">
+                            Perangkat ini perlu terhubung ke server backend di komputer utama Anda. Pastikan:
+                        </p>
+                        <ul style="margin: 0 0 12px 18px; padding: 0; color: #cbd5e1; font-size: 12px; line-height: 1.6;">
+                            <li>File <b>START_SERVER.bat</b> sedang aktif berjalan di komputer utama.</li>
+                            <li>HP dan komputer Anda terhubung ke jaringan WiFi yang sama.</li>
+                        </ul>
+                        <div style="display: flex; gap: 8px;">
+                            <button type="button" id="btnRetryConnect" class="btn" style="background: #059669; color: #ffffff; font-size: 12px; font-weight: 600; padding: 7px 16px; border-radius: 6px; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                                🔄 Coba Hubungkan Lagi
+                            </button>
+                        </div>
+                    </div>
+                `;
+                setTimeout(() => {
+                    const btnRetryConn = document.getElementById('btnRetryConnect');
+                    if (btnRetryConn) {
+                        btnRetryConn.onclick = () => {
+                            if (errorBox) errorBox.style.display = 'none';
+                            runScan();
+                        };
+                    }
+                }, 50);
+            } else if (isSetupError) {
                 errorMsg.innerHTML = `
                     <div style="font-size: 13px; line-height: 1.5; color: #f87171; text-align: left; width: 100%;">
                         <strong style="color: #fca5a5; font-size: 14px; display: block; margin-bottom: 4px;">⚠️ Server Document Parser belum aktif & PC ini belum di-setup.</strong>
@@ -2347,16 +2488,29 @@ function initDocumentParserModal() {
 
     // Cek dan nyalakan backend server secara otomatis jika belum aktif
     async function ensureBackendReady(connectRow) {
-        // 1. Cek langsung apakah server sudah online
+        // 1. Cek langsung apakah server sudah online (menggunakan getBackendUrl untuk mendukung akses via HP / WiFi)
         try {
-            const test = await fetch('http://localhost:5005/api/status', {
+            const test = await fetch(getBackendUrl('/api/status'), {
                 method: 'GET',
                 signal: AbortSignal.timeout(1500)
             });
             if (test.ok) return { ok: true };
         } catch (_) {}
 
-        // 2. Jika offline, minta ekstensi menyalakan server di latar belakang via Native Messaging
+        // Jika diakses dari HP / laptop lain via WiFi, server harus sudah aktif di PC host
+        const isRemoteDevice = typeof window !== 'undefined' && window.location && 
+            window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+
+        if (isRemoteDevice) {
+            return {
+                ok: false,
+                needSetup: false,
+                isRemote: true,
+                error: `Server Document Parser di PC Host (${window.location.hostname}:5005) belum aktif. Pastikan START_SERVER.bat sedang berjalan di komputer utama.`
+            };
+        }
+
+        // 2. Jika offline di PC host, minta ekstensi menyalakan server di latar belakang via Native Messaging
         if (connectRow) {
             updateLog(connectRow, '⏳', 'Server belum aktif. Mencoba menyalakan server Document Parser otomatis...', 'running');
         }
@@ -2382,7 +2536,7 @@ function initDocumentParserModal() {
             for (let i = 0; i < 30; i++) {
                 await new Promise(r => setTimeout(r, 600));
                 try {
-                    const ping = await fetch('http://localhost:5005/api/status', {
+                    const ping = await fetch(getBackendUrl('/api/status'), {
                         method: 'GET',
                         signal: AbortSignal.timeout(1000)
                     });
@@ -2409,7 +2563,7 @@ function initDocumentParserModal() {
             btnSaveGeminiKey.textContent = 'Menyimpan...';
             try {
                 localStorage.setItem('CEISA_GEMINI_API_KEY', key);
-                await fetch('http://localhost:5005/api/config-key', {
+                await fetch(getBackendUrl('/api/config-key'), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ apiKey: key })
@@ -2452,7 +2606,7 @@ function initDocumentParserModal() {
             `;
         }
 
-        const connectRow = appendLog('⏳', 'Menghubungkan ke Node Document Parser (http://localhost:5005)...', 'running');
+        const connectRow = appendLog('⏳', `Menghubungkan ke Node Document Parser (${getBackendUrl()})...`, 'running');
 
         try {
             // Pastikan server sudah aktif atau nyalakan secara otomatis
@@ -2479,14 +2633,16 @@ function initDocumentParserModal() {
 
             let response;
             try {
-                response = await fetch('http://localhost:5005/api/parse-documents', {
+                response = await fetch(getBackendUrl('/api/parse-documents'), {
                     method: 'POST',
                     headers: headers,
                     body: formData
                 });
             } catch (netErr) {
-                const err = new Error('Gagal terhubung ke Backend Document Parser di http://localhost:5005.');
-                err.isSetupError = true;
+                const isRemoteDevice = typeof window !== 'undefined' && window.location && 
+                    window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+                const err = new Error(`Gagal terhubung ke Backend Document Parser di ${getBackendUrl()}.`);
+                err.isSetupError = !isRemoteDevice;
                 throw err;
             }
 

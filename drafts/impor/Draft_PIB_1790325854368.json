@@ -1,0 +1,50 @@
+{
+  "safeCheck": {
+    "isRelated": true,
+    "confidenceScore": 100,
+    "summary": "Dokumen Surat Persetujuan Pengeluaran Barang (SPPB) ini valid dan memuat informasi pengiriman yang lengkap.",
+    "matchedIdentifiers": [
+      "Nomor Pendaftaran PPFTZ: 111488",
+      "Nomor SPPB: 111369/KPU.2/2026",
+      "Pengirim/Penerima: PT. TDK ELECTRONICS INDONESIA",
+      "Nomor B/L: SB22856-21-SKP"
+    ],
+    "discrepanciesOrWarnings": [],
+    "documentList": [
+      {
+        "fileName": "SB22856-21-SKP.pdf",
+        "documentType": "OTHER",
+        "belongsToShipment": true,
+        "notes": "Surat Persetujuan Pengeluaran Barang (SPPB) - Hijau"
+      }
+    ]
+  },
+  "blNumber": "SB22856-21-SKP",
+  "blDate": "25-06-2026",
+  "invoiceNumber": null,
+  "invoiceDate": null,
+  "invoices": [],
+  "packingListNumber": "SB22856-21-SKP",
+  "packingListDate": "25-06-2026",
+  "containerNumber": null,
+  "shipperName": "PT. TDK ELECTRONICS INDONESIA",
+  "shipperAddress": "JL. EPCOS JAYA BLOK B1-B10, KEL. MUKA KUNING, KEC. SEI BEDUK, KOTA BATAM",
+  "consigneeName": "TUAH TIMUR",
+  "consigneeAddress": "FIRST CITY KOMPLEK BLOK A2 NO.04 / TELUK TERING BATAM KOTA",
+  "loadingPort": null,
+  "dischargePort": "BATAM",
+  "totalKemasan": "2 PK",
+  "totalGrossWeightKGM": "236.0000",
+  "totalNetWeightKGM": null,
+  "items": [
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "SEWU",
+      "jumlahDanSatuanBarang": "2 PK",
+      "kemasan": "2 PK",
+      "beratBersih": null,
+      "beratKotor": "236.0000",
+      "amount": null
+    }
+  ]
+}

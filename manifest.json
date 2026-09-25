@@ -22,6 +22,14 @@
         "http://127.0.0.1/*"
     ],
 
+    "externally_connectable": {
+        "matches": [
+            "http://localhost/*",
+            "http://127.0.0.1/*",
+            "https://portal.beacukai.go.id/*"
+        ]
+    },
+
     "background": {
         "service_worker": "background.js"
     },

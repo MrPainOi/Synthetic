@@ -1,0 +1,534 @@
+{
+  "safeCheck": {
+    "isRelated": true,
+    "confidenceScore": 95,
+    "summary": "Seluruh dokumen saling berkaitan dan merupakan satu kesatuan pengiriman (shipment) dari PT. JMS Batam ke JMS Singapore Pte Ltd.",
+    "matchedIdentifiers": [
+      "Nomor kontainer CIMU 0654749, CIMU 0654754, dan TLHU 8158388 cocok antara dokumen fax transmission, invoice, dan packing list",
+      "Shipper PT. JMS Batam dan Consignee JMS Singapore Pte Ltd konsisten di semua dokumen",
+      "Nomor Invoice 335223, 335226, dan 335227 tercantum pada dokumen terkait"
+    ],
+    "discrepanciesOrWarnings": [],
+    "documentList": [
+      {
+        "fileName": "SIN-20260925.pdf page 1",
+        "documentType": "BILL_OF_LADING",
+        "belongsToShipment": true,
+        "notes": "Fax Transmission / Booking confirmation"
+      },
+      {
+        "fileName": "SIN-20260925.pdf page 2",
+        "documentType": "INVOICE",
+        "belongsToShipment": true,
+        "notes": "Commercial Invoice 335223"
+      },
+      {
+        "fileName": "SIN-20260925.pdf page 3",
+        "documentType": "PACKING_LIST",
+        "belongsToShipment": true,
+        "notes": "Packing list untuk Invoice 335223"
+      },
+      {
+        "fileName": "SIN-20260925.pdf page 4",
+        "documentType": "INVOICE",
+        "belongsToShipment": true,
+        "notes": "Commercial Invoice 335226"
+      },
+      {
+        "fileName": "SIN-20260925.pdf page 5",
+        "documentType": "PACKING_LIST",
+        "belongsToShipment": true,
+        "notes": "Packing list untuk Invoice 335226"
+      },
+      {
+        "fileName": "SIN-20260925.pdf page 6",
+        "documentType": "OTHER",
+        "belongsToShipment": true,
+        "notes": "Store-in / Invoice detail"
+      },
+      {
+        "fileName": "SIN-20260925.pdf page 7",
+        "documentType": "PACKING_LIST",
+        "belongsToShipment": true,
+        "notes": "Packing list store-in detail"
+      },
+      {
+        "fileName": "SIN-20260925.pdf page 8",
+        "documentType": "INVOICE",
+        "belongsToShipment": true,
+        "notes": "Commercial Invoice 335227 (Page 1)"
+      },
+      {
+        "fileName": "SIN-20260925.pdf page 9",
+        "documentType": "INVOICE",
+        "belongsToShipment": true,
+        "notes": "Commercial Invoice 335227 (Page 2)"
+      },
+      {
+        "fileName": "SIN-20260925.pdf page 10",
+        "documentType": "PACKING_LIST",
+        "belongsToShipment": true,
+        "notes": "Packing list untuk Invoice 335227 (Page 1)"
+      },
+      {
+        "fileName": "SIN-20260925.pdf page 11",
+        "documentType": "PACKING_LIST",
+        "belongsToShipment": true,
+        "notes": "Packing list untuk Invoice 335227 (Page 2)"
+      },
+      {
+        "fileName": "SIN-20260925.pdf page 12",
+        "documentType": "OTHER",
+        "belongsToShipment": true,
+        "notes": "Store-in / Invoice detail"
+      },
+      {
+        "fileName": "SIN-20260925.pdf page 13",
+        "documentType": "PACKING_LIST",
+        "belongsToShipment": true,
+        "notes": "Packing list store-in detail"
+      }
+    ]
+  },
+  "blNumber": "25C935",
+  "blDate": "25/09/2026",
+  "invoiceNumber": "335223, 335226, 335227",
+  "invoiceDate": "25-SEP-26",
+  "packingListNumber": null,
+  "packingListDate": "25 SEP 2026",
+  "containerNumber": "CIMU 0654749, CIMU 0654754, TLHU 8158388",
+  "shipperName": "PT. JMS BATAM",
+  "shipperAddress": "JL. Beringin Lot 211-212, Batamindo Industrial Park Kota Batam 29433, Provinsi Kepulauan Riau INDONESIA",
+  "consigneeName": "JMS SINGAPORE PTE LTD",
+  "consigneeAddress": "440 Ang Mo Kio Industrial Park 1 Singapore 569620",
+  "loadingPort": "BATAM, INDONESIA",
+  "dischargePort": "SINGAPORE",
+  "totalKemasan": "4580 CTN",
+  "totalGrossWeightKGM": "7,603.20",
+  "totalNetWeightKGM": "7,603.20",
+  "items": [
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "PLS HARNESS SET NX",
+      "jumlahDanSatuanBarang": "86,400 PCS",
+      "kemasan": "4580 CTN",
+      "beratBersih": "8.80",
+      "beratKotor": "62.841",
+      "amount": "1,138,678,287.84"
+    },
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "IV FLUID TRANSFER SET W/O LUER CAP-N-COIL",
+      "jumlahDanSatuanBarang": "80,000 PCS",
+      "kemasan": "8200 CTN",
+      "beratBersih": "7.90",
+      "beratKotor": "3.344",
+      "amount": "179,711,464.00"
+    },
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "SSV BLOOD COLLECTION SET 27CM L BF STZ",
+      "jumlahDanSatuanBarang": "36,000 PCS",
+      "kemasan": "8200 CTN",
+      "beratBersih": "5.90",
+      "beratKotor": "7.524",
+      "amount": "191,074,534.92"
+    },
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "AVF 15GX1\" BE 30CM W/CLAMP CE BF STZ",
+      "jumlahDanSatuanBarang": "1,000 PCS",
+      "kemasan": "8500 CTN",
+      "beratBersih": "8.40",
+      "beratKotor": "0.179",
+      "amount": "3,581,293.14"
+    },
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "AVF 16GX1\" BE 30CM W/CLAMP CE BF STZ",
+      "jumlahDanSatuanBarang": "1,000 PCS",
+      "kemasan": "8500 CTN",
+      "beratBersih": "8.10",
+      "beratKotor": "0.179",
+      "amount": "21,261,679.74"
+    },
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "AVF 16GX1\" BE 30CM W/CLAMP CE BF STZ",
+      "jumlahDanSatuanBarang": "6,000 PCS",
+      "kemasan": "8500 CTN",
+      "beratBersih": "8.10",
+      "beratKotor": "1.076",
+      "amount": "3,543,613.29"
+    },
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "AVF 16GX1\" BE 30CM W/CLAMP KOREA BF STZ",
+      "jumlahDanSatuanBarang": "129,600 PCS",
+      "kemasan": "8500 CTN",
+      "beratBersih": "10.56",
+      "beratKotor": "19.362",
+      "amount": "374,932,069.06"
+    },
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "WINGEATER AVF BE 30CM W/CLAMP BF STZ",
+      "jumlahDanSatuanBarang": "178,000 PCS",
+      "kemasan": "8500 CTN",
+      "beratBersih": "4.00",
+      "beratKotor": "28.703",
+      "amount": "255,501,906.66"
+    },
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "WINGEATER AVF BE 30CM W/CLAMP BF STZ",
+      "jumlahDanSatuanBarang": "2,000 PCS",
+      "kemasan": "8500 CTN",
+      "beratBersih": "4.00",
+      "beratKotor": "0.323",
+      "amount": "2,870,807.94"
+    },
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "SSV BLOOD COLLECTION SET 21GX3/4\" 27CM L W/O LUER CAP-N-COIL",
+      "jumlahDanSatuanBarang": "48 PCS",
+      "kemasan": "8500 CTN",
+      "beratBersih": "1.00",
+      "beratKotor": "1.00",
+      "amount": "7,200.00"
+    },
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "AVF 15GX1\" BE 30CM W/CLAMP CE BF STZ",
+      "jumlahDanSatuanBarang": "35 EA",
+      "kemasan": "8500 CTN",
+      "beratBersih": "1.00",
+      "beratKotor": "1.00",
+      "amount": "5,250.00"
+    },
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "AVF 16GX1\" BE 30CM W/CLAMP CE BF STZ",
+      "jumlahDanSatuanBarang": "35 EA",
+      "kemasan": "8500 CTN",
+      "beratBersih": "1.00",
+      "beratKotor": "1.00",
+      "amount": "5,250.00"
+    },
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "AVF 16GX1\" BE 30CM W/CLAMP KOREA BF STZ",
+      "jumlahDanSatuanBarang": "35 EA",
+      "kemasan": "8500 CTN",
+      "beratBersih": "1.00",
+      "beratKotor": "1.00",
+      "amount": "5,250.00"
+    },
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "AVF 16GX1\" BE 30CM W/CLAMP KOREA BF STZ",
+      "jumlahDanSatuanBarang": "35 EA",
+      "kemasan": "8500 CTN",
+      "beratBersih": "1.00",
+      "beratKotor": "1.00",
+      "amount": "5,250.00"
+    },
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "WINGEATER AVF BE 30CM W/CLAMP BF STZ",
+      "jumlahDanSatuanBarang": "35 EA",
+      "kemasan": "8500 CTN",
+      "beratBersih": "1.00",
+      "beratKotor": "1.00",
+      "amount": "5,250.00"
+    },
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "WINGEATER AVF BE 30CM W/CLAMP BF STZ",
+      "jumlahDanSatuanBarang": "35 EA",
+      "kemasan": "8500 CTN",
+      "beratBersih": "1.00",
+      "beratKotor": "1.00",
+      "amount": "5,250.00"
+    },
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "WINGEATER AVF BE 30CM W/CLAMP BF STZ",
+      "jumlahDanSatuanBarang": "35 EA",
+      "kemasan": "8500 CTN",
+      "beratBersih": "1.00",
+      "beratKotor": "1.00",
+      "amount": "5,250.00"
+    },
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "WINGEATER AVF BE 30CM W/CLAMP BF STZ",
+      "jumlahDanSatuanBarang": "35 EA",
+      "kemasan": "8500 CTN",
+      "beratBersih": "1.00",
+      "beratKotor": "1.00",
+      "amount": "5,250.00"
+    },
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "WINGEATER AVF BE 30CM W/CLAMP BF STZ",
+      "jumlahDanSatuanBarang": "35 EA",
+      "kemasan": "8500 CTN",
+      "beratBersih": "1.00",
+      "beratKotor": "1.00",
+      "amount": "5,250.00"
+    },
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "WINGEATER AVF BE 30CM W/CLAMP BF STZ",
+      "jumlahDanSatuanBarang": "35 EA",
+      "kemasan": "8500 CTN",
+      "beratBersih": "1.00",
+      "beratKotor": "1.00",
+      "amount": "5,250.00"
+    },
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "SYSLOC AVF BE 15CM W/CLAMP CE BF STZ",
+      "jumlahDanSatuanBarang": "5 PCS",
+      "kemasan": "8500 CTN",
+      "beratBersih": "6.60",
+      "beratKotor": "4.687",
+      "amount": "21,571.61"
+    },
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "SYSLOC AVF BE 15CM W/CLAMP CE BF STZ",
+      "jumlahDanSatuanBarang": "36,000 PCS",
+      "kemasan": "8500 CTN",
+      "beratBersih": "0.07",
+      "beratKotor": "0.065",
+      "amount": "155,315,561.04"
+    },
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "FISTULA NEEDLE PLUME SP P+ W/CLAMP BF STZ",
+      "jumlahDanSatuanBarang": "25,000 PCS",
+      "kemasan": "8500 CTN",
+      "beratBersih": "9.30",
+      "beratKotor": "4.482",
+      "amount": "109,246,628.50"
+    },
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "FISTULA NEEDLE PLUME SP P+ W/CLAMP BF STZ",
+      "jumlahDanSatuanBarang": "5 PCS",
+      "kemasan": "8500 CTN",
+      "beratBersih": "0.09",
+      "beratKotor": "0.090",
+      "amount": "21,849.33"
+    },
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "FISTULA NEEDLE PLUME SP P+ W/CLAMP BF STZ",
+      "jumlahDanSatuanBarang": "15,000 PCS",
+      "kemasan": "8500 CTN",
+      "beratBersih": "9.20",
+      "beratKotor": "2.689",
+      "amount": "66,057,646.65"
+    },
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "FISTULA NEEDLE PLUME SP P+ W/CLAMP BF STZ",
+      "jumlahDanSatuanBarang": "5 PCS",
+      "kemasan": "8500 CTN",
+      "beratBersih": "0.09",
+      "beratKotor": "0.090",
+      "amount": "22,019.22"
+    },
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "FISTULA NEEDLE PLUME SP P+ W/CLAMP BF STZ",
+      "jumlahDanSatuanBarang": "5 PCS",
+      "kemasan": "8500 CTN",
+      "beratBersih": "8.10",
+      "beratKotor": "0.179",
+      "amount": "21,978.89"
+    },
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "FISTULA NEEDLE PLUME SP P+ W/CLAMP BF STZ",
+      "jumlahDanSatuanBarang": "10,000 PCS",
+      "kemasan": "8500 CTN",
+      "beratBersih": "8.10",
+      "beratKotor": "0.179",
+      "amount": "43,957,783.00"
+    },
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "FISTULA NEEDLE PLUME SP P+ W/CLAMP BF STZ",
+      "jumlahDanSatuanBarang": "5 PCS",
+      "kemasan": "8500 CTN",
+      "beratBersih": "6.90",
+      "beratKotor": "1.890",
+      "amount": "21,809.66"
+    },
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "FISTULA NEEDLE PLUME SP P+ W/CLAMP BF STZ",
+      "jumlahDanSatuanBarang": "5,000 PCS",
+      "kemasan": "8500 CTN",
+      "beratBersih": "0.07",
+      "beratKotor": "0.095",
+      "amount": "21,809,662.70"
+    },
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "FISTULA NEEDLE PLUME SP P+ W/CLAMP BF STZ",
+      "jumlahDanSatuanBarang": "5 PCS",
+      "kemasan": "8500 CTN",
+      "beratBersih": "9.10",
+      "beratKotor": "0.707",
+      "amount": "22,032.44"
+    },
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "FISTULA NEEDLE PLUME SP P+ W/CLAMP BF STZ",
+      "jumlahDanSatuanBarang": "10,000 PCS",
+      "kemasan": "8500 CTN",
+      "beratBersih": "0.09",
+      "beratKotor": "0.071",
+      "amount": "44,064,873.10"
+    },
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "FISTULA NEEDLE PLUME SP P+ W/CLAMP BF STZ",
+      "jumlahDanSatuanBarang": "5 PCS",
+      "kemasan": "8500 CTN",
+      "beratBersih": "8.00",
+      "beratKotor": "1.793",
+      "amount": "22,032.44"
+    },
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "FISTULA NEEDLE PLUME SP P+ W/CLAMP BF STZ",
+      "jumlahDanSatuanBarang": "5,000 PCS",
+      "kemasan": "8500 CTN",
+      "beratBersih": "0.08",
+      "beratKotor": "0.090",
+      "amount": "22,032,436.55"
+    },
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "FISTULA NEEDLE PLUME SP P+ W/CLAMP BF STZ",
+      "jumlahDanSatuanBarang": "15,000 PCS",
+      "kemasan": "8500 CTN",
+      "beratBersih": "8.00",
+      "beratKotor": "0.896",
+      "amount": "66,969,895.65"
+    },
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "FISTULA NEEDLE PLUME SP P+ W/CLAMP BF STZ",
+      "jumlahDanSatuanBarang": "5 PCS",
+      "kemasan": "8500 CTN",
+      "beratBersih": "0.08",
+      "beratKotor": "0.090",
+      "amount": "22,323.30"
+    },
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "FISTULA NEEDLE PLUME SP P+ W/CLAMP BF STZ",
+      "jumlahDanSatuanBarang": "5 PCS",
+      "kemasan": "8500 CTN",
+      "beratBersih": "7.50",
+      "beratKotor": "2.689",
+      "amount": "22,213.56"
+    },
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "FISTULA NEEDLE PLUME SP P+ W/CLAMP BF STZ",
+      "jumlahDanSatuanBarang": "30,000 PCS",
+      "kemasan": "8500 CTN",
+      "beratBersih": "0.08",
+      "beratKotor": "0.090",
+      "amount": "133,281,385.50"
+    },
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "SYSLOC AVF WITH TERMINAL LOCK BE 30CM W/CLAMP CE BF STZ",
+      "jumlahDanSatuanBarang": "5 PCS",
+      "kemasan": "8500 CTN",
+      "beratBersih": "8.00",
+      "beratKotor": "5.378",
+      "amount": "20,665.39"
+    },
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "SYSLOC AVF WITH TERMINAL LOCK BE 30CM W/CLAMP CE BF STZ",
+      "jumlahDanSatuanBarang": "12,000 PCS",
+      "kemasan": "8500 CTN",
+      "beratBersih": "0.08",
+      "beratKotor": "0.090",
+      "amount": "49,596,924.36"
+    },
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "SYSLOC AVF WITH TERMINAL LOCK BE 30CM W/CLAMP CE BF STZ",
+      "jumlahDanSatuanBarang": "4,000 PCS",
+      "kemasan": "8500 CTN",
+      "beratBersih": "4.60",
+      "beratKotor": "2.268",
+      "amount": "16,340,868.04"
+    },
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "SYSLOC AVF WITH TERMINAL LOCK BE 30CM W/CLAMP CE BF STZ",
+      "jumlahDanSatuanBarang": "5 PCS",
+      "kemasan": "8500 CTN",
+      "beratBersih": "0.05",
+      "beratKotor": "0.095",
+      "amount": "20,426.09"
+    },
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "SYSLOC AVF WITH TERMINAL LOCK BE 30CM W/CLAMP CE BF STZ",
+      "jumlahDanSatuanBarang": "4,000 PCS",
+      "kemasan": "8500 CTN",
+      "beratBersih": "9.60",
+      "beratKotor": "0.821",
+      "amount": "76,800.00"
+    },
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "SYSLOC AVF WITH TERMINAL LOCK BE 30CM W/CLAMP CE BF STZ",
+      "jumlahDanSatuanBarang": "5 PCS",
+      "kemasan": "8500 CTN",
+      "beratBersih": "0.10",
+      "beratKotor": "0.103",
+      "amount": "5,250.00"
+    },
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "SYSLOC AVF WITH TERMINAL LOCK BE 30CM W/CLAMP CE BF STZ",
+      "jumlahDanSatuanBarang": "35 EA",
+      "kemasan": "8500 CTN",
+      "beratBersih": "0.05",
+      "beratKotor": "0.095",
+      "amount": "5,250.00"
+    },
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "SYSLOC AVF WITH TERMINAL LOCK BE 30CM W/CLAMP CE BF STZ",
+      "jumlahDanSatuanBarang": "35 EA",
+      "kemasan": "8500 CTN",
+      "beratBersih": "9.60",
+      "beratKotor": "0.821",
+      "amount": "5,250.00"
+    },
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "SYSLOC AVF WITH TERMINAL LOCK BE 30CM W/CLAMP CE BF STZ",
+      "jumlahDanSatuanBarang": "35 EA",
+      "kemasan": "8500 CTN",
+      "beratBersih": "0.10",
+      "beratKotor": "0.103",
+      "amount": "5,250.00"
+    }
+  ]
+}

@@ -1,0 +1,353 @@
+{
+  "safeCheck": {
+    "isRelated": true,
+    "confidenceScore": 95,
+    "summary": "Dokumen terdiri dari 1 file Commercial Invoice yang diterbitkan oleh PT Blackmagic Design Manufacturing untuk pengiriman ke Blackmagic Design Manufacturing Pte Ltd dengan nomor referensi B-2609059.",
+    "matchedIdentifiers": [
+      "Nomor Invoice B-2609059 konsisten pada dokumen",
+      "Shipper dan Consignee terkonfirmasi sesuai"
+    ],
+    "discrepanciesOrWarnings": [],
+    "documentList": [
+      {
+        "fileName": "Inv B-2609059.pdf",
+        "documentType": "INVOICE",
+        "belongsToShipment": true,
+        "notes": "Commercial Invoice untuk pengiriman barang elektronik dan suku cadang"
+      }
+    ]
+  },
+  "blNumber": null,
+  "blDate": null,
+  "invoiceNumber": "B-2609059",
+  "invoiceDate": "25-Sep-2026",
+  "packingListNumber": null,
+  "packingListDate": null,
+  "containerNumber": "40 FT",
+  "shipperName": "PT Blackmagic Design Manufacturing",
+  "shipperAddress": "Lot 213 Jalan Beringin, Batamindo Industrial Park Muka Kuning Batam 29433, Indonesia",
+  "consigneeName": "Blackmagic Design Manufacturing Pte Ltd",
+  "consigneeAddress": "1 Kallang Sector #05-03 Singapore 349276",
+  "loadingPort": null,
+  "dischargePort": null,
+  "totalKemasan": "15 Pallets",
+  "totalGrossWeightKGM": "3,155.00 KGS",
+  "totalNetWeightKGM": null,
+  "items": [
+    {
+      "hsCode": "8522.90.91",
+      "uraianJenisBarang": "ATEM 1 M/E Advanced Panel 20",
+      "jumlahDanSatuanBarang": "8 Pcs",
+      "kemasan": "15 Pallets",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "19,734.00"
+    },
+    {
+      "hsCode": "8522.90.91",
+      "uraianJenisBarang": "ATEM 1 M/E Advanced Panel 20",
+      "jumlahDanSatuanBarang": "8 Pcs",
+      "kemasan": "15 Pallets",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "19,734.00"
+    },
+    {
+      "hsCode": "8522.90.91",
+      "uraianJenisBarang": "ATEM 1 M/E Advanced Panel 20",
+      "jumlahDanSatuanBarang": "8 Pcs",
+      "kemasan": "15 Pallets",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "19,734.00"
+    },
+    {
+      "hsCode": "8522.90.91",
+      "uraianJenisBarang": "ATEM 4 M/E Advanced Panel 40",
+      "jumlahDanSatuanBarang": "4 Pcs",
+      "kemasan": "15 Pallets",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "46,787.00"
+    },
+    {
+      "hsCode": "8522.90.91",
+      "uraianJenisBarang": "ATEM 2 M/E Advanced Panel 20",
+      "jumlahDanSatuanBarang": "10 Pcs",
+      "kemasan": "15 Pallets",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "38,967.50"
+    },
+    {
+      "hsCode": "8522.90.91",
+      "uraianJenisBarang": "ATEM 2 M/E Advanced Panel 20",
+      "jumlahDanSatuanBarang": "10 Pcs",
+      "kemasan": "15 Pallets",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "38,967.50"
+    },
+    {
+      "hsCode": "8522.90.91",
+      "uraianJenisBarang": "ATEM 2 M/E Advanced Panel 20",
+      "jumlahDanSatuanBarang": "10 Pcs",
+      "kemasan": "15 Pallets",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "38,967.50"
+    },
+    {
+      "hsCode": "8522.90.91",
+      "uraianJenisBarang": "ATEM 2 M/E Advanced Panel 20",
+      "jumlahDanSatuanBarang": "10 Pcs",
+      "kemasan": "15 Pallets",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "38,967.50"
+    },
+    {
+      "hsCode": "8522.90.91",
+      "uraianJenisBarang": "Blackmagic MultiDock 10G",
+      "jumlahDanSatuanBarang": "32 Pcs",
+      "kemasan": "15 Pallets",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "17,759.04"
+    },
+    {
+      "hsCode": "8522.90.91",
+      "uraianJenisBarang": "DaVinci Resolve Micro Panel",
+      "jumlahDanSatuanBarang": "3 Pcs",
+      "kemasan": "15 Pallets",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "1,970.10"
+    },
+    {
+      "hsCode": "8522.90.91",
+      "uraianJenisBarang": "DaVinci Resolve Speed Editor",
+      "jumlahDanSatuanBarang": "102 Pcs",
+      "kemasan": "15 Pallets",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "16,116.00"
+    },
+    {
+      "hsCode": "8522.90.91",
+      "uraianJenisBarang": "Battery - LPE6",
+      "jumlahDanSatuanBarang": "100 Pcs",
+      "kemasan": "15 Pallets",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "2,275.00"
+    },
+    {
+      "hsCode": "8522.90.91",
+      "uraianJenisBarang": "Mini Converter - UpDownCross HD",
+      "jumlahDanSatuanBarang": "672 Pcs",
+      "kemasan": "15 Pallets",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "92,561.28"
+    },
+    {
+      "hsCode": "8522.90.91",
+      "uraianJenisBarang": "DaVinci Resolve Micro Color Panel (EN)",
+      "jumlahDanSatuanBarang": "111 Pcs",
+      "kemasan": "15 Pallets",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "35,714.25"
+    },
+    {
+      "hsCode": "8522.90.91",
+      "uraianJenisBarang": "Blackmagic UpDownCross 100G",
+      "jumlahDanSatuanBarang": "12 Pcs",
+      "kemasan": "15 Pallets",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "18,993.00"
+    },
+    {
+      "hsCode": "8522.90.91",
+      "uraianJenisBarang": "Mini Converter - SDI to Audio",
+      "jumlahDanSatuanBarang": "294 Pcs",
+      "kemasan": "15 Pallets",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "55,445.46"
+    },
+    {
+      "hsCode": "8522.90.91",
+      "uraianJenisBarang": "Blackmagic Cinema Camera 6K",
+      "jumlahDanSatuanBarang": "36 Pcs",
+      "kemasan": "15 Pallets",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "60,723.00"
+    },
+    {
+      "hsCode": "8522.90.91",
+      "uraianJenisBarang": "Mini Converter - SDI Distribution",
+      "jumlahDanSatuanBarang": "210 Pcs",
+      "kemasan": "15 Pallets",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "30,187.50"
+    },
+    {
+      "hsCode": "8522.90.91",
+      "uraianJenisBarang": "Fairlight Live Audio Panel 10",
+      "jumlahDanSatuanBarang": "8 Pcs",
+      "kemasan": "15 Pallets",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "11,414.00"
+    },
+    {
+      "hsCode": "8522.90.91",
+      "uraianJenisBarang": "ATEM 4 M/E Constellation 4K Plus",
+      "jumlahDanSatuanBarang": "6 Pcs",
+      "kemasan": "15 Pallets",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "50,680.50"
+    },
+    {
+      "hsCode": "8522.90.91",
+      "uraianJenisBarang": "Mini Converter - UpDownCross HD",
+      "jumlahDanSatuanBarang": "168 Pcs",
+      "kemasan": "15 Pallets",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "23,140.32"
+    },
+    {
+      "hsCode": "8522.90.91",
+      "uraianJenisBarang": "Mini Converter - SDI Distribution",
+      "jumlahDanSatuanBarang": "126 Pcs",
+      "kemasan": "15 Pallets",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "18,112.50"
+    },
+    {
+      "hsCode": "8522.90.91",
+      "uraianJenisBarang": "Blackmagic Cinema Camera 6K",
+      "jumlahDanSatuanBarang": "2 Pcs",
+      "kemasan": "15 Pallets",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "3,373.50"
+    },
+    {
+      "hsCode": "8522.90.91",
+      "uraianJenisBarang": "ATEM Constellation 8K - LCD Display",
+      "jumlahDanSatuanBarang": "10 Pcs",
+      "kemasan": "15 Pallets",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "897.50"
+    },
+    {
+      "hsCode": "8522.90.91",
+      "uraianJenisBarang": "ATEM Panel - System Control LCD",
+      "jumlahDanSatuanBarang": "10 Pcs",
+      "kemasan": "15 Pallets",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "578.50"
+    },
+    {
+      "hsCode": "8522.90.91",
+      "uraianJenisBarang": "ATEM TV Studio Connector PCB - Audio",
+      "jumlahDanSatuanBarang": "5 Pcs",
+      "kemasan": "15 Pallets",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "276.25"
+    },
+    {
+      "hsCode": "8522.90.91",
+      "uraianJenisBarang": "Camera PCC6K - PCB Main",
+      "jumlahDanSatuanBarang": "2 Pcs",
+      "kemasan": "15 Pallets",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "733.60"
+    },
+    {
+      "hsCode": "8522.90.91",
+      "uraianJenisBarang": "Camera PYXIS Monitor - Cable USB Set",
+      "jumlahDanSatuanBarang": "30 Pcs",
+      "kemasan": "15 Pallets",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "955.50"
+    },
+    {
+      "hsCode": "8522.90.91",
+      "uraianJenisBarang": "Teranex Mini - SDI to DisplayPort 8K HDR",
+      "jumlahDanSatuanBarang": "1 Pcs",
+      "kemasan": "15 Pallets",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "919.75"
+    },
+    {
+      "hsCode": "8471.60.90",
+      "uraianJenisBarang": "Enclosure - Web Presenter HD Keypad",
+      "jumlahDanSatuanBarang": "833 Pcs",
+      "kemasan": "15 Pallets",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "2,903.01"
+    },
+    {
+      "hsCode": "8542.90.00",
+      "uraianJenisBarang": "Reg Sw 24V 30A - AOZ2369",
+      "jumlahDanSatuanBarang": "200 Pcs",
+      "kemasan": "15 Pallets",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "286.00"
+    },
+    {
+      "hsCode": "8542.90.00",
+      "uraianJenisBarang": "0u22H 18A 20% Inductor CSHB0421R",
+      "jumlahDanSatuanBarang": "4,000 Pcs",
+      "kemasan": "15 Pallets",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "628.00"
+    },
+    {
+      "hsCode": "8471.60.90",
+      "uraianJenisBarang": "Enclosure - ATEM Mini Pro Top",
+      "jumlahDanSatuanBarang": "1,387 Pcs",
+      "kemasan": "15 Pallets",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "1,739.71"
+    },
+    {
+      "hsCode": "8466.10.90",
+      "uraianJenisBarang": "Router Pallet PCB1245E",
+      "jumlahDanSatuanBarang": "2 Pcs",
+      "kemasan": "15 Pallets",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "500.00"
+    },
+    {
+      "hsCode": "8466.10.90",
+      "uraianJenisBarang": "Router Pallet PCB385B1",
+      "jumlahDanSatuanBarang": "2 Pcs",
+      "kemasan": "15 Pallets",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "487.50"
+    }
+  ]
+}
