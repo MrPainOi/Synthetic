@@ -1,10 +1,17 @@
 {
     "manifest_version": 3,
 
-    "name": "CEISA Auto Coloring",
+    "name": "Beacukai for Developers",
     "version": "2.0.0",
 
-    "description": "Auto coloring dokumen CEISA berdasarkan lokasi/pelabuhan dan nomor pendaftaran.",
+    "description": "Smart Customs Automation Hub & CEISA 4.0 Suite for Developers.",
+
+    "icons": {
+        "16": "icons/icon-16.png",
+        "32": "icons/icon-32.png",
+        "48": "icons/icon-48.png",
+        "128": "icons/icon-128.png"
+    },
 
     "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAprSCP2mODaVwl/OEMlXw+64EFBlOriWwygfNfKxQRzxl5/9nfMukJJwS8Iu5Ef17xgJnxCrQAGX+54CL3ZfEW80kJNd7lNC6gKijWoSHBD2lIbN6pp5VF6Xl2MTymjW/AnTdofk80OwSHFxvmWsTpoZTRe3MSjjO3nazrsPkTTwL27bPspyN/iCNJ42dRtNvaxyvEcgb6qnNlTrrJVIzFcb7ydNXE4Lei4gtqiNw7cMzLDHpnc2yK/xJLXKkp/WI8HOhk2UzND/vc5rsH9IsU9Aa6/mc73WIQEI1jro0vRlT9xzE/sApfVpKv3qpvPdCafR+suTxmvYQuQ9XV+5p4QIDAQAB",
 
@@ -35,8 +42,14 @@
     },
 
     "action": {
-        "default_title": "CEISA Auto Coloring",
-        "default_popup": "popup.html"
+        "default_title": "Beacukai for Developers",
+        "default_popup": "popup.html",
+        "default_icon": {
+            "16": "icons/icon-16.png",
+            "32": "icons/icon-32.png",
+            "48": "icons/icon-48.png",
+            "128": "icons/icon-128.png"
+        }
     },
 
     "content_scripts": [
