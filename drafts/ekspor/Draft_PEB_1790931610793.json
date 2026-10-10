@@ -1,0 +1,120 @@
+{
+  "safeCheck": {
+    "isRelated": true,
+    "confidenceScore": 100,
+    "summary": "Dokumen Packing List/Invoice dari PT. SANJAYA ABADI SUKSES dengan nomor BE001/X/26 adalah satu kesatuan dokumen pengiriman yang valid dan konsisten.",
+    "matchedIdentifiers": [
+      "Nomor Invoice BE001/X/26 sesuai dengan dokumen Packing list/Invoice",
+      "Shipper PT. SANJAYA ABADI SUKSES dan Consignee ARTIFY CREATIVE PTE LTD konsisten"
+    ],
+    "discrepanciesOrWarnings": [],
+    "documentList": [
+      {
+        "fileName": "INV.BE001 X 26.pdf",
+        "documentType": "INVOICE",
+        "belongsToShipment": true,
+        "notes": "Packing list/Invoice gabungan untuk pengiriman barang ke ARTIFY CREATIVE PTE LTD"
+      }
+    ]
+  },
+  "blNumber": null,
+  "blDate": null,
+  "invoiceNumber": "BE001/X/26",
+  "invoiceDate": "01-Oct-2026",
+  "invoices": [
+    {
+      "invoiceNumber": "BE001/X/26",
+      "invoiceDate": "01-Oct-2026",
+      "amount": "1,986.50",
+      "currency": "SGD",
+      "containerNumber": null,
+      "type": "COMMERCIAL"
+    }
+  ],
+  "packingListNumber": "BE001/X/26",
+  "packingListDate": "01-Oct-2026",
+  "containerNumber": null,
+  "shipperName": "PT. SANJAYA ABADI SUKSES",
+  "shipperAddress": "Komplek BCI Industrial Park Blok C No.19 Kel. Tanjung Sengkuang - Kec. Batu Ampar Batu Ampar - Kota Batam",
+  "consigneeName": "ARTIFY CREATIVE PTE LTD",
+  "consigneeAddress": "146 Mei Ling Street #02-121 Singapore 140146",
+  "loadingPort": "Batam, Indonesia",
+  "dischargePort": "Singapore",
+  "totalKemasan": "05 PALLETS",
+  "totalGrossWeightKGM": "601.90 Kg",
+  "totalNetWeightKGM": "513.40 Kg",
+  "items": [
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "Paper Bag - Small",
+      "jumlahDanSatuanBarang": "24 Packs",
+      "kemasan": "05 PALLETS",
+      "beratBersih": "67.20 Kg",
+      "beratKotor": "82.20 Kg",
+      "amount": "156.00"
+    },
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "Paper Bag",
+      "jumlahDanSatuanBarang": "19 Packs",
+      "kemasan": "05 PALLETS",
+      "beratBersih": "121.60 Kg",
+      "beratKotor": "136.60 Kg",
+      "amount": "209.00"
+    },
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "Paper Bag",
+      "jumlahDanSatuanBarang": "3 Packs",
+      "kemasan": "05 PALLETS",
+      "beratBersih": "15.90 Kg",
+      "beratKotor": "18.50 Kg",
+      "amount": "33.00"
+    },
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "Sleeve - Keycard",
+      "jumlahDanSatuanBarang": "86 Packs",
+      "kemasan": "05 PALLETS",
+      "beratBersih": "77.40 Kg",
+      "beratKotor": "89.80 Kg",
+      "amount": "537.50"
+    },
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "Paper Flag",
+      "jumlahDanSatuanBarang": "36,000 Pcs",
+      "kemasan": "05 PALLETS",
+      "beratBersih": "15.10 Kg",
+      "beratKotor": "20.60 Kg",
+      "amount": "360.00"
+    },
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "Sleeve - DL",
+      "jumlahDanSatuanBarang": "9,100 Pcs",
+      "kemasan": "05 PALLETS",
+      "beratBersih": "52.30 Kg",
+      "beratKotor": "66.50 Kg",
+      "amount": "182.00"
+    },
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "Sleeve - A4",
+      "jumlahDanSatuanBarang": "1,600 Pcs",
+      "kemasan": "05 PALLETS",
+      "beratBersih": "30.40 Kg",
+      "beratKotor": "39.20 Kg",
+      "amount": "64.00"
+    },
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "Paper Luggage Tag",
+      "jumlahDanSatuanBarang": "44,500 Pcs",
+      "kemasan": "05 PALLETS",
+      "beratBersih": "133.50 Kg",
+      "beratKotor": "148.50 Kg",
+      "amount": "445.00"
+    }
+  ]
+}

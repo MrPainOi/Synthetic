@@ -10,8 +10,12 @@ function getBackendUrl(path = '') {
     }
     let base = 'http://localhost:5005';
     try {
-        if (typeof window !== 'undefined' && window.location && window.location.protocol.startsWith('http')) {
-            base = `${window.location.protocol}//${window.location.hostname}:5005`;
+        if (typeof window !== 'undefined' && window.location) {
+            const host = window.location.hostname;
+            // Jika diakses dari HP / laptop lain via WiFi IP (192.168.x.x, 10.x.x.x, dsb)
+            if (/^(192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)/.test(host)) {
+                base = `http://${host}:5005`;
+            }
         }
     } catch (_) {}
     if (path) {

@@ -1,0 +1,68 @@
+{
+  "safeCheck": {
+    "isRelated": true,
+    "confidenceScore": 100,
+    "summary": "Dokumen PPFTZ (Pemberitahuan Pabean Free Trade Zone) memuat data lengkap yang konsisten antara pengirim (SHOWA GLOBAL LIMITED), penerima (PT. JMS BATAM), nomor invoice (26-JMSS-V39), nomor packing list (26-JMSS-V39), dan nomor B/L (SINBTM039651). Seluruh dokumen saling berhubungan dan membentuk satu kesatuan pengiriman yang valid.",
+    "matchedIdentifiers": [
+      "Nomor Invoice 26-JMSS-V39 cocok antara PPFTZ dan Dokumen Pelengkap",
+      "Nomor Packing List 26-JMSS-V39 cocok antara PPFTZ dan Dokumen Pelengkap",
+      "Nomor B/L SINBTM039651 cocok antara PPFTZ dan Dokumen Pelengkap",
+      "Shipper (SHOWA GLOBAL LIMITED) dan Consignee (PT. JMS BATAM) konsisten"
+    ],
+    "discrepanciesOrWarnings": [],
+    "documentList": [
+      {
+        "fileName": "44b2d13e-4ecb-4439-b8fe-849e575173d2.pdf",
+        "documentType": "OTHER",
+        "belongsToShipment": true,
+        "notes": "Dokumen PPFTZ Pemasukan dari LDP beserta lembar lanjutan dan dokumen pelengkap"
+      }
+    ]
+  },
+  "blNumber": "SINBTM039651",
+  "blDate": "07-10-2026",
+  "invoiceNumber": "26-JMSS-V39",
+  "invoiceDate": "20-09-2026",
+  "invoices": [
+    {
+      "invoiceNumber": "26-JMSS-V39",
+      "invoiceDate": "20-09-2026",
+      "amount": "60,130.00",
+      "currency": "USD",
+      "containerNumber": "CAAU9084402",
+      "type": "COMMERCIAL"
+    }
+  ],
+  "packingListNumber": "26-JMSS-V39",
+  "packingListDate": "20-09-2026",
+  "containerNumber": "CAAU9084402",
+  "shipperName": "SHOWA GLOBAL LIMITED",
+  "shipperAddress": "ROOM 2304, OMEGA PLAZA, NO 32A-34A DUNDAS STREE , KOWLOON HONGKONG, HONG KONG SAR",
+  "consigneeName": "PT. JMS BATAM",
+  "consigneeAddress": "JALAN BERINGIN LOT 211-212 KAWASAN INDUSTRI BATAMINDO MUKA KUNING - BATAM 29433, INDONESIA",
+  "loadingPort": "SGJUR - JURONG",
+  "dischargePort": "IDSKP - SEKUPANG",
+  "totalKemasan": "1 UNPACKED OR UNPACKAGED, -",
+  "totalGrossWeightKGM": "20,507.0000",
+  "totalNetWeightKGM": "20,000.0000",
+  "items": [
+    {
+      "hsCode": "39042220",
+      "uraianJenisBarang": "PVC PELLET MD685 NATURAL",
+      "jumlahDanSatuanBarang": "19,000.0000 KGS",
+      "kemasan": "1 UNPACKED OR UNPACKAGED, -",
+      "beratBersih": "19,000.0000",
+      "beratKotor": "NULL",
+      "amount": "57,190.00"
+    },
+    {
+      "hsCode": "39042220",
+      "uraianJenisBarang": "PVC PELLET MD684 NATURAL",
+      "jumlahDanSatuanBarang": "1,000.0000 KGS",
+      "kemasan": "1 UNPACKED OR UNPACKAGED, -",
+      "beratBersih": "1,000.0000",
+      "beratKotor": "NULL",
+      "amount": "2,940.00"
+    }
+  ]
+}

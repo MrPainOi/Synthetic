@@ -1,0 +1,136 @@
+{
+  "safeCheck": {
+    "isRelated": true,
+    "confidenceScore": 100,
+    "summary": "Semua dokumen saling berhubungan dan membentuk satu kesatuan pengiriman (shipment) yang valid. Bill of Lading, Invoice, dan Packing List mencocokkan nomor dokumen BE001/X/26, Shipper (PT. SANJAYA ABADI SUKSES), Consignee (ARTIFY CREATIVE PTE LTD), serta rute pelayaran dari Sekupang Batam ke Singapore.",
+    "matchedIdentifiers": [
+      "Nomor Invoice dan Packing List: BE001/X/26",
+      "Nomor Bill of Lading B/L: BS 05 / 7382-A",
+      "Shipper: PT. SANJAYA ABADI SUKSES",
+      "Consignee: ARTIFY CREATIVE PTE LTD",
+      "Pelabuhan Muat: Sekupang Batam",
+      "Pelabuhan Bongkar: SINGAPORE"
+    ],
+    "discrepanciesOrWarnings": [],
+    "documentList": [
+      {
+        "fileName": "BL.BS 05 7382-A.pdf",
+        "documentType": "BILL_OF_LADING",
+        "belongsToShipment": true,
+        "notes": "Bill of Lading pengiriman 5 Pallets dari Batam ke Singapore"
+      },
+      {
+        "fileName": "INV.BE001 X 26.pdf",
+        "documentType": "INVOICE",
+        "belongsToShipment": true,
+        "notes": "Commercial Invoice No. BE001/X/26"
+      },
+      {
+        "fileName": "PL.BE001 X 26.pdf",
+        "documentType": "PACKING_LIST",
+        "belongsToShipment": true,
+        "notes": "Packing List No. BE001/X/26"
+      }
+    ]
+  },
+  "blNumber": "BS 05 / 7382-A",
+  "blDate": "02 October 2026",
+  "invoiceNumber": "BE001/X/26",
+  "invoiceDate": "01-Oct-2026",
+  "invoices": [
+    {
+      "invoiceNumber": "BE001/X/26",
+      "invoiceDate": "01-Oct-2026",
+      "amount": "1,986.50",
+      "currency": "SGD",
+      "containerNumber": null,
+      "type": "COMMERCIAL"
+    }
+  ],
+  "packingListNumber": "BE001/X/26",
+  "packingListDate": "01-Oct-2026",
+  "containerNumber": null,
+  "shipperName": "PT. SANJAYA ABADI SUKSES",
+  "shipperAddress": "Komplek BCI Industrial Park Block C No.19\nKel Tanjung Sengkuang Kec. Batu Ampar Batu Ampar-Kota Batam",
+  "consigneeName": "ARTIFY CREATIVE PTE LTD",
+  "consigneeAddress": "146 MEI LING STREET #02-121\nSINGAPORE 140146",
+  "loadingPort": "Sekupang Batam",
+  "dischargePort": "SINGAPORE",
+  "totalKemasan": "05 PALLETS",
+  "totalGrossWeightKGM": "601.90 Kg",
+  "totalNetWeightKGM": "513.40 Kg",
+  "items": [
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "Paper Bag - Small",
+      "jumlahDanSatuanBarang": "24 Packs",
+      "kemasan": "05 PALLETS",
+      "beratBersih": "67.20 Kg",
+      "beratKotor": "82.20 Kg",
+      "amount": "156.00"
+    },
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "Paper Bag",
+      "jumlahDanSatuanBarang": "19 Packs",
+      "kemasan": "05 PALLETS",
+      "beratBersih": "121.60 Kg",
+      "beratKotor": "136.60 Kg",
+      "amount": "209.00"
+    },
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "Paper Bag",
+      "jumlahDanSatuanBarang": "3 Packs",
+      "kemasan": "05 PALLETS",
+      "beratBersih": "15.90 Kg",
+      "beratKotor": "18.50 Kg",
+      "amount": "33.00"
+    },
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "Sleeve - Keycard",
+      "jumlahDanSatuanBarang": "86 Packs",
+      "kemasan": "05 PALLETS",
+      "beratBersih": "77.40 Kg",
+      "beratKotor": "89.80 Kg",
+      "amount": "537.50"
+    },
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "Paper Flag",
+      "jumlahDanSatuanBarang": "36,000 Pcs",
+      "kemasan": "05 PALLETS",
+      "beratBersih": "15.10 Kg",
+      "beratKotor": "20.60 Kg",
+      "amount": "360.00"
+    },
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "Sleeve - DL",
+      "jumlahDanSatuanBarang": "9,100 Pcs",
+      "kemasan": "05 PALLETS",
+      "beratBersih": "52.30 Kg",
+      "beratKotor": "66.50 Kg",
+      "amount": "182.00"
+    },
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "Sleeve - A4",
+      "jumlahDanSatuanBarang": "1,600 Pcs",
+      "kemasan": "05 PALLETS",
+      "beratBersih": "30.40 Kg",
+      "beratKotor": "39.20 Kg",
+      "amount": "64.00"
+    },
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "Paper Luggage Tag",
+      "jumlahDanSatuanBarang": "44,500 Pcs",
+      "kemasan": "05 PALLETS",
+      "beratBersih": "133.50 Kg",
+      "beratKotor": "148.50 Kg",
+      "amount": "445.00"
+    }
+  ]
+}

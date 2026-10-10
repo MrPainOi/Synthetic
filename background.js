@@ -228,35 +228,71 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 
     // --------------------------------------------------------
-    // Kontrol Backend Server via Native Messaging
+    // Kontrol Backend Server via Native Messaging (Internal)
     // --------------------------------------------------------
 
     if (message.type === "START_BACKEND_SERVER") {
-        try {
-            chrome.runtime.sendNativeMessage(
-                "com.ceisa.server_launcher",
-                { action: "start" },
-                (response) => {
-                    if (chrome.runtime.lastError) {
-                        sendResponse({
-                            ok: false,
-                            error: chrome.runtime.lastError.message
-                        });
-                    } else {
-                        sendResponse({
-                            ok: true,
-                            data: response
-                        });
-                    }
-                }
-            );
-        } catch (err) {
-            sendResponse({
-                ok: false,
-                error: err.message
-            });
-        }
+        handleNativeServerAction("start", sendResponse);
+        return true;
+    }
+
+    if (message.type === "STOP_BACKEND_SERVER") {
+        handleNativeServerAction("stop", sendResponse);
+        return true;
+    }
+
+    if (message.type === "CHECK_BACKEND_STATUS") {
+        handleNativeServerAction("status", sendResponse);
         return true;
     }
 
 });
+
+// Helper komunikasi Native Messaging Host
+function handleNativeServerAction(action, sendResponse) {
+    try {
+        chrome.runtime.sendNativeMessage(
+            "com.ceisa.server_launcher",
+            { action: action },
+            (response) => {
+                if (chrome.runtime.lastError) {
+                    sendResponse({
+                        ok: false,
+                        error: chrome.runtime.lastError.message
+                    });
+                } else {
+                    sendResponse({
+                        ok: true,
+                        data: response
+                    });
+                }
+            }
+        );
+    } catch (err) {
+        sendResponse({
+            ok: false,
+            error: err.message
+        });
+    }
+}
+
+// ============================================================
+// Pesan dari Web Page Eksternal (localhost / 127.0.0.1 / Portal CEISA)
+// ============================================================
+if (chrome.runtime.onMessageExternal) {
+    chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => {
+        if (!message) return;
+        if (message.type === "START_BACKEND_SERVER") {
+            handleNativeServerAction("start", sendResponse);
+            return true;
+        }
+        if (message.type === "STOP_BACKEND_SERVER") {
+            handleNativeServerAction("stop", sendResponse);
+            return true;
+        }
+        if (message.type === "CHECK_BACKEND_STATUS") {
+            handleNativeServerAction("status", sendResponse);
+            return true;
+        }
+    });
+}

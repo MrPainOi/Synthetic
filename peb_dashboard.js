@@ -10,8 +10,12 @@ function getBackendUrl(path = '') {
     }
     let base = 'http://localhost:5005';
     try {
-        if (typeof window !== 'undefined' && window.location && window.location.protocol.startsWith('http')) {
-            base = `${window.location.protocol}//${window.location.hostname}:5005`;
+        if (typeof window !== 'undefined' && window.location) {
+            const host = window.location.hostname;
+            // Jika diakses dari HP / laptop lain via WiFi IP (192.168.x.x, 10.x.x.x, dsb)
+            if (/^(192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)/.test(host)) {
+                base = `http://${host}:5005`;
+            }
         }
     } catch (_) {}
     if (path) {
@@ -19,6 +23,20 @@ function getBackendUrl(path = '') {
         return `${base}${path}`;
     }
     return base;
+}
+
+// Deteksi apakah klien saat ini benar-benar perangkat remote (HP/WiFi)
+function isRemoteDeviceClient() {
+    if (typeof window === 'undefined' || !window.location) return false;
+    const proto = window.location.protocol;
+    const host = window.location.hostname;
+    // Jika context adalah Chrome Extension (chrome-extension://), file lokal (file://),
+    // localhost, 127.0.0.1, atau langsung di portal Beacukai, ini PASTI PC lokal (BUKAN remote HP).
+    if (proto === 'chrome-extension:' || proto === 'file:' || host === 'localhost' || host === '127.0.0.1' || host.includes('beacukai.go.id')) {
+        return false;
+    }
+    // Remote device terdeteksi jika host berupa IP LAN WiFi
+    return /^(192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)/.test(host);
 }
 
 // MASTER PORTAL MODULE SWITCHER (CEISA 4.0 SIDEBAR & WORKSPACE)
@@ -2365,8 +2383,7 @@ function initDocumentParserModal() {
         if (progressFill) progressFill.style.width = '100%';
         progressFill.style.background = '#ef4444';
 
-        const isRemoteDevice = typeof window !== 'undefined' && window.location && 
-            window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+        const isRemoteDevice = isRemoteDeviceClient();
 
         if (stepTitle) {
             if (isRemoteDevice) {
@@ -2498,8 +2515,7 @@ function initDocumentParserModal() {
         } catch (_) {}
 
         // Jika diakses dari HP / laptop lain via WiFi, server harus sudah aktif di PC host
-        const isRemoteDevice = typeof window !== 'undefined' && window.location && 
-            window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+        const isRemoteDevice = isRemoteDeviceClient();
 
         if (isRemoteDevice) {
             return {
@@ -2515,17 +2531,89 @@ function initDocumentParserModal() {
             updateLog(connectRow, '⏳', 'Server belum aktif. Mencoba menyalakan server Document Parser otomatis...', 'running');
         }
 
+        const EXT_ID = 'geogeopfnkjopjgpfdnfnikfpecdodhe';
         const nativeResult = await new Promise((resolve) => {
-            if (typeof chrome === 'undefined' || !chrome.runtime || !chrome.runtime.sendMessage) {
-                return resolve({ ok: false, needSetup: true, error: 'Chrome extension runtime tidak ditemukan.' });
-            }
-            chrome.runtime.sendMessage({ type: 'START_BACKEND_SERVER' }, (res) => {
-                if (chrome.runtime.lastError || !res || !res.ok) {
-                    const err = (chrome.runtime.lastError && chrome.runtime.lastError.message) || (res && res.error) || 'Host belum terdaftar';
-                    return resolve({ ok: false, needSetup: true, error: err });
+            let resolved = false;
+            const finish = (res) => {
+                if (!resolved) {
+                    resolved = true;
+                    resolve(res);
                 }
-                resolve({ ok: true, data: res.data });
-            });
+            };
+
+            // Listener untuk respon dari Content Script Bridge
+            const onBridgeMessage = (e) => {
+                if (e.data && e.data.type === 'CEISA_START_SERVER_RESPONSE') {
+                    window.removeEventListener('message', onBridgeMessage);
+                    if (e.data.response && e.data.response.ok) {
+                        finish({ ok: true, data: e.data.response.data });
+                    } else {
+                        finish({ ok: false, needSetup: true, error: e.data.response?.error || 'Gagal memulai server via bridge' });
+                    }
+                }
+            };
+            window.addEventListener('message', onBridgeMessage);
+
+            // 1. Coba Native Messaging langsung jika ada API-nya (misal di peb.html / internal extension page)
+            if (typeof chrome !== 'undefined' && chrome.runtime && typeof chrome.runtime.sendNativeMessage === 'function') {
+                try {
+                    chrome.runtime.sendNativeMessage('com.ceisa.server_launcher', { action: 'start' }, (natRes) => {
+                        if (!chrome.runtime.lastError && natRes && (natRes.status === 'started' || natRes.status === 'already_running' || natRes.status === 'starting')) {
+                            window.removeEventListener('message', onBridgeMessage);
+                            return finish({ ok: true, data: natRes });
+                        }
+                        tryRuntimeSendMessage();
+                    });
+                } catch (_) {
+                    tryRuntimeSendMessage();
+                }
+            } else {
+                tryRuntimeSendMessage();
+            }
+
+            function tryRuntimeSendMessage() {
+                if (typeof chrome !== 'undefined' && chrome.runtime && typeof chrome.runtime.sendMessage === 'function') {
+                    try {
+                        chrome.runtime.sendMessage({ type: 'START_BACKEND_SERVER' }, (res) => {
+                            if (!chrome.runtime.lastError && res && res.ok) {
+                                window.removeEventListener('message', onBridgeMessage);
+                                return finish({ ok: true, data: res.data });
+                            }
+                            tryExternalSendMessage();
+                        });
+                        return;
+                    } catch (_) {}
+                }
+                tryExternalSendMessage();
+            }
+
+            function tryExternalSendMessage() {
+                if (typeof chrome !== 'undefined' && chrome.runtime && typeof chrome.runtime.sendMessage === 'function') {
+                    try {
+                        chrome.runtime.sendMessage(EXT_ID, { type: 'START_BACKEND_SERVER' }, (extRes) => {
+                            if (!chrome.runtime.lastError && extRes && extRes.ok) {
+                                window.removeEventListener('message', onBridgeMessage);
+                                return finish({ ok: true, data: extRes.data });
+                            }
+                            tryPostMessageBridge();
+                        });
+                        return;
+                    } catch (_) {}
+                }
+                tryPostMessageBridge();
+            }
+
+            function tryPostMessageBridge() {
+                try {
+                    window.postMessage({ type: 'CEISA_REQUEST_START_SERVER' }, '*');
+                } catch (_) {}
+            }
+
+            // Timeout jika launcher/ekstensi tidak merespons perintah auto-start (15 detik)
+            setTimeout(() => {
+                window.removeEventListener('message', onBridgeMessage);
+                finish({ ok: false, needSetup: true, error: 'Ekstensi Chrome tidak merespons perintah auto-start.' });
+            }, 15000);
         });
 
         // 3. Polling server port 5005 sampai aktif (maksimal 20 detik)
@@ -2639,8 +2727,7 @@ function initDocumentParserModal() {
                     body: formData
                 });
             } catch (netErr) {
-                const isRemoteDevice = typeof window !== 'undefined' && window.location && 
-                    window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+                const isRemoteDevice = isRemoteDeviceClient();
                 const err = new Error(`Gagal terhubung ke Backend Document Parser di ${getBackendUrl()}.`);
                 err.isSetupError = !isRemoteDevice;
                 throw err;

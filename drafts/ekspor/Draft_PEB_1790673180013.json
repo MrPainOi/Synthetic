@@ -1,0 +1,37 @@
+{
+  "safeCheck": {
+    "isRelated": false,
+    "confidenceScore": 0,
+    "summary": "File yang dilampirkan adalah sebuah gambar ilustrasi pemandangan pantai (gambar kartun/lukisan) dan bukan merupakan dokumen kepabeanan, komersial, atau dokumen pengapalan seperti Invoice, Packing List, atau Bill of Lading.",
+    "matchedIdentifiers": [],
+    "discrepanciesOrWarnings": [
+      "File lampiran berupa gambar ilustrasi pemandangan (gambar pantai), tidak ada data dokumen ekspor/impor yang dapat diproses."
+    ],
+    "documentList": [
+      {
+        "fileName": "Untitled.png",
+        "documentType": "OTHER",
+        "belongsToShipment": false,
+        "notes": "Gambar ilustrasi pemandangan pantai."
+      }
+    ]
+  },
+  "blNumber": null,
+  "blDate": null,
+  "invoiceNumber": null,
+  "invoiceDate": null,
+  "invoices": [],
+  "packingListNumber": null,
+  "packingListDate": null,
+  "containerNumber": null,
+  "shipperName": null,
+  "shipperAddress": null,
+  "consigneeName": null,
+  "consigneeAddress": null,
+  "loadingPort": null,
+  "dischargePort": null,
+  "totalKemasan": null,
+  "totalGrossWeightKGM": null,
+  "totalNetWeightKGM": null,
+  "items": []
+}

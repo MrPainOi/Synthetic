@@ -6,6 +6,14 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { parseDocuments } = require('./document_parser');
+const {
+    analyzePibPebDocument,
+    searchOutlook,
+    openOutlookEmail,
+    createZipBundle,
+    ATTACHMENTS_DIR,
+    ZIPS_DIR
+} = require('./doc_searcher_service');
 
 const app = express();
 const PORT = process.env.PORT || 5005;
@@ -386,6 +394,59 @@ app.get('/api/hscode/stats', (req, res) => {
         res.json({ success: true, data: stats });
     } catch (err) {
         res.status(500).json({ error: err.message });
+    }
+});
+
+// ====================================================================
+// CEISA 4.0 - DOKUMEN SEARCHER (OUTLOOK MATCHER) APIS
+// ====================================================================
+app.use('/api/doc-searcher/attachments', express.static(ATTACHMENTS_DIR));
+app.use('/api/doc-searcher/zips', express.static(ZIPS_DIR));
+
+// POST /api/doc-searcher/analyze-pib-peb
+app.post('/api/doc-searcher/analyze-pib-peb', upload.single('file'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ success: false, error: 'Tidak ada berkas PIB/PEB yang diunggah.' });
+        }
+        const customKey = req.headers['x-gemini-key'] || null;
+        const result = await analyzePibPebDocument(req.file.path, req.file.originalname, customKey);
+        res.json(result);
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// POST /api/doc-searcher/search-outlook
+app.post('/api/doc-searcher/search-outlook', async (req, res) => {
+    try {
+        const searchParams = req.body || {};
+        const result = await searchOutlook(searchParams);
+        res.json(result);
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// POST /api/doc-searcher/open-outlook-email
+app.post('/api/doc-searcher/open-outlook-email', async (req, res) => {
+    try {
+        const { entryId } = req.body || {};
+        const result = await openOutlookEmail(entryId);
+        res.json(result);
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// POST /api/doc-searcher/create-zip
+app.post('/api/doc-searcher/create-zip', async (req, res) => {
+    try {
+        const { fileNames } = req.body || {};
+        const result = await createZipBundle(fileNames);
+        res.json(result);
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
     }
 });
 

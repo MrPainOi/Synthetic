@@ -2610,9 +2610,18 @@
         });
     }
 
-    window.addEventListener("load", () => {
-        initContentScript();
+    // Bridge message dari Web Page (misal localhost/dashboard) ke Extension Background
+    window.addEventListener("message", (event) => {
+        if (!event.data) return;
+        if (event.data.type === "CEISA_REQUEST_START_SERVER") {
+            try {
+                chrome.runtime.sendMessage({ type: "START_BACKEND_SERVER" }, (res) => {
+                    window.postMessage({ type: "CEISA_START_SERVER_RESPONSE", response: res }, "*");
+                });
+            } catch (e) {
+                window.postMessage({ type: "CEISA_START_SERVER_RESPONSE", response: { ok: false, error: e.message } }, "*");
+            }
+        }
     });
-
 
 })();

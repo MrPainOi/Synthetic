@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CEISA 4.0 - Dokumen Searcher</title>
+
+    <script src="theme-init.js"></script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="dashboard.css">
+
+    <style>
+        /* Scoped adjustments matching CEISA 4.0 */
+        .ds-container {
+            padding: 16px 20px 48px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .ds-grid-layout {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+            gap: 16px;
+            align-items: start;
+            margin-bottom: 16px;
+        }
+
+        @media (max-width: 1024px) {
+            .ds-grid-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* CEISA-style Dropzone */
+        .ceisa-dropzone {
+            border: 2px dashed var(--border-color);
+            background: var(--surface-subtle);
+            border-radius: var(--radius-sm);
+            padding: 24px 16px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .ceisa-dropzone:hover, .ceisa-dropzone.dragover {
+            border-color: var(--ceisa-blue, #0284c7);
+            background: rgba(2, 132, 199, 0.05);
+        }
+
+        .dropzone-icon-box {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(2, 132, 199, 0.12);
+            color: var(--ceisa-blue, #0284c7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 10px;
+        }
+
+        .dropzone-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin: 0 0 4px;
+        }
+
+        .dropzone-subtitle {
+            font-size: 11.5px;
+            color: var(--text-secondary);
+            margin: 0;
+        }
+
+        /* Selected file card */
+        .selected-file-banner {
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 14px;
+            background: var(--surface-subtle);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            margin-bottom: 12px;
+        }
+
+        /* Checklist items */
+        .target-doc-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 12px;
+            background: var(--surface-subtle);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            margin-bottom: 8px;
+        }
+
+        .target-doc-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .target-doc-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 4px;
+            background: rgba(2, 132, 199, 0.1);
+            color: var(--ceisa-blue, #0284c7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .target-doc-name {
+            font-size: 12.5px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .target-doc-val {
+            font-size: 11.5px;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--text-secondary);
+        }
+
+        /* Customs Document Code Badge (380, 217, 705, etc.) */
+        .badge-doc-code {
+            display: inline-block;
+            padding: 1px 5px;
+            font-size: 11px;
+            font-weight: 700;
+            font-family: var(--font-mono, 'JetBrains Mono', monospace);
+            background: rgba(37, 99, 235, 0.1);
+            color: var(--ceisa-blue, #2563eb);
+            border: 1px solid rgba(37, 99, 235, 0.25);
+            border-radius: var(--radius-xs, 4px);
+            margin-right: 6px;
+            line-height: 1.3;
+        }
+
+        /* Status badge styling */
+        .badge-status-green {
+            background: rgba(22, 163, 74, 0.12);
+            color: #16a34a;
+            border: 1px solid rgba(22, 163, 74, 0.3);
+            font-size: 11.5px;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 4px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .badge-status-orange {
+            background: rgba(245, 158, 11, 0.12);
+            color: #d97706;
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            font-size: 11.5px;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 4px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .badge-status-red {
+            background: rgba(239, 68, 68, 0.12);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            font-size: 11.5px;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 4px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .badge-status-blue {
+            background: rgba(2, 132, 199, 0.12);
+            color: #0284c7;
+            border: 1px solid rgba(2, 132, 199, 0.3);
+            font-size: 11.5px;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 4px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .status-dot-green {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #16a34a;
+            flex-shrink: 0;
+        }
+
+        .status-dot-orange {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #f59e0b;
+            flex-shrink: 0;
+        }
+
+        .status-dot-red {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #ef4444;
+            flex-shrink: 0;
+        }
+
+        .btn-action-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+            background: var(--surface-subtle);
+            color: var(--text-primary);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .btn-action-icon:hover {
+            border-color: var(--ceisa-blue, #0284c7);
+            color: var(--ceisa-blue, #0284c7);
+            background: rgba(2, 132, 199, 0.08);
+        }
+
+        .spinner-inline {
+            width: 12px;
+            height: 12px;
+            border: 2px solid rgba(2, 132, 199, 0.3);
+            border-radius: 50%;
+            border-top-color: var(--ceisa-blue, #0284c7);
+            animation: dsSpin 0.7s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        @keyframes dsSpin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Hallmark Precision Dark Mode overrides */
+        [data-theme="dark"] .badge-doc-code {
+            background: rgba(59, 130, 246, 0.18);
+            color: #60a5fa;
+            border-color: rgba(59, 130, 246, 0.35);
+        }
+
+        [data-theme="dark"] .badge-status-green {
+            background: rgba(16, 185, 129, 0.16);
+            color: #34d399;
+            border-color: rgba(16, 185, 129, 0.35);
+        }
+
+        [data-theme="dark"] .badge-status-orange {
+            background: rgba(245, 158, 11, 0.16);
+            color: #fbbf24;
+            border-color: rgba(245, 158, 11, 0.35);
+        }
+
+        [data-theme="dark"] .badge-status-red {
+            background: rgba(239, 68, 68, 0.16);
+            color: #f87171;
+            border-color: rgba(239, 68, 68, 0.35);
+        }
+
+        [data-theme="dark"] .badge-status-blue {
+            background: rgba(59, 130, 246, 0.18);
+            color: #60a5fa;
+            border-color: rgba(59, 130, 246, 0.35);
+        }
+
+        [data-theme="dark"] .btn-action-icon {
+            background: #131d31;
+            border-color: #1e293b;
+            color: #cbd5e1;
+        }
+
+        [data-theme="dark"] .btn-action-icon:hover {
+            border-color: #3b82f6;
+            color: #60a5fa;
+            background: rgba(59, 130, 246, 0.15);
+        }
+
+        [data-theme="dark"] .doc-modal-container {
+            background: var(--surface-card, #0e1626);
+            border-color: var(--border-color, #1e293b);
+        }
+
+        #modalCandidates {
+            z-index: 10000;
+        }
+
+        #modalPreview {
+            z-index: 10001;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- TOP PORTAL HEADER -->
+    <header class="portal-header">
+        <div class="portal-header-inner">
+            <div class="portal-brand">
+                <div class="portal-logo-emblem">
+                    <svg class="portal-logo-svg" width="32" height="32" viewBox="0 0 48 48" fill="none"
+                        xmlns="http://www.w3.org/2000/svg" aria-label="Logo Bea Cukai">
+                        <path d="M24 4L7 9V22C7 33.5 14.3 41.8 24 44C33.7 41.8 41 33.5 41 22V9L24 4Z" fill="#0A2540"
+                            stroke="#F59E0B" stroke-width="2.5" stroke-linejoin="round" />
+                        <path d="M24 7L10 11.2V21.5C10 31.2 16.2 38.3 24 40.5C31.8 38.3 38 31.2 38 21.5V11.2L24 7Z"
+                            fill="#0F3460" stroke="#FCD34D" stroke-width="1.2" />
+                        <path
+                            d="M24 10.5L25.6 14.5L29.8 14.7L26.5 17.3L27.7 21.3L24 18.8L20.3 21.3L21.5 17.3L18.2 14.7L22.4 14.5L24 10.5Z"
+                            fill="#FBBF24" stroke="#F59E0B" stroke-width="0.5" />
+                        <path
+                            d="M22 22C18 20 12 21 11 25C13 25.5 16 25 18 26C14 27 12 29 13 32C15.5 31 18 30 20 30.5C18 32 16 34 17 36C20 34.5 22 31.5 22.5 29V22H22Z"
+                            fill="#FBBF24" opacity="0.95" />
+                        <path
+                            d="M26 22C30 20 36 21 37 25C35 25.5 32 25 30 26C34 27 36 29 35 32C32.5 31 30 30 28 30.5C30 32 32 34 31 36C28 34.5 26 31.5 25.5 29V22H26Z"
+                            fill="#FBBF24" opacity="0.95" />
+                        <path d="M24 19V38M21 34C21 36.5 22.3 38 24 38C25.7 38 27 36.5 27 34" stroke="#FFFFFF"
+                            stroke-width="1.8" stroke-linecap="round" />
+                        <circle cx="24" cy="20" r="1.8" fill="#FCD34D" stroke="#FFFFFF" stroke-width="0.8" />
+                        <path d="M22 25C22.5 24 25.5 24 26 25C26.5 26.5 21.5 27.5 22 29C22.5 30.5 25.5 30.5 26 32"
+                            stroke="#FFFFFF" stroke-width="1.2" stroke-linecap="round" />
+                    </svg>
+                </div>
+                <div class="portal-brand-text">
+                    <span class="portal-system-title">CEISA 4.0 &bull; DOKUMEN SEARCHER</span>
+                    <span class="portal-system-sub">Pencari Lampiran Pabean (Outlook Mailbox)</span>
+                </div>
+            </div>
+            <!-- Contextual Header Actions -->
+            <div class="portal-header-actions" style="display: flex;">
+                <button type="button" class="btn btn-header-subtle" id="btnHeaderReset" title="Reset Semua Isian Dokumen Searcher">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                        <path d="M3 3v5h5"></path>
+                    </svg>
+                    Reset Form
+                </button>
+                <a href="peb.html" class="btn btn-header-subtle" title="Buka Modul Draft PEB">
+                    Modul PEB
+                </a>
+                <a href="pib.html" class="btn btn-header-subtle" title="Buka Modul Draft PIB">
+                    Modul PIB
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- MASTER PORTAL WRAPPER -->
+    <div class="ceisa-portal-layout">
+        <!-- SIDEBAR -->
+        <aside class="ceisa-sidebar" id="ceisaSidebar" aria-label="Navigasi Menu CEISA 4.0">
+            <div class="ceisa-sidebar-header">
+                <div class="ceisa-sidebar-brand-box">
+                    <span class="sidebar-brand-badge">PORTAL</span>
+                    <span class="sidebar-brand-title">MENU CEISA</span>
+                </div>
+                <button type="button" class="ceisa-sidebar-toggle" id="ceisaSidebarToggle"
+                    title="Perluas / Ciutkan Menu Samping" aria-label="Toggle Menu Samping" aria-expanded="false">
+                    <svg class="icon-toggle-expand" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="13 17 18 12 13 7"></polyline>
+                        <polyline points="6 17 11 12 6 7"></polyline>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="ceisa-sidebar-nav" role="tablist" aria-label="Menu Utama Portal CEISA">
+                <!-- 1. Modul Draft PEB -->
+                <a href="peb.html" class="ceisa-sidebar-item" id="btnNavPeb" role="tab"
+                    aria-selected="false" title="Modul Draft PEB (Ekspor)" data-tooltip="Modul Draft PEB (Ekspor)">
+                    <div class="sidebar-icon-box">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="16" y1="13" x2="8" y2="13"></line>
+                            <line x1="16" y1="17" x2="8" y2="17"></line>
+                        </svg>
+                    </div>
+                    <span class="sidebar-label">Modul Draft PEB</span>
+                </a>
+
+                <!-- 2. Modul Draft PIB -->
+                <a href="pib.html" class="ceisa-sidebar-item" id="btnNavPib" role="tab"
+                    aria-selected="false" title="Modul Draft PIB (Impor)" data-tooltip="Modul Draft PIB (Impor)">
+                    <div class="sidebar-icon-box">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                            <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                            <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                        </svg>
+                    </div>
+                    <span class="sidebar-label">Modul Draft PIB</span>
+                </a>
+
+                <!-- 3. HS Code Checker -->
+                <a href="hscode.html" class="ceisa-sidebar-item" id="btnNavHsCode" role="tab"
+                    aria-selected="false" title="HS Code Checker & BTKI" data-tooltip="HS Code Checker & BTKI">
+                    <div class="sidebar-icon-box">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                            <line x1="11" y1="8" x2="11" y2="14"></line>
+                            <line x1="8" y1="11" x2="14" y2="11"></line>
+                        </svg>
+                    </div>
+                    <span class="sidebar-label">HS Code Checker</span>
+                </a>
+
+                <!-- 4. Dokumen Searcher (ACTIVE) -->
+                <a href="doc_searcher.html" class="ceisa-sidebar-item active" id="btnNavDocSearcher" role="tab"
+                    aria-selected="true" title="Dokumen Searcher (Pencari Dokumen Pabean)" data-tooltip="Dokumen Searcher">
+                    <div class="sidebar-icon-box">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <circle cx="11" cy="14" r="3"></circle>
+                            <line x1="13.5" y1="16.5" x2="16" y2="19"></line>
+                        </svg>
+                    </div>
+                    <span class="sidebar-label">Dokumen Searcher</span>
+                </a>
+
+                <div class="ceisa-sidebar-dots" aria-hidden="true"><span></span><span></span><span></span></div>
+
+                <!-- 5. CEISA Inspector -->
+                <a href="dashboard.html" class="ceisa-sidebar-item" id="btnNavInspector" role="tab"
+                    aria-selected="false" title="CEISA Inspector (Monitoring & SPPB)"
+                    data-tooltip="CEISA Inspector (Monitoring & SPPB)">
+                    <div class="sidebar-icon-box">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                            <line x1="8" y1="21" x2="16" y2="21"></line>
+                            <line x1="12" y1="17" x2="12" y2="21"></line>
+                        </svg>
+                    </div>
+                    <span class="sidebar-label">CEISA Inspector</span>
+                </a>
+            </div>
+
+            <!-- Footer Theme Mode Toggle -->
+            <div class="ceisa-sidebar-footer">
+                <button type="button" class="ceisa-theme-toggle" id="themeToggleBtn"
+                    title="Beralih Mode Gelap / Terang" aria-label="Toggle Dark/Light Mode" data-tooltip="Mode Gelap / Terang">
+                    <div class="sidebar-icon-box">
+                        <svg class="icon-theme-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="5"></circle>
+                            <line x1="12" y1="1" x2="12" y2="3"></line>
+                            <line x1="12" y1="21" x2="12" y2="23"></line>
+                            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                            <line x1="1" y1="12" x2="3" y2="12"></line>
+                            <line x1="21" y1="12" x2="23" y2="12"></line>
+                            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                        </svg>
+                        <svg class="icon-theme-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                        </svg>
+                    </div>
+                    <span class="sidebar-label theme-label">Mode Gelap</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Workspace Viewport -->
+        <div class="ceisa-portal-content">
+            <div id="module-docsearcher" class="portal-module-view" style="display: block;">
+                <main class="main-workspace" style="padding-top: 4px;">
+
+                    <!-- Sub-Header Strip (1:1 Standar Resmi CEISA 4.0) -->
+                    <section class="doc-title-strip">
+                        <div class="doc-title-container">
+                            <div class="doc-title-left">
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <span class="badge-bc-type" style="background: #0284c7; color: #fff; padding: 3px 8px; border-radius: 4px; font-weight: 700; font-size: 11px; letter-spacing: 0.5px;">OUTLOOK MAPI</span>
+                                    <h1 style="margin: 0; font-size: 18px; font-weight: 700;">Dokumen Searcher</h1>
+                                </div>
+                                <span class="badge-draft-status" id="lblDocSearcherStatus">Pencarian Lampiran Pabean Otomatis</span>
+                            </div>
+                            <div class="doc-title-meta">
+                                Akun Mailbox: <strong>admin@tuahtimur.com</strong> &bull; Status: <span style="color: #16a34a; font-weight: 600;"><span class="status-dot-green" style="display:inline-block; margin-right:4px;"></span>Siap Terhubung ke Outlook</span>
+                            </div>
+                        </div>
+                    </section>
+
+                    <div class="ds-container">
+
+                        <!-- TWO-COLUMN WORKFLOW -->
+                        <div class="ds-grid-layout">
+
+                            <!-- COLUMN 1: UPLOAD DOKUMEN & CHECKLIST -->
+                            <div>
+                                <!-- CARD 1: UPLOAD -->
+                                <div class="ceisa-form-card">
+                                    <div class="ceisa-card-header">
+                                        <span class="ceisa-card-title">1. Unggah Dokumen PIB / PEB</span>
+                                        <span class="badge-bc-type" style="background: rgba(2,132,199,0.12); color: #0284c7; font-size: 11px; font-weight: 700;">FORMAT PDF</span>
+                                    </div>
+                                    <div class="ceisa-card-body">
+                                        <!-- Dropzone -->
+                                        <div class="ceisa-dropzone" id="dsDropzone">
+                                            <input type="file" id="dsFileInput" accept=".pdf" style="display: none;">
+                                            <div class="dropzone-icon-box">
+                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                                    <polyline points="17 8 12 3 7 8"></polyline>
+                                                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                                                </svg>
+                                            </div>
+                                            <p class="dropzone-title">Tarik & Lepaskan Berkas PIB / PEB ke Sini</p>
+                                            <p class="dropzone-subtitle">atau klik untuk memilih berkas dari komputer</p>
+                                        </div>
+
+                                        <!-- Selected File Banner -->
+                                        <div class="selected-file-banner" id="dsSelectedFileCard">
+                                            <div style="display: flex; align-items: center; gap: 10px;">
+                                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2">
+                                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                                    <polyline points="14 2 14 8 20 8"></polyline>
+                                                </svg>
+                                                <div>
+                                                    <div style="font-size: 13px; font-weight: 700; color: var(--text-primary);" id="dsFileName">—</div>
+                                                    <div style="font-size: 11.5px; color: var(--text-secondary);" id="dsFileSize">—</div>
+                                                </div>
+                                            </div>
+                                            <button type="button" class="btn-action-icon" id="dsBtnRemoveFile" title="Hapus Berkas">
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                                </svg>
+                                            </button>
+                                        </div>
+
+                                        <!-- Progress Bar / Status Log -->
+                                        <div id="dsAnalysisLogBox" style="display: none; margin-top: 12px; padding: 10px 14px; background: var(--surface-subtle); border: 1px solid var(--border-color); border-radius: var(--radius-sm); align-items: center; gap: 10px;">
+                                            <span class="spinner-inline" id="dsLogSpinner"></span>
+                                            <span id="dsLogText" style="font-size: 12px; color: var(--text-primary);">Membaca & menganalisis berkas pabean...</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- CARD 2: TARGET DOKUMEN IDENTIFIKASI -->
+                                <div class="ceisa-form-card">
+                                    <div class="ceisa-card-header">
+                                        <span class="ceisa-card-title">Target Dokumen Pendukung</span>
+                                        <span class="badge-safe-valid" id="dsDocTypeBadge" style="font-size: 11px;">MENUNGGU DOKUMEN</span>
+                                    </div>
+                                    <div class="ceisa-card-body">
+                                        <div id="dsTargetList">
+                                            <div class="target-doc-row">
+                                                <div class="target-doc-left">
+                                                    <div class="target-doc-icon">
+                                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                                                    </div>
+                                                    <div>
+                                                        <div class="target-doc-name">Commercial Invoice</div>
+                                                        <div class="target-doc-val" id="targetValInvoice">Belum ada data</div>
+                                                    </div>
+                                                </div>
+                                                <span class="badge-status-orange" style="font-size: 11px;">Wajib</span>
+                                            </div>
+
+                                            <div class="target-doc-row">
+                                                <div class="target-doc-left">
+                                                    <div class="target-doc-icon">
+                                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
+                                                    </div>
+                                                    <div>
+                                                        <div class="target-doc-name">Packing List</div>
+                                                        <div class="target-doc-val" id="targetValPacking">Belum ada data</div>
+                                                    </div>
+                                                </div>
+                                                <span class="badge-status-orange" style="font-size: 11px;">Wajib</span>
+                                            </div>
+
+                                            <div class="target-doc-row">
+                                                <div class="target-doc-left">
+                                                    <div class="target-doc-icon">
+                                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="3"></circle><line x1="12" y1="22" x2="12" y2="8"></line><path d="M5 12H2a10 10 0 0 0 20 0h-3"></path></svg>
+                                                    </div>
+                                                    <div>
+                                                        <div class="target-doc-name">Bill of Lading / AWB</div>
+                                                        <div class="target-doc-val" id="targetValBl">Belum ada data</div>
+                                                    </div>
+                                                </div>
+                                                <span class="badge-status-orange" style="font-size: 11px;">Wajib</span>
+                                            </div>
+
+                                            <div class="target-doc-row">
+                                                <div class="target-doc-left">
+                                                    <div class="target-doc-icon">
+                                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 14 14"></polyline></svg>
+                                                    </div>
+                                                    <div>
+                                                        <div class="target-doc-name">Certificate of Origin (COO)</div>
+                                                        <div class="target-doc-val" id="targetValCoo">Opsional</div>
+                                                    </div>
+                                                </div>
+                                                <span class="badge-status-blue" style="font-size: 11px;">Opsional</span>
+                                            </div>
+                                        </div>
+
+                                        <button type="button" class="btn btn-primary-ceisa" id="btnStartSearchOutlook" disabled style="width: 100%; margin-top: 14px; padding: 10px 16px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                                                <circle cx="11" cy="11" r="8"></circle>
+                                                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                                            </svg>
+                                            Mulai Cari di Outlook
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- COLUMN 2: PARAMETER PENCARIAN -->
+                            <div>
+                                <div class="ceisa-form-card">
+                                    <div class="ceisa-card-header">
+                                        <span class="ceisa-card-title">2. Parameter Pencarian Mailbox</span>
+                                        <span style="font-size: 11.5px; color: var(--text-secondary);">Diekstrak otomatis dari berkas</span>
+                                    </div>
+                                    <div class="ceisa-card-body">
+                                        <div class="form-grid-2">
+                                            <div class="form-group">
+                                                <label class="form-label" for="paramPibNo">Nomor PIB / PEB</label>
+                                                <input type="text" id="paramPibNo" class="form-control form-control-mono" placeholder="Nomor Pendaftaran / Aju">
+                                            </div>
+                                            <div class="form-group">
+                                                <label class="form-label" for="paramPibDate">Tanggal Pabean</label>
+                                                <input type="date" id="paramPibDate" class="form-control">
+                                            </div>
+
+                                            <div class="form-group">
+                                                <label class="form-label" for="paramInvoiceNo">Nomor Invoice <span class="req">*</span></label>
+                                                <input type="text" id="paramInvoiceNo" class="form-control form-control-mono" placeholder="Contoh: TC 32352 / 98007744">
+                                            </div>
+                                            <div class="form-group">
+                                                <label class="form-label" for="paramInvoiceDate">Tanggal Invoice</label>
+                                                <input type="date" id="paramInvoiceDate" class="form-control">
+                                            </div>
+
+                                            <div class="form-group">
+                                                <label class="form-label" for="paramBlNo">Nomor B/L atau AWB <span class="req">*</span></label>
+                                                <input type="text" id="paramBlNo" class="form-control form-control-mono" placeholder="Contoh: 7383-A / BAPSIN0153818">
+                                            </div>
+                                            <div class="form-group">
+                                                <label class="form-label" for="paramBlDate">Tanggal B/L</label>
+                                                <input type="date" id="paramBlDate" class="form-control">
+                                            </div>
+                                        </div>
+
+                                        <div class="form-group" style="margin-top: 12px;">
+                                            <label class="form-label" for="paramCompany">Importir / Eksportir (Perusahaan)</label>
+                                            <input type="text" id="paramCompany" class="form-control" placeholder="Nama entitas perusahaan">
+                                        </div>
+
+                                        <div class="form-group" style="margin-top: 12px;">
+                                            <label class="form-label" for="paramSupplier">Pemasok / Shipper Luar Negeri</label>
+                                            <input type="text" id="paramSupplier" class="form-control" placeholder="Nama supplier / penjual">
+                                        </div>
+
+                                        <div class="form-grid-2" style="margin-top: 12px;">
+                                            <div class="form-group">
+                                                <label class="form-label" for="paramVessel">Sarana Pengangkut (Vessel / Voyage)</label>
+                                                <input type="text" id="paramVessel" class="form-control" placeholder="Nama kapal & voyage">
+                                            </div>
+                                            <div class="form-group">
+                                                <label class="form-label" for="paramContainer">Nomor Kontainer</label>
+                                                <input type="text" id="paramContainer" class="form-control form-control-mono" placeholder="Contoh: TEMU1234567">
+                                            </div>
+                                        </div>
+
+                                        <div class="form-group" style="margin-top: 12px;">
+                                            <label class="form-label" for="paramCustomQuery">Kata Kunci Tambahan (Opsional)</label>
+                                            <input type="text" id="paramCustomQuery" class="form-control" placeholder="Kata kunci subjek / No PO / referensi forwarder">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <!-- SECTION 3: HASIL PENCARIAN DOKUMEN -->
+                        <div class="ceisa-form-card" id="dsResultsCard">
+                            <div class="ceisa-card-header">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <span class="ceisa-card-title">3. Hasil Pencarian Dokumen di Outlook</span>
+                                    <span class="badge-safe-valid" id="dsResultCountBadge" style="display: none;">0 Berkas Ditemukan</span>
+                                </div>
+                                <div>
+                                    <button type="button" class="btn btn-secondary-ceisa" id="btnDownloadAllZip" disabled title="Unduh seluruh dokumen sebagai arsip ZIP">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                            <polyline points="7 10 12 15 17 10"></polyline>
+                                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                                        </svg>
+                                        Unduh Semua (ZIP)
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="ceisa-card-body" style="padding: 0;">
+                                <div class="table-responsive">
+                                    <table class="ceisa-table table-bordered table-hover" id="dsResultsTable">
+                                        <thead>
+                                            <tr>
+                                                <th style="width: 20%;">Jenis Dokumen</th>
+                                                <th style="width: 15%;">Status</th>
+                                                <th style="width: 25%;">Berkas Lampiran</th>
+                                                <th style="width: 22%;">Info Email Asal (Outlook)</th>
+                                                <th style="width: 9%; text-align: center;">Kecocokan</th>
+                                                <th style="width: 9%; text-align: center;">Aksi</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="dsTableBody">
+                                            <tr>
+                                                <td colspan="6" style="text-align: center; padding: 36px; color: var(--text-secondary);">
+                                                    Belum ada dokumen yang dicari. Silakan unggah berkas PIB / PEB di atas atau tekan tombol <b>Mulai Cari di Outlook</b>.
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </main>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 1: PREVIEW DOKUMEN PDF -->
+    <div class="doc-modal-overlay" id="modalPreview" style="display: none;" role="dialog" aria-modal="true">
+        <div class="doc-modal-container">
+            <div class="doc-modal-header">
+                <div>
+                    <h3 style="margin: 0; font-size: 14.5px; font-weight: 700; color: #ffffff;" id="modalPreviewTitle">Pratinjau Dokumen</h3>
+                    <span style="font-size: 11.5px; color: rgba(255, 255, 255, 0.75);" id="modalPreviewSubtitle">—</span>
+                </div>
+                <button type="button" class="btn-action-icon" id="btnClosePreviewModal" style="background: transparent; border-color: rgba(255,255,255,0.2); color: #ffffff;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div style="flex: 1; background: #525659; overflow: hidden;">
+                <iframe id="previewIframe" style="width: 100%; height: 100%; border: none;" src="about:blank"></iframe>
+            </div>
+            <div style="padding: 10px 16px; background: var(--surface-subtle); border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end;">
+                <a id="btnDownloadPreviewFile" href="#" download class="btn btn-primary-ceisa" style="text-decoration: none;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    Unduh Berkas
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 2: CANDIDATE PICKER (WHEN MULTIPLE FOUND) -->
+    <div class="doc-modal-overlay" id="modalCandidates" style="display: none;" role="dialog" aria-modal="true">
+        <div class="doc-modal-container" style="max-width: 800px; height: auto; max-height: 80vh;">
+            <div class="doc-modal-header">
+                <div>
+                    <h3 style="margin: 0; font-size: 14.5px; font-weight: 700; color: #ffffff;" id="modalCandTitle">Pilih Dokumen yang Sesuai</h3>
+                    <span style="font-size: 11.5px; color: rgba(255, 255, 255, 0.75);">Ditemukan beberapa kandidat lampiran pada mailbox Outlook Anda.</span>
+                </div>
+                <button type="button" class="btn-action-icon" id="btnCloseCandModal" style="background: transparent; border-color: rgba(255,255,255,0.2); color: #ffffff;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div style="padding: 16px; overflow-y: auto; flex: 1;">
+                <div id="candidateListContainer" style="display: flex; flex-direction: column; gap: 10px;">
+                    <!-- Injected dynamically -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPTS -->
+    <script src="config.js"></script>
+    <script src="sync.js"></script>
+    <script src="wifi-share.js"></script>
+    <script src="doc_searcher.js"></script>
+
+</body>
+</html>

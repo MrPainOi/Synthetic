@@ -83,26 +83,35 @@ async function startServer() {
         return { status: 'already_running', port: SERVER_PORT };
     }
 
-    // 2. Pastikan ExecutionPolicy & dependencies terpasang
-    ensureExecutionPolicy();
+    // 2. Pastikan dependencies terpasang jika belum ada
     ensureDependencies();
 
-    // 3. Cari binary node
-    let nodeBin = 'node';
-    if (fs.existsSync('C:\\Program Files\\nodejs\\node.exe')) {
-        nodeBin = 'C:\\Program Files\\nodejs\\node.exe';
-    } else if (fs.existsSync('D:\\Program Files\\nodejs\\node.exe')) {
-        nodeBin = 'D:\\Program Files\\nodejs\\node.exe';
+    // 3. Cari binary node yang valid
+    let nodeBin = process.execPath || 'node';
+    if (!fs.existsSync(nodeBin)) {
+        if (fs.existsSync('D:\\Program Files\\nodejs\\node.exe')) {
+            nodeBin = 'D:\\Program Files\\nodejs\\node.exe';
+        } else if (fs.existsSync('C:\\Program Files\\nodejs\\node.exe')) {
+            nodeBin = 'C:\\Program Files\\nodejs\\node.exe';
+        }
     }
 
-    // 4. Jalankan server secara detached di background
-    log('Menjalankan server di port ' + SERVER_PORT);
+    // 4. Jalankan server secara detached di background dengan file log
+    log('Menjalankan server di port ' + SERVER_PORT + ' menggunakan ' + nodeBin);
     const serverScript = path.join(BACKEND_DIR, 'server.js');
-    
+    const serverLogPath = path.join(PROJECT_ROOT, 'server.log');
+    let outStream = 'ignore';
+    let errStream = 'ignore';
+    try {
+        const outFd = fs.openSync(serverLogPath, 'a');
+        outStream = outFd;
+        errStream = outFd;
+    } catch (_) {}
+
     const child = spawn(nodeBin, [serverScript], {
         cwd: BACKEND_DIR,
         detached: true,
-        stdio: 'ignore',
+        stdio: ['ignore', outStream, errStream],
         windowsHide: true
     });
     child.unref();
