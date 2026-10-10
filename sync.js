@@ -17,6 +17,28 @@ let isSupabaseSyncing = false;
 let lastLocalSaveTimestamp = 0;
 let isLocalPushInProgress = false;
 
+// Smart Sync & Egress Protection Constants
+let syncChannel = null;
+try {
+    if (typeof BroadcastChannel !== "undefined") {
+        syncChannel = new BroadcastChannel("ceisa_sync_channel");
+        syncChannel.onmessage = (event) => {
+            if (event.data?.type === "LOCAL_STATE_UPDATED") {
+                try {
+                    window.dispatchEvent(new CustomEvent("ceisa_storage_changed", { detail: event.data.payload }));
+                    broadcastRefreshColor();
+                } catch (_) {}
+            }
+        };
+    }
+} catch (_) {}
+
+let lastSuccessfulSupabaseSyncIso = null;
+try {
+    lastSuccessfulSupabaseSyncIso = localStorage.getItem("ceisa_last_supabase_sync_iso") || null;
+} catch (_) {}
+const GLOBAL_SYNC_THROTTLE_MS = 25000; // Minimal interval 25 detik antar sinkronisasi cloud
+
 function getSupabaseHeaders(extraHeaders = {}) {
     return {
         "apikey": SUPABASE_ANON_KEY,
@@ -63,6 +85,9 @@ async function storageSet(object) {
 
     try {
         window.dispatchEvent(new CustomEvent("ceisa_storage_changed", { detail: object }));
+        if (syncChannel) {
+            syncChannel.postMessage({ type: "LOCAL_STATE_UPDATED", payload: object });
+        }
     } catch (_) {}
 }
 
@@ -144,7 +169,7 @@ async function broadcastRefreshColor() {
 // ------------------------------------------------------------
 // PUSH EXACT MIRROR STATE TO SUPABASE CLOUD
 // ------------------------------------------------------------
-async function pushExactStateToSupabase(completed, pibpeb, cache, targetDate) {
+async function pushExactStateToSupabase(completed, pibpeb, cache, targetDate, isFullBackup = false) {
     const now = Date.now();
     lastLocalSaveTimestamp = now;
     isLocalPushInProgress = true;
@@ -201,9 +226,19 @@ async function pushExactStateToSupabase(completed, pibpeb, cache, targetDate) {
         }
 
         // 3. Upsert cache in background without blocking UI
+        // Supabase Quota Protection: Hanya upload item yang baru (24 jam terakhir, max 50 item)
+        // kecuali saat full backup import (isFullBackup = true).
         const cacheEntries = Object.values(cleanCache);
         if (cacheEntries.length > 0) {
-            const cacheRows = cacheEntries.map(item => {
+            let targetCacheEntries = cacheEntries;
+            if (!isFullBackup) {
+                const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+                targetCacheEntries = cacheEntries
+                    .filter(item => item && (now - Number(item.timestamp || 0)) < ONE_DAY_MS)
+                    .slice(0, 50);
+            }
+
+            const cacheRows = targetCacheEntries.map(item => {
                 if (!item) return null;
                 const regNo = sanitizeRegistrationItem(item.registrationNumber);
                 if (!regNo) return null;
@@ -283,22 +318,50 @@ async function pushSingleCacheItemToSupabase(item) {
 // ------------------------------------------------------------
 // SYNC WITH SUPABASE CLOUD (FETCH & MERGE)
 // ------------------------------------------------------------
-async function syncWithSupabase() {
+async function syncWithSupabase(force = false) {
+    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
     if (isSupabaseSyncing || isLocalPushInProgress) return null;
+
+    // 1. Tab Visibility Guard: Hentikan polling jika tab sedang di-minimize / tidak aktif
+    if (!force && typeof document !== "undefined" && document.hidden) {
+        return null;
+    }
+
+    // 2. Cross-Tab Throttle: Jika tab lain di browser baru saja sync < 25 detik lalu, lewati
+    let lastGlobal = 0;
+    try {
+        lastGlobal = Number(localStorage.getItem("ceisa_global_sync_ts") || 0);
+    } catch (_) {}
+    if (!force && (Date.now() - lastGlobal < GLOBAL_SYNC_THROTTLE_MS)) {
+        return null;
+    }
+
     isSupabaseSyncing = true;
+    try {
+        localStorage.setItem("ceisa_global_sync_ts", String(Date.now()));
+    } catch (_) {}
 
     try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 4000);
 
-        // Fetch sync state & scan cache in parallel
+        // Fetch sync state & scan cache in parallel (DELTA INCREMENTAL SYNC)
+        let syncUrl = `${SUPABASE_URL}/rest/v1/ceisa_sync_state?select=*&order=date.desc&limit=15`;
+        let cacheUrl = `${SUPABASE_URL}/rest/v1/ceisa_scan_cache?select=registration_number,document_number,document_type,company_name,location,status,row_date,timestamp,updated_at&status=not.is.null&order=timestamp.desc.nullslast&limit=250`;
+
+        // Jika sudah pernah sync sebelumnya, cukup ambil data yang baru diperbarui (hemat 99% egress)
+        if (lastSuccessfulSupabaseSyncIso && !force) {
+            syncUrl = `${SUPABASE_URL}/rest/v1/ceisa_sync_state?select=*&updated_at=gt.${encodeURIComponent(lastSuccessfulSupabaseSyncIso)}`;
+            cacheUrl = `${SUPABASE_URL}/rest/v1/ceisa_scan_cache?select=registration_number,document_number,document_type,company_name,location,status,row_date,timestamp,updated_at&updated_at=gt.${encodeURIComponent(lastSuccessfulSupabaseSyncIso)}&limit=100`;
+        }
+
         const [syncRes, cacheRes] = await Promise.all([
-            fetch(`${SUPABASE_URL}/rest/v1/ceisa_sync_state?select=*&order=date.desc`, {
+            fetch(syncUrl, {
                 method: "GET",
                 headers: getSupabaseHeaders(),
                 signal: controller.signal
             }),
-            fetch(`${SUPABASE_URL}/rest/v1/ceisa_scan_cache?select=*&status=not.is.null&order=timestamp.desc.nullslast&limit=1000`, {
+            fetch(cacheUrl, {
                 method: "GET",
                 headers: getSupabaseHeaders(),
                 signal: controller.signal
@@ -315,6 +378,16 @@ async function syncWithSupabase() {
 
         const syncData = await syncRes.json();
         const cacheData = cacheRes.ok ? await cacheRes.json() : [];
+        lastSuccessfulSupabaseSyncIso = new Date().toISOString();
+        try {
+            localStorage.setItem("ceisa_last_supabase_sync_iso", lastSuccessfulSupabaseSyncIso);
+        } catch (_) {}
+
+        // Jika delta query kosong (tidak ada data baru dari cloud), langsung selesai dengan 0 KB beban
+        if (lastSuccessfulSupabaseSyncIso && Array.isArray(syncData) && syncData.length === 0 && Array.isArray(cacheData) && cacheData.length === 0) {
+            isSupabaseSyncing = false;
+            return true;
+        }
 
         // Active date handling
         const activeDateData = await storageGet("ceisa_last_scan_date");
@@ -377,7 +450,7 @@ async function syncWithSupabase() {
         // Merge localCache and serverCache safely (local valid scan never gets erased by server)
         const local = await storageGet(["ceisa_scan_cache"]);
         const localCache = (local.ceisa_scan_cache && typeof local.ceisa_scan_cache === "object") ? local.ceisa_scan_cache : {};
-        const mergedCache = { ...serverCache };
+        const mergedCache = { ...localCache, ...serverCache };
         const unsyncedCacheRows = [];
 
         for (const [k, v] of Object.entries(localCache)) {
@@ -544,7 +617,7 @@ async function importBackupJSON(jsonString) {
         const impPibPeb = cleanNumberArray(parsed.pibpeb);
         const impCache = (parsed.cache && typeof parsed.cache === "object") ? parsed.cache : {};
 
-        await pushExactStateToSupabase(impCompleted, impPibPeb, impCache);
+        await pushExactStateToSupabase(impCompleted, impPibPeb, impCache, null, true);
 
         return {
             success: true,
@@ -576,14 +649,30 @@ async function discoverWifiServer() {
 }
 
 // ------------------------------------------------------------
-// AUTO SUPABASE SYNC LOOP (Every 2.5 seconds)
+// SMART SUPABASE SYNC LOOP (Every 30 seconds when tab is active)
 // ------------------------------------------------------------
 (async () => {
-    await syncWithSupabase();
+    // Initial sync
+    setTimeout(async () => {
+        await syncWithSupabase(true);
+    }, 1000);
+
     if (!supabaseSyncInterval) {
         supabaseSyncInterval = setInterval(async () => {
-            await syncWithSupabase();
-        }, 2500);
+            await syncWithSupabase(false);
+        }, 30000); // 30 detik (hemat bandwidth 99%)
+    }
+
+    // Auto sync saat pengguna kembali membuka / memfokuskan tab
+    if (typeof document !== "undefined") {
+        document.addEventListener("visibilitychange", () => {
+            if (!document.hidden) {
+                syncWithSupabase(false);
+            }
+        });
+        window.addEventListener("focus", () => {
+            syncWithSupabase(false);
+        });
     }
 })();
 
