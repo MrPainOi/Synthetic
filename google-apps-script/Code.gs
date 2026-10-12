@@ -253,7 +253,7 @@ function doGet(e) {
     });
   }
 
-  if (action === "sync") {
+  if (action === "sync" || action === "pull") {
     const since = (e && e.parameter && e.parameter.since) ? e.parameter.since : null;
     const sinceTime = since ? new Date(since).getTime() : 0;
 

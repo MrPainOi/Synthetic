@@ -263,14 +263,15 @@ async function checkWifiStatus() {
             : (typeof CEISA_CONFIG !== "undefined" ? CEISA_CONFIG.GOOGLE_SCRIPT_URL : "");
         if (scriptUrl) {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 3000);
-            const res = await fetch(`${scriptUrl}?action=pull`, {
+            const timeoutId = setTimeout(() => controller.abort(), 8000);
+            const res = await fetch(`${scriptUrl}?action=ping`, {
                 signal: controller.signal
             });
             clearTimeout(timeoutId);
             if (res.ok) {
                 wifiStatusBadge.textContent = "Terhubung";
                 wifiStatusBadge.className = "wifi-status-on";
+                await storageSet({ ceisa_supabase_status: "connected" });
                 return;
             }
         }
@@ -295,6 +296,19 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     chrome.storage.onChanged.addListener(async (changes, area) => {
         if (area === "local") {
+            if (changes.ceisa_supabase_status) {
+                if (changes.ceisa_supabase_status.newValue === "connected") {
+                    if (wifiStatusBadge) {
+                        wifiStatusBadge.textContent = "Terhubung";
+                        wifiStatusBadge.className = "wifi-status-on";
+                    }
+                } else if (changes.ceisa_supabase_status.newValue === "offline") {
+                    if (wifiStatusBadge) {
+                        wifiStatusBadge.textContent = "Offline";
+                        wifiStatusBadge.className = "wifi-status-off";
+                    }
+                }
+            }
             if (changes.ceisa_last_scan_date && changes.ceisa_last_scan_date.newValue) {
                 const newDate = changes.ceisa_last_scan_date.newValue;
                 if (dateInput && dateInput.value !== newDate) {

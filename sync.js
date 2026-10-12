@@ -35,6 +35,7 @@ let supabaseSyncInterval = null;
 let isSupabaseSyncing = false;
 let lastLocalSaveTimestamp = 0;
 let isLocalPushInProgress = false;
+let consecutiveSyncFailures = 0;
 
 // Smart Sync & Egress Protection Constants
 let syncChannel = null;
@@ -350,7 +351,7 @@ async function syncWithSupabase(force = false) {
 
     try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 6000);
+        const timeoutId = setTimeout(() => controller.abort(), 18000);
 
         let gUrl = `${GOOGLE_SCRIPT_URL}?action=sync`;
         if (lastSuccessfulSupabaseSyncIso && !force) {
@@ -366,7 +367,10 @@ async function syncWithSupabase(force = false) {
 
         if (!gRes.ok) {
             isSupabaseSyncing = false;
-            await storageSet({ ceisa_supabase_status: "offline" });
+            consecutiveSyncFailures++;
+            if (consecutiveSyncFailures >= 2) {
+                await storageSet({ ceisa_supabase_status: "offline" });
+            }
             return null;
         }
 
@@ -590,11 +594,15 @@ async function syncWithSupabase(force = false) {
         }
 
         isSupabaseSyncing = false;
+        consecutiveSyncFailures = 0;
         return true;
 
     } catch (err) {
         isSupabaseSyncing = false;
-        await storageSet({ ceisa_supabase_status: "offline" });
+        consecutiveSyncFailures++;
+        if (consecutiveSyncFailures >= 2) {
+            await storageSet({ ceisa_supabase_status: "offline" });
+        }
         return null;
     }
 }
