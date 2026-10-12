@@ -620,12 +620,29 @@
             return batuAmpar ? "yellow" : "green";
         }
 
-        // 4. Belum Di Print SPPB/NPPB (Hanya jika ada di scanCache)
-        if (cached && cached.status) {
+        // 4. Belum Di-Print (TIDAK ADA di daftar Nomor Selesai Hijau maupun PIB/PEB)
+        // DILARANG mengembalikan status selesai (green/yellow/blue/purple/pink/aqua) jika nomor tidak ada di daftar!
+        if (cached) {
             if (cached.status === "orange" || cached.status === "red") {
                 return batuAmpar ? "red" : "orange";
             }
-            return cached.status;
+
+            // Jika sebelumnya di-cache sebagai status selesai (misal green/yellow), tetapi sekarang sudah dihapus dari daftar selesai:
+            // Kembalikan ke warna hasil scan aslinya jika pernah di-scan
+            if (cached.companyName || cached.location || cached.documentNumber) {
+                const docType = cached.documentType || "";
+                const loc = cached.location || cached.target || cached.value || "";
+                let targetFound = false;
+                if (docType === "SPPB") {
+                    targetFound = isSppbSewu(loc);
+                } else if (docType === "NPPB") {
+                    targetFound = isNppbSekupang(loc);
+                } else {
+                    targetFound = isSppbSewu(loc) || isNppbSekupang(loc);
+                }
+
+                return targetFound ? (batuAmpar ? "red" : "orange") : "red";
+            }
         }
 
         // Jika cache kosong & tidak di daftar selesai -> Tanpa Warna ("")
@@ -737,11 +754,14 @@
 
         if (!type) {
             if (existing) {
-                existing.style.removeProperty("background");
-                existing.style.removeProperty("color");
-                existing.style.removeProperty("padding");
-                existing.style.removeProperty("border-radius");
-                existing.style.removeProperty("font-weight");
+                try {
+                    const textNode = document.createTextNode(existing.textContent || registrationNumber);
+                    existing.parentNode.replaceChild(textNode, existing);
+                } catch (_) {
+                    existing.removeAttribute("style");
+                    existing.removeAttribute("title");
+                    delete existing.dataset.ceisaRegistration;
+                }
             }
             return true;
         }
@@ -1584,10 +1604,29 @@
 
                 colorRegistrationNumber(item.row, reg, color || "");
 
-                if (cached && !cached.documentType && item.documentType) {
-                    cached.documentType = item.documentType;
-                    cached.documentNumber = item.documentNumber;
-                    updated = true;
+                if (cached) {
+                    if (color && cached.status !== color) {
+                        const isOldCompleted = (cached.status === "green" || cached.status === "yellow" || cached.status === "blue" || cached.status === "purple" || cached.status === "pink" || cached.status === "aqua");
+                        if (isOldCompleted) {
+                            cached.status = color;
+                            updated = true;
+                        }
+                    } else if (!color && (cached.status === "green" || cached.status === "yellow" || cached.status === "blue" || cached.status === "purple" || cached.status === "pink" || cached.status === "aqua")) {
+                        if (!cached.companyName && !cached.location) {
+                            delete scanCache[reg];
+                            delete scanCache[reg.padStart(6, "0")];
+                            delete scanCache[reg.replace(/^0+/, "")];
+                        } else {
+                            cached.status = "red";
+                        }
+                        updated = true;
+                    }
+
+                    if (!cached.documentType && item.documentType) {
+                        cached.documentType = item.documentType;
+                        cached.documentNumber = item.documentNumber;
+                        updated = true;
+                    }
                 }
             }
 

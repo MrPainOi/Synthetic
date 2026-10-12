@@ -175,23 +175,77 @@ function areArraysEqual(a, b) {
 async function broadcastRefreshColor() {
     try {
         if (typeof chrome !== "undefined" && chrome.tabs && chrome.tabs.query) {
-            const tabs = await chrome.tabs.query({ url: ["*://portal.beacukai.go.id/*", "*://*.beacukai.go.id/*"] });
+            const tabs = await chrome.tabs.query({});
             if (tabs && tabs.length > 0) {
                 tabs.forEach(tab => {
-                    if (tab.id) {
-                        chrome.tabs.sendMessage(tab.id, { type: "REFRESH_COLOR" }).catch(() => {});
-                    }
-                });
-            } else {
-                const activeTabs = await chrome.tabs.query({ active: true });
-                activeTabs.forEach(tab => {
-                    if (tab.id) {
+                    if (tab.id && tab.url && (tab.url.includes("beacukai.go.id") || tab.url.includes("localhost"))) {
                         chrome.tabs.sendMessage(tab.id, { type: "REFRESH_COLOR" }).catch(() => {});
                     }
                 });
             }
         }
     } catch (_) {}
+}
+
+// ------------------------------------------------------------
+// RECONCILE SCAN CACHE WITH COMPLETED LISTS
+// Memastikan status 'green'/'yellow'/'blue' dsb langsung dibersihkan/dikembalikan
+// jika nomor bersangkutan dihapus dari daftar selesai
+// ------------------------------------------------------------
+function reconcileCacheWithCompletedNumbers(cache, completedList, pibpebList) {
+    if (!cache || typeof cache !== "object") return {};
+    const compSet = new Set((cleanNumberArray(completedList) || []).map(s => String(s).trim().padStart(6, "0")));
+    const pibSet = new Set((cleanNumberArray(pibpebList) || []).map(s => String(s).trim().padStart(6, "0")));
+
+    const isNumInSet = (setObj, rawNum) => {
+        if (!setObj || setObj.size === 0 || !rawNum) return false;
+        const s = String(rawNum).trim();
+        return setObj.has(s) || setObj.has(s.padStart(6, "0")) || setObj.has(s.replace(/^0+/, ""));
+    };
+
+    const isBatuAmparObj = (item) => {
+        if (!item) return false;
+        const status = item.status;
+        if (status === "red" || status === "yellow" || status === "pink" || status === "cream" || status === "aqua") return true;
+        const str = ((item.location || "") + " " + (item.target || "") + " " + (item.value || "") + " " + (item.companyName || "")).toUpperCase();
+        return str.includes("BATU AMPAR") || str.includes("BATUAMPAR") || str.includes("IDBTU");
+    };
+
+    for (const [key, item] of Object.entries(cache)) {
+        if (!item) continue;
+        const reg = item.registrationNumber || key;
+        const isComp = isNumInSet(compSet, reg);
+        const isPib = isNumInSet(pibSet, reg);
+        const status = item.status;
+        const isBatu = isBatuAmparObj(item);
+
+        const isCompletedStatus = (status === "green" || status === "yellow" || status === "blue" || status === "purple" || status === "pink" || status === "aqua");
+
+        if (isCompletedStatus) {
+            if (isComp && isPib) {
+                item.status = isBatu ? "aqua" : "blue";
+            } else if (isComp && !isPib) {
+                item.status = isBatu ? "yellow" : "green";
+            } else if (!isComp && isPib) {
+                item.status = isBatu ? "pink" : "purple";
+            } else {
+                // Nomor dihapus dari daftar selesai oleh pengguna
+                if (item.companyName || item.location || item.documentNumber) {
+                    const docType = item.documentType || "";
+                    const loc = ((item.location || "") + " " + (item.target || "") + " " + (item.value || "")).toUpperCase();
+                    let targetFound = false;
+                    if (docType === "SPPB") targetFound = loc.includes("SEWU");
+                    else if (docType === "NPPB") targetFound = loc.includes("SEKUPANG") || loc.includes("IDKSP") || loc.includes("IDSKP");
+                    else targetFound = loc.includes("SEWU") || loc.includes("SEKUPANG") || loc.includes("IDKSP");
+
+                    item.status = targetFound ? (isBatu ? "red" : "orange") : "red";
+                } else {
+                    delete cache[key];
+                }
+            }
+        }
+    }
+    return cache;
 }
 
 // ------------------------------------------------------------
@@ -211,7 +265,10 @@ async function pushExactStateToSupabase(completed, pibpeb, cache, targetDate, is
 
         const cleanCompleted = cleanNumberArray(completed);
         const cleanPibPeb = cleanNumberArray(pibpeb);
-        const cleanCache = (cache && typeof cache === "object") ? cache : {};
+        let cleanCache = (cache && typeof cache === "object") ? { ...cache } : {};
+
+        // Rekonsiliasi cache agar nomor selesai yang dihapus tidak lagi berstatus 'green'/'yellow'
+        cleanCache = reconcileCacheWithCompletedNumbers(cleanCache, cleanCompleted, cleanPibPeb);
 
         // 1. Instantly update local storage for zero latency
         const localPayload = {
@@ -520,6 +577,11 @@ async function syncWithSupabase(force = false) {
             `ceisa_completed_numbers_${activeDate}`,
             `ceisa_pibpeb_numbers_${activeDate}`
         ]);
+
+        // Rekonsiliasi mergedCache dengan daftar selesai aktif agar nomor yang dihapus tidak pernah dibangkitkan kembali
+        const effectiveCompleted = serverCompletedByDate[activeDate] !== undefined ? serverCompletedByDate[activeDate] : (currentStored[`ceisa_completed_numbers_${activeDate}`] || currentStored.ceisa_completed_numbers || []);
+        const effectivePibpeb = serverPibPebByDate[activeDate] !== undefined ? serverPibPebByDate[activeDate] : (currentStored[`ceisa_pibpeb_numbers_${activeDate}`] || currentStored.ceisa_pibpeb_numbers || []);
+        reconcileCacheWithCompletedNumbers(mergedCache, effectiveCompleted, effectivePibpeb);
 
         let hasNumberChanges = false;
         const storagePayload = {

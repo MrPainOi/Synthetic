@@ -232,6 +232,10 @@ async function saveAllData() {
         await broadcastRefreshColor();
     }
 
+    if (typeof loadDataForDate === "function") {
+        await loadDataForDate(date);
+    }
+
     setStatus("TERSIMPAN");
     setTimeout(() => {
         if (statusText && (statusText.textContent === "TERSIMPAN" || statusText.textContent === "DATA TERSIMPAN!")) {
