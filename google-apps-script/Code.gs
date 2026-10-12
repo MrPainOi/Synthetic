@@ -733,27 +733,29 @@ function tidyAndReformatAllSheets() {
   if (masterData.length > 1) {
     const headers = masterData[0].map(h => String(h).trim().toLowerCase());
     
-    // Periksa apakah format lama (4 kolom: date, completed_numbers, pibpeb_numbers, updated_at)
-    const isLegacyFourCols = headers.length <= 4 || (headers.includes("date") && !headers.includes("bulan"));
+    // Deteksi dinamis kolom berdasarkan header
+    let colDate = headers.indexOf("tanggal");
+    if (colDate === -1) colDate = headers.indexOf("date");
+    if (colDate === -1) colDate = isLegacyFourCols ? 0 : 2;
+
+    let colComp = headers.indexOf("daftar nomor selesai (hijau)");
+    if (colComp === -1) colComp = headers.indexOf("completed_numbers");
+    if (colComp === -1) colComp = isLegacyFourCols ? 1 : 7;
+
+    let colPib = headers.indexOf("daftar nomor pib/peb");
+    if (colPib === -1) colPib = headers.indexOf("pibpeb_numbers");
+    if (colPib === -1) colPib = isLegacyFourCols ? 2 : 8;
+
+    let colUpdated = headers.indexOf("terakhir diperbarui");
+    if (colUpdated === -1) colUpdated = headers.indexOf("updated_at");
+    if (colUpdated === -1) colUpdated = isLegacyFourCols ? 3 : 9;
 
     for (let i = 1; i < masterData.length; i++) {
       const row = masterData[i];
-      let dateVal = "";
-      let compVal = "";
-      let pibVal = "";
-      let updateVal = "";
-
-      if (isLegacyFourCols) {
-        dateVal = row[0];
-        compVal = row[1];
-        pibVal = row[2];
-        updateVal = row[3];
-      } else {
-        dateVal = row[2] || row[0];
-        compVal = row[7] || row[1];
-        pibVal = row[8] || row[2];
-        updateVal = row[9] || row[3];
-      }
+      const dateVal = (colDate !== -1 && colDate < row.length) ? row[colDate] : "";
+      const compVal = (colComp !== -1 && colComp < row.length) ? row[colComp] : "";
+      const pibVal = (colPib !== -1 && colPib < row.length) ? row[colPib] : "";
+      const updateVal = (colUpdated !== -1 && colUpdated < row.length) ? row[colUpdated] : "";
 
       const dateStr = formatSheetDate(dateVal);
       if (!dateStr) continue;
@@ -887,20 +889,40 @@ function formatNumbersForSheet(arr) {
 }
 
 /**
+ * Validasi apakah teks merupakan nomor dokumen yang sah (bukan string Date/GMT)
+ */
+function isValidDocNumber(str) {
+  if (!str) return false;
+  const s = String(str).trim();
+  if (s.length === 0) return false;
+  if (s.startsWith("[") || s.startsWith("]") || s.startsWith("{") || s.startsWith("}")) return false;
+  if (s.includes("GMT") || s.includes("Time") || s.includes("Waktu") || s.includes("00:00:00") ||
+      s.includes("Mon ") || s.includes("Tue ") || s.includes("Wed ") || s.includes("Thu ") ||
+      s.includes("Fri ") || s.includes("Sat ") || s.includes("Sun ")) {
+    return false;
+  }
+  return /^[A-Za-z0-9\/\-\.]{3,30}$/.test(s) && /\d/.test(s);
+}
+
+/**
  * Parse string sel (bisa format koma, baris baru, atau JSON lama) kembali ke Array
  */
 function parseNumbersFromSheet(val) {
   if (!val) return [];
-  if (Array.isArray(val)) return val;
+  if (val instanceof Date) return [];
+  if (Array.isArray(val)) return val.map(n => String(n).trim()).filter(isValidDocNumber);
   const str = String(val).trim();
   if (!str) return [];
+  if (str.includes("GMT") || str.includes("Time") || str.includes("Waktu") || str.includes("00:00:00")) {
+    return [];
+  }
 
   // Jika format JSON lama: ["081049", "081052"]
   if (str.startsWith("[") && str.endsWith("]")) {
     try {
       const parsed = JSON.parse(str);
       if (Array.isArray(parsed)) {
-        return parsed.map(n => String(n).trim()).filter(Boolean);
+        return parsed.map(n => String(n).trim()).filter(isValidDocNumber);
       }
     } catch (_) {}
   }
@@ -908,7 +930,7 @@ function parseNumbersFromSheet(val) {
   // Jika format baru: teks dipisah koma atau baris baru
   return str.split(/[\r\n,]+/)
     .map(s => s.trim().replace(/^['"]|['"]$/g, ""))
-    .filter(s => s.length > 0 && !s.startsWith("[") && !s.startsWith("]"));
+    .filter(isValidDocNumber);
 }
 
 /**

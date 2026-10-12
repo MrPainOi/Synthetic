@@ -143,7 +143,7 @@ function sanitizeRegistrationItem(item) {
     } else {
         str = String(item).trim();
     }
-    if (!str || str === "[object Object]" || str.includes("[object") || str.startsWith("PEB-USER-")) return null;
+    if (!str || str === "[object Object]" || str.includes("[object") || str.startsWith("PEB-USER-") || str.includes("GMT") || str.includes("Time") || str.includes("Waktu") || str.includes("00:00:00")) return null;
     return str;
 }
 
