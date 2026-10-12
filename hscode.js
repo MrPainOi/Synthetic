@@ -1154,7 +1154,7 @@ function setupActionButtons() {
 
             if (bestMatch && highestScore > 0) {
                 selectHsCodeItem(bestMatch);
-                showToast(`🤖 Rekomendasi AI: ${bestMatch.formattedCode} (${bestMatch.uraianId.substring(0, 40)}...)`, "success");
+                showToast(`Rekomendasi AI: ${bestMatch.formattedCode} (${bestMatch.uraianId.substring(0, 40)}...)`, "success");
             } else {
                 performSearch(true);
             }

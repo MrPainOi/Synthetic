@@ -1547,7 +1547,12 @@
 
                         <!-- Fallback / Uploader if file not yet loaded in browser -->
                         <div id="modalDocFallback" class="doc-modal-fallback" style="display: none;">
-                            <div class="fallback-icon">📄</div>
+                            <div class="fallback-icon">
+                                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                    <polyline points="14 2 14 8 20 8"></polyline>
+                                </svg>
+                            </div>
                             <h4 id="fallbackTitle">Pratinjau Berkas Dokumen</h4>
                             <p id="fallbackDesc">
                                 Berkas <strong id="fallbackFileName">INV.98007744.pdf</strong> dapat dibuka
@@ -1612,8 +1617,8 @@
                             <span class="dropzone-sub-text">atau <button type="button" class="dropzone-browse-btn" id="btnBrowseDocParser">Pilih Berkas dari Komputer</button></span>
                         </div>
                         <div class="doc-parser-dropzone-hints">
-                            <span class="hint-tag">📄 PDF</span>
-                            <span class="hint-tag">🖼️ PNG / JPG</span>
+                            <span class="hint-tag">PDF</span>
+                            <span class="hint-tag">PNG / JPG</span>
                             <span class="hint-sep">&bull;</span>
                             <span>Mendukung multi-dokumen (Invoice, Packing List, B/L, Certificate)</span>
                         </div>

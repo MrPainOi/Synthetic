@@ -499,7 +499,7 @@ if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onMessage)
             updateBtn.disabled = false;
             if (res && res.ok && res.data && res.data.update_available) {
                 isUpdateReady = true;
-                updateBtn.textContent = "🚀 Update Sekarang!";
+                updateBtn.textContent = "Pasang Pembaruan";
                 updateBtn.classList.add("btn-has-update");
                 if (updateDot) updateDot.classList.add("has-update");
             } else {

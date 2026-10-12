@@ -1216,7 +1216,7 @@ function submitPibCustoms() {
         showToast('Memvalidasi Draft PIB ke OpenAPI Bea Cukai...', 'info');
     }
     setTimeout(() => {
-        alert(`✅ VALIDASI DOKUMEN IMPOR BERHASIL!\n\nNomor Aju: ${data.nomorAju}\nDokumen: BC 2.0 (PIB)\nKantor Pabean: ${data.kantorPabean}\nImportir: ${data.importirName}\nStatus: Siap Kirim (Billing Terbit)`);
+        alert(`VALIDASI DOKUMEN IMPOR BERHASIL!\n\nNomor Aju: ${data.nomorAju}\nDokumen: BC 2.0 (PIB)\nKantor Pabean: ${data.kantorPabean}\nImportir: ${data.importirName}\nStatus: Siap Kirim (Billing Terbit)`);
     }, 800);
 }
 

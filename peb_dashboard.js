@@ -1579,7 +1579,7 @@ function renderSafeCheck(safeCheck) {
             warningsList.innerHTML = '';
             warnings.forEach(w => {
                 const li = document.createElement('li');
-                li.innerHTML = `<span style="color: var(--color-red-text); font-weight: 700; flex-shrink: 0;">⚠</span><span>${escapeHtml(w)}</span>`;
+                li.innerHTML = `<span style="color: var(--color-red-text); font-weight: 700; flex-shrink: 0;">!</span><span>${escapeHtml(w)}</span>`;
                 warningsList.appendChild(li);
             });
         } else {
@@ -2213,7 +2213,7 @@ function initDocumentParserModal() {
             const docType = guessDocType(file.name);
             const sizeStr = formatFileSize(file.size);
             const statusBadge = isDone 
-                ? `<span class="file-item-tag" style="background:#dcfce7;color:#15803d;border:1px solid #86efac;">✅ Terbaca</span>` 
+                ? `<span class="file-item-tag" style="background:#dcfce7;color:#15803d;border:1px solid #86efac;">Terbaca</span>` 
                 : `<span class="file-item-tag">${docType}</span>`;
 
             item.innerHTML = `
@@ -2398,7 +2398,7 @@ function initDocumentParserModal() {
             if (isRemoteDevice) {
                 errorMsg.innerHTML = `
                     <div style="font-size: 13px; line-height: 1.5; color: #f87171; text-align: left; width: 100%;">
-                        <strong style="color: #fca5a5; font-size: 14px; display: block; margin-bottom: 4px;">⚠️ Tidak dapat terhubung ke Server Host (${window.location.hostname || 'PC'})</strong>
+                        <strong style="color: #fca5a5; font-size: 14px; display: block; margin-bottom: 4px;">Tidak dapat terhubung ke Server Host (${window.location.hostname || 'PC'})</strong>
                         <p style="margin: 4px 0 10px 0; color: #cbd5e1; font-size: 12.5px;">
                             Perangkat ini perlu terhubung ke server backend di komputer utama Anda. Pastikan:
                         </p>
@@ -2408,7 +2408,7 @@ function initDocumentParserModal() {
                         </ul>
                         <div style="display: flex; gap: 8px;">
                             <button type="button" id="btnRetryConnect" class="btn" style="background: #059669; color: #ffffff; font-size: 12px; font-weight: 600; padding: 7px 16px; border-radius: 6px; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
-                                🔄 Coba Hubungkan Lagi
+                                Coba Hubungkan Lagi
                             </button>
                         </div>
                     </div>
@@ -2425,10 +2425,10 @@ function initDocumentParserModal() {
             } else if (isSetupError) {
                 errorMsg.innerHTML = `
                     <div style="font-size: 13px; line-height: 1.5; color: #f87171; text-align: left; width: 100%;">
-                        <strong style="color: #fca5a5; font-size: 14px; display: block; margin-bottom: 4px;">⚠️ Server Document Parser belum aktif & PC ini belum di-setup.</strong>
+                        <strong style="color: #fca5a5; font-size: 14px; display: block; margin-bottom: 4px;">Server Document Parser belum aktif & PC ini belum di-setup.</strong>
                         <p style="margin: 4px 0 8px 0; color: #cbd5e1; font-size: 12.5px;">Jika PC ini baru / belum pernah menjalankan server, silakan lakukan salah satu cara di bawah (cukup 1x saja):</p>
                         <div style="background: rgba(15, 23, 42, 0.7); padding: 10px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.12); margin-bottom: 10px;">
-                            <div style="color: #38bdf8; font-weight: 600; font-size: 12.5px; margin-bottom: 4px;">📁 Opsi 1 (1-Klik Otomatis - Sangat Direkomendasikan):</div>
+                            <div style="color: #38bdf8; font-weight: 600; font-size: 12.5px; margin-bottom: 4px;">Opsi 1 (1-Klik Otomatis - Sangat Direkomendasikan):</div>
                             <div style="color: #cbd5e1; font-size: 12px; line-height: 1.4;">
                                 Buka folder <b>Synthetic</b> di File Explorer lalu klik ganda file <b>SETUP_PC.bat</b>.<br>
                                 Skrip ini otomatis mengatur <code>Set-ExecutionPolicy RemoteSigned</code>, menginstall modul (<code>npm install</code>), dan mendaftarkan auto-start agar tombol Start selanjutnya langsung menyalakan server otomatis!
@@ -2436,10 +2436,10 @@ function initDocumentParserModal() {
                         </div>
                         <div style="display: flex; gap: 8px; flex-wrap: wrap;">
                             <button type="button" id="btnCopySetupCmd" class="btn" style="background: #2563eb; color: #ffffff; font-size: 12px; font-weight: 600; padding: 6px 14px; border-radius: 6px; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
-                                📋 Salin Perintah Setup (PowerShell)
+                                Salin Perintah Setup (PowerShell)
                             </button>
                             <button type="button" id="btnRetryConnect" class="btn" style="background: #059669; color: #ffffff; font-size: 12px; font-weight: 600; padding: 6px 14px; border-radius: 6px; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
-                                🔄 Coba Hubungkan Lagi
+                                Coba Hubungkan Lagi
                             </button>
                         </div>
                     </div>
@@ -2450,9 +2450,9 @@ function initDocumentParserModal() {
                         btnCopy.onclick = () => {
                             const cmd = 'powershell -ExecutionPolicy Bypass -Command "Set-ExecutionPolicy RemoteSigned -Scope CurrentUser -Force"; $targets = @(".\\SETUP_PC.bat", "..\\SETUP_PC.bat", "C:\\Synthetic\\SETUP_PC.bat", "D:\\Synthetic\\SETUP_PC.bat", "D:\\Synthetic\\Synthetic\\SETUP_PC.bat"); $p = $targets | Where-Object { Test-Path $_ } | Select-Object -First 1; if ($p) { & $p } else { cd backend-service; npm start }';
                             navigator.clipboard.writeText(cmd).then(() => {
-                                btnCopy.textContent = '✅ Berhasil Disalin ke Clipboard!';
+                                btnCopy.textContent = 'Berhasil Disalin ke Clipboard!';
                                 setTimeout(() => {
-                                    if (btnCopy) btnCopy.textContent = '📋 Salin Perintah Setup (PowerShell)';
+                                    if (btnCopy) btnCopy.textContent = 'Salin Perintah Setup (PowerShell)';
                                 }, 3000);
                             }).catch(() => {
                                 prompt('Salin perintah berikut secara manual:', cmd);
@@ -2737,7 +2737,7 @@ function initDocumentParserModal() {
                 throw new Error(`Server Document Parser mengembalikan status HTTP ${response.status}`);
             }
 
-            updateLog(connectRow, '✅', 'Terhubung ke Backend Document Parser', 'done');
+            updateLog(connectRow, '✓', 'Terhubung ke Backend Document Parser', 'done');
             if (progressFill) progressFill.style.width = '15%';
             updateFloatingProgress(15, 'Terhubung ke Backend', 'Menyiapkan berkas dokumen...', 'running');
 
@@ -2773,7 +2773,7 @@ function initDocumentParserModal() {
                                 const fileKey = evt.file || `file-${evt.index}`;
                                 if (evt.status === 'running') {
                                     if (!uploadLogMap[fileKey]) {
-                                        uploadLogMap[fileKey] = appendLog('⏳', evt.message, 'running');
+                                        uploadLogMap[fileKey] = appendLog('•', evt.message, 'running');
                                     }
                                     if (stepTitle) stepTitle.textContent = `Mengunggah: ${fileKey}...`;
                                     if (stepDesc) stepDesc.textContent = `File ${evt.index + 1} dari ${evt.total}`;
@@ -2782,9 +2782,9 @@ function initDocumentParserModal() {
                                     updateFloatingProgress(pct, `Mengunggah: ${fileKey}...`, `File ${evt.index + 1} dari ${evt.total}`, 'running');
                                 } else if (evt.status === 'done') {
                                     if (uploadLogMap[fileKey]) {
-                                        updateLog(uploadLogMap[fileKey], '✅', evt.message, 'done');
+                                        updateLog(uploadLogMap[fileKey], '✓', evt.message, 'done');
                                     } else {
-                                        uploadLogMap[fileKey] = appendLog('✅', evt.message, 'done');
+                                        uploadLogMap[fileKey] = appendLog('✓', evt.message, 'done');
                                     }
                                     const pct = 15 + Math.round(((evt.index + 1) / evt.total) * 25);
                                     if (progressFill) progressFill.style.width = `${pct}%`;
@@ -2794,30 +2794,30 @@ function initDocumentParserModal() {
                                 if (stepTitle) stepTitle.textContent = 'Menyiapkan Ray-OCR V.1...';
                                 if (stepDesc) stepDesc.textContent = evt.message;
                                 if (progressFill) progressFill.style.width = '45%';
-                                appendLog('⏳', evt.message, 'running');
+                                appendLog('•', evt.message, 'running');
                                 updateFloatingProgress(45, 'Menyiapkan Ray-OCR V.1...', evt.message || 'Ekstraksi teks & struktur', 'running');
                             } else if (evt.step === 'ai') {
                                 if (stepTitle) stepTitle.textContent = 'Ray-OCR V.1 Menganalisis Dokumen...';
                                 if (stepDesc) stepDesc.textContent = evt.message;
                                 if (progressFill) progressFill.style.width = '70%';
                                 if (!lastAiRow) {
-                                    lastAiRow = appendLog('🤖', evt.message, 'running');
+                                    lastAiRow = appendLog('•', evt.message, 'running');
                                 } else {
-                                    updateLog(lastAiRow, '🤖', evt.message, 'running');
+                                    updateLog(lastAiRow, '•', evt.message, 'running');
                                 }
                                 updateFloatingProgress(70, 'Ray-OCR V.1 Menganalisis Dokumen...', evt.message || 'AI mengenali entitas pabean', 'running');
                             } else if (evt.step === 'safecheck') {
                                 if (lastAiRow) {
-                                    updateLog(lastAiRow, '✅', 'Data pabean berhasil dianalisis oleh Ray-OCR V.1', 'done');
+                                    updateLog(lastAiRow, '✓', 'Data pabean berhasil dianalisis oleh Ray-OCR V.1', 'done');
                                 }
                                 if (stepTitle) stepTitle.textContent = 'SafeCheck & Validasi Shipment...';
                                 if (stepDesc) stepDesc.textContent = evt.message;
                                 if (progressFill) progressFill.style.width = '88%';
-                                appendLog('🛡️', evt.message, 'done');
+                                appendLog('✓', evt.message, 'done');
                                 updateFloatingProgress(88, 'SafeCheck & Validasi Shipment...', evt.message || 'Memverifikasi nomor, nilai, tanggal', 'running');
                             } else if (evt.step === 'complete') {
                                 if (progressFill) progressFill.style.width = '96%';
-                                appendLog('✅', evt.message, 'done');
+                                appendLog('✓', evt.message, 'done');
                                 updateFloatingProgress(96, 'Menyelesaikan Pemindaian...', evt.message || 'Menyiapkan draft PEB', 'running');
                             }
                         }
@@ -2838,7 +2838,7 @@ function initDocumentParserModal() {
             }
 
             if (progressFill) progressFill.style.width = '100%';
-            if (stepTitle) stepTitle.textContent = '✅ Ekstraksi & Validasi Selesai (Ray-OCR V.1)!';
+            if (stepTitle) stepTitle.textContent = 'Ekstraksi & Validasi Selesai (Ray-OCR V.1)';
             const activeFileText = selectedFiles.length > 0 ? selectedFiles[0].name : 'Dokumen';
             if (stepDesc) stepDesc.textContent = `${activeFileText} • SafeCheck Tervalidasi 1 Kesatuan Shipment`;
             if (spinner) spinner.style.display = 'none';
@@ -2883,22 +2883,22 @@ function initDocumentParserModal() {
             if (btnContinue) btnContinue.style.display = 'inline-flex';
 
             // Update floating progress ke completed
-            updateFloatingProgress(100, '✅ Ekstraksi Selesai!', `${activeFileText} • SafeCheck Tervalidasi`, 'completed');
+            updateFloatingProgress(100, 'Ekstraksi Selesai', `${activeFileText} • SafeCheck Tervalidasi`, 'completed');
 
             // Jika modal sedang ditutup user, beri notifikasi toast dan tampilkan widget
             if (modal.style.display === 'none') {
                 showFloatingWidget();
-                showToast("✅ Pemindaian selesai! Klik widget di kanan bawah untuk membuka formulir.", "success");
+                showToast("Pemindaian selesai! Klik widget di kanan bawah untuk membuka formulir.", "success");
             } else {
                 hideFloatingWidget();
             }
 
         } catch (err) {
             showErrorState(err?.message || 'Gagal memproses dokumen.', !!err?.isSetupError);
-            updateFloatingProgress(100, '❌ Pemindaian Gagal', err?.message || 'Gagal memproses dokumen.', 'error');
+            updateFloatingProgress(100, 'Pemindaian Gagal', err?.message || 'Gagal memproses dokumen.', 'error');
             if (modal.style.display === 'none') {
                 showFloatingWidget();
-                showToast("⚠️ Pemindaian dokumen gagal. Klik widget untuk melihat detail.", "error");
+                showToast("Pemindaian dokumen gagal. Klik widget untuk melihat detail.", "error");
             }
         } finally {
             isScanRunning = false;
@@ -2964,7 +2964,7 @@ function initDocumentParserModal() {
                 warnings.forEach(w => {
                     const li = document.createElement('li');
                     li.className = 'modal-safecheck-warning-item';
-                    li.innerHTML = `<span class="modal-safecheck-warn-icon">⚠</span><span class="modal-safecheck-warning-text">${escapeHtml(w)}</span>`;
+                    li.innerHTML = `<span class="modal-safecheck-warn-icon">!</span><span class="modal-safecheck-warning-text">${escapeHtml(w)}</span>`;
                     warningsList.appendChild(li);
                 });
             } else {

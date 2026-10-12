@@ -76,17 +76,17 @@ function initDashboard() {
         if (!badge) return;
         storageGet(["ceisa_supabase_status"]).then(data => {
             if (data.ceisa_supabase_status === "connected") {
-                badge.textContent = "⚡ Google Cloud Sync: Terhubung";
+                badge.textContent = "Google Cloud Sync: Terhubung";
                 badge.style.background = "rgba(16, 185, 129, 0.15)";
                 badge.style.color = "#10b981";
                 badge.style.borderColor = "rgba(16, 185, 129, 0.3)";
             } else if (data.ceisa_supabase_status === "offline") {
-                badge.textContent = "⚠️ Cloud Sync: Offline";
+                badge.textContent = "Cloud Sync: Offline";
                 badge.style.background = "rgba(239, 68, 68, 0.15)";
                 badge.style.color = "#ef4444";
                 badge.style.borderColor = "rgba(239, 68, 68, 0.3)";
             } else {
-                badge.textContent = "⚡ Google Cloud Sync: Aktif";
+                badge.textContent = "Google Cloud Sync: Aktif";
                 badge.style.background = "rgba(16, 185, 129, 0.15)";
                 badge.style.color = "#10b981";
                 badge.style.borderColor = "rgba(16, 185, 129, 0.3)";
@@ -485,7 +485,7 @@ async function saveAllDataDashboard() {
         await broadcastRefreshColor();
     }
 
-    showToast("💾 Seluruh data berhasil disimpan & disinkronkan ke Google Cloud!");
+    showToast("Seluruh data berhasil disimpan & disinkronkan ke Google Cloud.");
     await loadDashboardData();
 }
 
@@ -576,7 +576,7 @@ async function clearCache() {
             if (typeof storageSet === "function") {
                 storageSet({ ceisa_auto_update_enabled: autoUpdateToggle.checked });
             }
-            showToast(autoUpdateToggle.checked ? "⚡ Auto-Update aktif" : "Auto-Update dinonaktifkan");
+            showToast(autoUpdateToggle.checked ? "Auto-Update aktif" : "Auto-Update dinonaktifkan");
         });
     }
 
@@ -602,7 +602,7 @@ async function clearCache() {
     // 4. Periksa Pembaruan
     function checkUpdate(isManualClick = true) {
         if (isManualClick && updateStatusFeedback) {
-            updateStatusFeedback.textContent = "🔍 Memeriksa pembaruan di GitHub...";
+            updateStatusFeedback.textContent = "Memeriksa pembaruan di GitHub...";
             updateStatusFeedback.style.color = "var(--text-muted)";
         }
 
@@ -627,7 +627,7 @@ async function clearCache() {
                     }
                     if (applyUpdateBtn) applyUpdateBtn.disabled = false;
                     if (updateStatusFeedback) {
-                        updateStatusFeedback.textContent = "🚀 Pembaruan tersedia! Klik tombol di atas untuk memasang.";
+                        updateStatusFeedback.textContent = "Pembaruan tersedia. Klik tombol di atas untuk memasang.";
                         updateStatusFeedback.style.color = "#d97706";
                     }
                 } else {
@@ -635,7 +635,7 @@ async function clearCache() {
                     if (updateNoticeBox) updateNoticeBox.classList.add("hidden");
                     if (applyUpdateBtn) applyUpdateBtn.disabled = true;
                     if (updateStatusFeedback) {
-                        updateStatusFeedback.textContent = "✅ Versi yang Anda gunakan adalah yang paling baru.";
+                        updateStatusFeedback.textContent = "Versi yang Anda gunakan adalah yang paling baru.";
                         updateStatusFeedback.style.color = "#059669";
                     }
                 }
@@ -654,7 +654,7 @@ async function clearCache() {
             applyUpdateBtn.disabled = true;
             if (applyUpdateBtnText) applyUpdateBtnText.textContent = "Mengunduh & Memasang...";
             if (updateStatusFeedback) {
-                updateStatusFeedback.textContent = "⏳ Sedang mengunduh file terbaru dari GitHub...";
+                updateStatusFeedback.textContent = "Sedang mengunduh file terbaru dari GitHub...";
                 updateStatusFeedback.style.color = "var(--text-muted)";
             }
 
@@ -663,17 +663,17 @@ async function clearCache() {
                     applyUpdateBtn.disabled = false;
                     if (applyUpdateBtnText) applyUpdateBtnText.textContent = "Perbarui Sekarang";
                     if (updateStatusFeedback) {
-                        updateStatusFeedback.textContent = "❌ Gagal mengunduh pembaruan. Silakan coba lagi.";
+                        updateStatusFeedback.textContent = "Gagal mengunduh pembaruan. Silakan coba lagi.";
                         updateStatusFeedback.style.color = "#dc2626";
                     }
                     return;
                 }
 
                 if (updateStatusFeedback) {
-                    updateStatusFeedback.textContent = "✅ Pembaruan berhasil dipasang! Memuat ulang ekstensi...";
+                    updateStatusFeedback.textContent = "Pembaruan berhasil dipasang. Memuat ulang ekstensi...";
                     updateStatusFeedback.style.color = "#059669";
                 }
-                showToast("✅ Pembaruan berhasil dipasang! Memuat ulang sistem...");
+                showToast("Pembaruan berhasil dipasang. Memuat ulang sistem...");
             });
         });
     }
@@ -689,7 +689,7 @@ async function clearCache() {
             devPushUpdateBtn.disabled = true;
             if (devPushBtnText) devPushBtnText.textContent = "Mendorong ke GitHub...";
             if (devPushFeedback) {
-                devPushFeedback.textContent = "⏳ Memproses git commit, git push & menyiarkan sinyal...";
+                devPushFeedback.textContent = "Memproses git commit, git push & menyiarkan sinyal...";
                 devPushFeedback.style.color = "var(--text-muted)";
             }
 
@@ -702,7 +702,7 @@ async function clearCache() {
 
                 if (chrome.runtime.lastError || !res || !res.ok) {
                     if (devPushFeedback) {
-                        devPushFeedback.textContent = "❌ Gagal melakukan push update. Periksa koneksi internet.";
+                        devPushFeedback.textContent = "Gagal melakukan push update. Periksa koneksi internet.";
                         devPushFeedback.style.color = "#dc2626";
                     }
                     return;
@@ -710,11 +710,11 @@ async function clearCache() {
 
                 const commitSha = res.data && res.data.commit ? res.data.commit.substring(0, 7) : "";
                 if (devPushFeedback) {
-                    devPushFeedback.textContent = `✅ Berhasil! Commit [${commitSha}] telah di-push dan disiarkan ke semua komputer client!`;
+                    devPushFeedback.textContent = `Berhasil. Commit [${commitSha}] telah di-push dan disiarkan ke semua komputer client.`;
                     devPushFeedback.style.color = "#059669";
                 }
                 if (devCommitMsgInput) devCommitMsgInput.value = "";
-                showToast("🚀 Update berhasil dipublikasikan ke seluruh komputer!");
+                showToast("Update berhasil dipublikasikan ke seluruh komputer.");
                 refreshLocalVersion();
             });
         });
