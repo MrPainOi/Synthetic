@@ -258,11 +258,13 @@ async function checkWifiStatus() {
             wifiStatusBadge.className = "wifi-status-on";
             return;
         }
-        if (typeof SUPABASE_URL !== "undefined" && typeof getSupabaseHeaders === "function") {
+        const scriptUrl = (typeof GOOGLE_SCRIPT_URL !== "undefined" && GOOGLE_SCRIPT_URL)
+            ? GOOGLE_SCRIPT_URL
+            : (typeof CEISA_CONFIG !== "undefined" ? CEISA_CONFIG.GOOGLE_SCRIPT_URL : "");
+        if (scriptUrl) {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 2000);
-            const res = await fetch(`${SUPABASE_URL}/rest/v1/ceisa_sync_state?select=date&limit=1`, {
-                headers: getSupabaseHeaders(),
+            const timeoutId = setTimeout(() => controller.abort(), 3000);
+            const res = await fetch(`${scriptUrl}?action=pull`, {
                 signal: controller.signal
             });
             clearTimeout(timeoutId);

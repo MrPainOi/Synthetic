@@ -76,7 +76,7 @@ function initDashboard() {
         if (!badge) return;
         storageGet(["ceisa_supabase_status"]).then(data => {
             if (data.ceisa_supabase_status === "connected") {
-                badge.textContent = "⚡ Supabase Cloud: Terhubung";
+                badge.textContent = "⚡ Google Cloud Sync: Terhubung";
                 badge.style.background = "rgba(16, 185, 129, 0.15)";
                 badge.style.color = "#10b981";
                 badge.style.borderColor = "rgba(16, 185, 129, 0.3)";
@@ -86,7 +86,7 @@ function initDashboard() {
                 badge.style.color = "#ef4444";
                 badge.style.borderColor = "rgba(239, 68, 68, 0.3)";
             } else {
-                badge.textContent = "⚡ Supabase Cloud: Aktif";
+                badge.textContent = "⚡ Google Cloud Sync: Aktif";
                 badge.style.background = "rgba(16, 185, 129, 0.15)";
                 badge.style.color = "#10b981";
                 badge.style.borderColor = "rgba(16, 185, 129, 0.3)";
@@ -485,7 +485,7 @@ async function saveAllDataDashboard() {
         await broadcastRefreshColor();
     }
 
-    showToast("💾 Seluruh data berhasil disimpan & disinkronkan ke Supabase Cloud!");
+    showToast("💾 Seluruh data berhasil disimpan & disinkronkan ke Google Cloud!");
     await loadDashboardData();
 }
 

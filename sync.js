@@ -1,21 +1,11 @@
 // ============================================================
-// CEISA INSPECTOR - SUPABASE CLOUD SYNC ENGINE (sync.js)
-// Real-time Cloud Synchronization (Additions, Deletions & Offline Fallback)
+// CEISA INSPECTOR - GOOGLE SHEETS CLOUD SYNC ENGINE (sync.js)
+// Real-time Cloud Synchronization (Additions, Deletions & Auto-Update)
 // ============================================================
 
-// Konfigurasi diambil dari config.js (file yang di-gitignore).
-// Jika config.js tidak ada (misal: clone baru), buat dari config.example.js
-const SYNC_PROVIDER = (typeof CEISA_CONFIG !== "undefined" && CEISA_CONFIG.SYNC_PROVIDER)
-    ? CEISA_CONFIG.SYNC_PROVIDER
-    : "google_sheets";
+const SYNC_PROVIDER = "google_sheets";
 const GOOGLE_SCRIPT_URL = (typeof CEISA_CONFIG !== "undefined" && CEISA_CONFIG.GOOGLE_SCRIPT_URL)
     ? CEISA_CONFIG.GOOGLE_SCRIPT_URL
-    : "";
-const SUPABASE_URL = (typeof CEISA_CONFIG !== "undefined" && CEISA_CONFIG.SUPABASE_URL)
-    ? CEISA_CONFIG.SUPABASE_URL
-    : "";
-const SUPABASE_ANON_KEY = (typeof CEISA_CONFIG !== "undefined" && CEISA_CONFIG.SUPABASE_ANON_KEY)
-    ? CEISA_CONFIG.SUPABASE_ANON_KEY
     : "";
 
 function isGoogleSheetsActive() {
@@ -67,15 +57,6 @@ try {
     lastSuccessfulSupabaseSyncIso = localStorage.getItem("ceisa_last_supabase_sync_iso") || null;
 } catch (_) {}
 const GLOBAL_SYNC_THROTTLE_MS = 25000; // Minimal interval 25 detik antar sinkronisasi cloud
-
-function getSupabaseHeaders(extraHeaders = {}) {
-    return {
-        "apikey": SUPABASE_ANON_KEY,
-        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-        "Content-Type": "application/json",
-        ...extraHeaders
-    };
-}
 
 // ------------------------------------------------------------
 // UNIVERSAL STORAGE HELPER (chrome.storage.local + localStorage)
@@ -278,71 +259,33 @@ async function pushExactStateToSupabase(completed, pibpeb, cache, targetDate, is
             }).filter(Boolean);
         }
 
-        // Jalur A: Google Sheets Web App (jika aktif)
-        if (isGoogleSheetsActive()) {
-            postGoogleSheetsAction({
-                action: "push_state",
-                date: date,
-                completed_numbers: cleanCompleted,
-                pibpeb_numbers: cleanPibPeb
-            }).then(ok => {
-                if (ok) storageSet({ ceisa_supabase_status: "connected" });
-            });
-
-            if (cacheRows.length > 0) {
-                postGoogleSheetsAction({
-                    action: "push_cache_batch",
-                    items: cacheRows
-                });
-            }
-
+        // Kirim ke Google Sheets Web App
+        if (!isGoogleSheetsActive()) {
             isLocalPushInProgress = false;
-            return true;
+            return false;
         }
 
-        // Jalur B: Supabase Cloud (fallback)
-        const syncRow = {
+        postGoogleSheetsAction({
+            action: "push_state",
             date: date,
             completed_numbers: cleanCompleted,
-            pibpeb_numbers: cleanPibPeb,
-            updated_at: new Date(now).toISOString()
-        };
-
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/ceisa_sync_state`, {
-            method: "POST",
-            headers: getSupabaseHeaders({
-                "Prefer": "resolution=merge-duplicates"
-            }),
-            body: JSON.stringify([syncRow])
+            pibpeb_numbers: cleanPibPeb
+        }).then(ok => {
+            if (ok) storageSet({ ceisa_supabase_status: "connected" });
         });
 
-        isLocalPushInProgress = false;
-
-        if (res.ok) {
-            await storageSet({ ceisa_supabase_status: "connected" });
-        } else {
-            console.warn("Supabase sync state warning:", res.status, await res.text().catch(() => ""));
-        }
-
         if (cacheRows.length > 0) {
-            (async () => {
-                for (let i = 0; i < cacheRows.length; i += 50) {
-                    const batch = cacheRows.slice(i, i + 50);
-                    await fetch(`${SUPABASE_URL}/rest/v1/ceisa_scan_cache`, {
-                        method: "POST",
-                        headers: getSupabaseHeaders({
-                            "Prefer": "resolution=merge-duplicates"
-                        }),
-                        body: JSON.stringify(batch)
-                    }).catch(() => {});
-                }
-            })();
+            postGoogleSheetsAction({
+                action: "push_cache_batch",
+                items: cacheRows
+            });
         }
 
+        isLocalPushInProgress = false;
         return true;
     } catch (err) {
         isLocalPushInProgress = false;
-        console.warn("Gagal menyimpan ke cloud:", err.message);
+        console.warn("Gagal menyimpan ke Google Sheets:", err.message);
         return false;
     }
 }
@@ -368,33 +311,20 @@ async function pushSingleCacheItemToSupabase(item) {
         updated_at: new Date().toISOString()
     };
 
-    if (isGoogleSheetsActive()) {
-        postGoogleSheetsAction({
-            action: "push_cache_single",
-            item: row
-        });
-        return true;
-    }
+    if (!isGoogleSheetsActive()) return false;
 
-    try {
-        await fetch(`${SUPABASE_URL}/rest/v1/ceisa_scan_cache`, {
-            method: "POST",
-            headers: getSupabaseHeaders({
-                "Prefer": "resolution=merge-duplicates"
-            }),
-            body: JSON.stringify([row])
-        });
-        return true;
-    } catch (_) {
-        return false;
-    }
+    postGoogleSheetsAction({
+        action: "push_cache_single",
+        item: row
+    });
+    return true;
 }
 
 // ------------------------------------------------------------
 // SYNC WITH CLOUD (GOOGLE SHEETS / SUPABASE) (FETCH & MERGE)
 // ------------------------------------------------------------
 async function syncWithSupabase(force = false) {
-    if (!isGoogleSheetsActive() && (!SUPABASE_URL || !SUPABASE_ANON_KEY)) return null;
+    if (!isGoogleSheetsActive()) return null;
     if (isSupabaseSyncing || isLocalPushInProgress) return null;
 
     // 1. Tab Visibility Guard: Hentikan polling jika tab sedang di-minimize / tidak aktif
@@ -420,85 +350,46 @@ async function syncWithSupabase(force = false) {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 6000);
 
-        let syncData = [];
-        let cacheData = [];
+        let gUrl = `${GOOGLE_SCRIPT_URL}?action=sync`;
+        if (lastSuccessfulSupabaseSyncIso && !force) {
+            gUrl += `&since=${encodeURIComponent(lastSuccessfulSupabaseSyncIso)}`;
+        }
 
-        // Jalur A: Google Sheets Web App
-        if (isGoogleSheetsActive()) {
-            let gUrl = `${GOOGLE_SCRIPT_URL}?action=sync`;
-            if (lastSuccessfulSupabaseSyncIso && !force) {
-                gUrl += `&since=${encodeURIComponent(lastSuccessfulSupabaseSyncIso)}`;
-            }
+        const gRes = await fetch(gUrl, {
+            method: "GET",
+            signal: controller.signal
+        });
 
-            const gRes = await fetch(gUrl, {
-                method: "GET",
-                signal: controller.signal
-            });
+        clearTimeout(timeoutId);
 
-            clearTimeout(timeoutId);
+        if (!gRes.ok) {
+            isSupabaseSyncing = false;
+            await storageSet({ ceisa_supabase_status: "offline" });
+            return null;
+        }
 
-            if (!gRes.ok) {
-                isSupabaseSyncing = false;
-                await storageSet({ ceisa_supabase_status: "offline" });
-                return null;
-            }
+        const gJson = await gRes.json();
+        const syncData = Array.isArray(gJson.sync_state) ? gJson.sync_state : [];
+        const cacheData = Array.isArray(gJson.scan_cache) ? gJson.scan_cache : [];
 
-            const gJson = await gRes.json();
-            syncData = Array.isArray(gJson.sync_state) ? gJson.sync_state : [];
-            cacheData = Array.isArray(gJson.scan_cache) ? gJson.scan_cache : [];
+        // Broadcast Auto-Update Detection
+        if (gJson && gJson.latest_update && gJson.latest_update.commit) {
+            storageSet({ ceisa_remote_update: gJson.latest_update }).catch(() => {});
+            storageGet(["ceisa_local_commit", "ceisa_auto_update_enabled"]).then(store => {
+                const localSha = store.ceisa_local_commit;
+                const remoteSha = gJson.latest_update.commit;
+                if (localSha && remoteSha && localSha !== remoteSha) {
+                    try {
+                        window.dispatchEvent(new CustomEvent("ceisa_update_available", { detail: gJson.latest_update }));
+                    } catch (_) {}
 
-            // Broadcast Auto-Update Detection
-            if (gJson && gJson.latest_update && gJson.latest_update.commit) {
-                storageSet({ ceisa_remote_update: gJson.latest_update }).catch(() => {});
-                storageGet(["ceisa_local_commit", "ceisa_auto_update_enabled"]).then(store => {
-                    const localSha = store.ceisa_local_commit;
-                    const remoteSha = gJson.latest_update.commit;
-                    if (localSha && remoteSha && localSha !== remoteSha) {
+                    if (store.ceisa_auto_update_enabled === true) {
                         try {
-                            window.dispatchEvent(new CustomEvent("ceisa_update_available", { detail: gJson.latest_update }));
+                            chrome.runtime.sendMessage({ type: "PERFORM_PULL_UPDATE" });
                         } catch (_) {}
-
-                        if (store.ceisa_auto_update_enabled === true) {
-                            try {
-                                chrome.runtime.sendMessage({ type: "PERFORM_PULL_UPDATE" });
-                            } catch (_) {}
-                        }
                     }
-                }).catch(() => {});
-            }
-        } else {
-            // Jalur B: Supabase (Delta Incremental Sync)
-            let syncUrl = `${SUPABASE_URL}/rest/v1/ceisa_sync_state?select=*&order=date.desc&limit=15`;
-            let cacheUrl = `${SUPABASE_URL}/rest/v1/ceisa_scan_cache?select=registration_number,document_number,document_type,company_name,location,status,row_date,timestamp,updated_at&status=not.is.null&order=timestamp.desc.nullslast&limit=250`;
-
-            if (lastSuccessfulSupabaseSyncIso && !force) {
-                syncUrl = `${SUPABASE_URL}/rest/v1/ceisa_sync_state?select=*&updated_at=gt.${encodeURIComponent(lastSuccessfulSupabaseSyncIso)}`;
-                cacheUrl = `${SUPABASE_URL}/rest/v1/ceisa_scan_cache?select=registration_number,document_number,document_type,company_name,location,status,row_date,timestamp,updated_at&updated_at=gt.${encodeURIComponent(lastSuccessfulSupabaseSyncIso)}&limit=100`;
-            }
-
-            const [syncRes, cacheRes] = await Promise.all([
-                fetch(syncUrl, {
-                    method: "GET",
-                    headers: getSupabaseHeaders(),
-                    signal: controller.signal
-                }),
-                fetch(cacheUrl, {
-                    method: "GET",
-                    headers: getSupabaseHeaders(),
-                    signal: controller.signal
-                })
-            ]);
-
-            clearTimeout(timeoutId);
-
-            if (!syncRes.ok) {
-                isSupabaseSyncing = false;
-                await storageSet({ ceisa_supabase_status: "offline" });
-                return null;
-            }
-
-            syncData = await syncRes.json();
-            cacheData = cacheRes.ok ? await cacheRes.json() : [];
+                }
+            }).catch(() => {});
         }
 
         lastSuccessfulSupabaseSyncIso = new Date().toISOString();
@@ -672,21 +563,11 @@ async function syncWithSupabase(force = false) {
         await storageSet(storagePayload);
 
         // Upload unsynced local cache rows to cloud in background
-        if (unsyncedCacheRows.length > 0) {
-            if (isGoogleSheetsActive()) {
-                postGoogleSheetsAction({
-                    action: "push_cache_batch",
-                    items: unsyncedCacheRows.slice(0, 50)
-                });
-            } else {
-                fetch(`${SUPABASE_URL}/rest/v1/ceisa_scan_cache`, {
-                    method: "POST",
-                    headers: getSupabaseHeaders({
-                        "Prefer": "resolution=merge-duplicates"
-                    }),
-                    body: JSON.stringify(unsyncedCacheRows.slice(0, 50))
-                }).catch(() => {});
-            }
+        if (unsyncedCacheRows.length > 0 && isGoogleSheetsActive()) {
+            postGoogleSheetsAction({
+                action: "push_cache_batch",
+                items: unsyncedCacheRows.slice(0, 50)
+            });
         }
 
         // Only broadcast REFRESH_COLOR if numbers actually changed or new cache arrived
@@ -712,13 +593,6 @@ async function clearAllScanCache() {
 
     if (isGoogleSheetsActive()) {
         await postGoogleSheetsAction({ action: "clear_cache" });
-    } else if (SUPABASE_URL && SUPABASE_ANON_KEY) {
-        try {
-            await fetch(`${SUPABASE_URL}/rest/v1/ceisa_scan_cache?registration_number=not.is.null`, {
-                method: "DELETE",
-                headers: getSupabaseHeaders()
-            });
-        } catch (_) {}
     }
 
     try {
@@ -739,7 +613,7 @@ async function exportBackupJSON() {
     const backup = {
         app: "CEISA_INSPECTOR",
         version: "3.0.0",
-        source: "Supabase Cloud",
+        source: "Google Cloud Sync",
         exportDate: new Date().toISOString(),
         completed: Array.isArray(data.ceisa_completed_numbers) ? data.ceisa_completed_numbers : [],
         pibpeb: Array.isArray(data.ceisa_pibpeb_numbers) ? data.ceisa_pibpeb_numbers : [],
@@ -780,15 +654,15 @@ const pushExactStateToWifiServer = pushExactStateToSupabase;
 const syncWithWifiServer = syncWithSupabase;
 
 async function getWifiServerUrl() {
-    return SUPABASE_URL;
+    return GOOGLE_SCRIPT_URL;
 }
 
 async function setWifiServerUrl(url) {
-    return SUPABASE_URL;
+    return GOOGLE_SCRIPT_URL;
 }
 
 async function discoverWifiServer() {
-    return SUPABASE_URL;
+    return GOOGLE_SCRIPT_URL;
 }
 
 // ------------------------------------------------------------
