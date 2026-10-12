@@ -540,16 +540,22 @@ async function syncWithSupabase(force = false) {
         if (Array.isArray(cacheData)) {
             for (const doc of cacheData) {
                 if (!doc || !doc.registration_number || !doc.status) continue;
-                serverCache[doc.registration_number] = doc.raw_data || {
-                    registrationNumber: doc.registration_number,
+                const regKey = sanitizeRegistrationItem(doc.registration_number);
+                if (!regKey) continue;
+                const cacheObj = doc.raw_data || {
+                    registrationNumber: regKey,
                     documentNumber: doc.document_number,
                     documentType: doc.document_type,
                     companyName: doc.company_name,
                     location: doc.location,
                     status: doc.status,
-                    rowDate: doc.row_date,
+                    rowDate: normalizeIsoDate(doc.row_date),
                     timestamp: doc.timestamp
                 };
+                serverCache[regKey] = cacheObj;
+                if (/^\d{1,5}$/.test(regKey)) {
+                    serverCache[regKey.padStart(6, '0')] = cacheObj;
+                }
             }
         }
 
