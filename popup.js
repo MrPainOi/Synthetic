@@ -79,10 +79,10 @@ async function loadDataForDate(chosenDate) {
 
 async function loadLastDate() {
     if (!dateInput) return;
-    const data = await storageGet("ceisa_last_scan_date");
-    const val = data.ceisa_last_scan_date || todayISO();
-    dateInput.value = val;
-    await loadDataForDate(val);
+    const today = todayISO();
+    dateInput.value = today;
+    await storageSet({ ceisa_last_scan_date: today });
+    await loadDataForDate(today);
 }
 
 function syncDateFromActiveCeisaTab() {
@@ -164,10 +164,10 @@ async function loadCompleted(chosenDate) {
     if (!completedNumbers) return;
     if (document.activeElement === completedNumbers) return;
     const date = chosenDate || (dateInput ? dateInput.value : todayISO());
-    const data = await storageGet([`ceisa_completed_numbers_${date}`, "ceisa_completed_numbers"]);
+    const data = await storageGet([`ceisa_completed_numbers_${date}`]);
     const raw = Array.isArray(data[`ceisa_completed_numbers_${date}`])
         ? data[`ceisa_completed_numbers_${date}`]
-        : (Array.isArray(data.ceisa_completed_numbers) && date === todayISO() ? data.ceisa_completed_numbers : []);
+        : [];
     const numbers = cleanNumberList(raw);
     completedNumbers.value = numbers.join("\n");
 }
@@ -176,10 +176,10 @@ async function loadPibPeb(chosenDate) {
     if (!pibPebNumbers) return;
     if (document.activeElement === pibPebNumbers) return;
     const date = chosenDate || (dateInput ? dateInput.value : todayISO());
-    const data = await storageGet([`ceisa_pibpeb_numbers_${date}`, "ceisa_pibpeb_numbers"]);
+    const data = await storageGet([`ceisa_pibpeb_numbers_${date}`]);
     const raw = Array.isArray(data[`ceisa_pibpeb_numbers_${date}`])
         ? data[`ceisa_pibpeb_numbers_${date}`]
-        : (Array.isArray(data.ceisa_pibpeb_numbers) && date === todayISO() ? data.ceisa_pibpeb_numbers : []);
+        : [];
     const numbers = cleanNumberList(raw);
     pibPebNumbers.value = numbers.join("\n");
 }

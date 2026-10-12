@@ -317,11 +317,11 @@ async function loadDashboardData() {
 
     const rawCompleted = Array.isArray(data[`ceisa_completed_numbers_${chosenDate}`])
         ? data[`ceisa_completed_numbers_${chosenDate}`]
-        : (Array.isArray(data.ceisa_completed_numbers) && chosenDate === todayISO() ? data.ceisa_completed_numbers : []);
+        : [];
 
     const rawPibPeb = Array.isArray(data[`ceisa_pibpeb_numbers_${chosenDate}`])
         ? data[`ceisa_pibpeb_numbers_${chosenDate}`]
-        : (Array.isArray(data.ceisa_pibpeb_numbers) && chosenDate === todayISO() ? data.ceisa_pibpeb_numbers : []);
+        : [];
 
     const completed = cleanNumberList(rawCompleted);
     const pibPeb = cleanNumberList(rawPibPeb);

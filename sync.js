@@ -214,8 +214,6 @@ async function pushExactStateToSupabase(completed, pibpeb, cache, targetDate, is
 
         // 1. Instantly update local storage for zero latency
         const localPayload = {
-            ceisa_completed_numbers: cleanCompleted,
-            ceisa_pibpeb_numbers: cleanPibPeb,
             ceisa_scan_cache: cleanCache,
             ceisa_last_supabase_sync: now,
             ceisa_last_local_save_time: now
@@ -223,6 +221,10 @@ async function pushExactStateToSupabase(completed, pibpeb, cache, targetDate, is
         localPayload[`ceisa_completed_numbers_${date}`] = cleanCompleted;
         localPayload[`ceisa_pibpeb_numbers_${date}`] = cleanPibPeb;
         localPayload[`ceisa_last_save_${date}`] = now;
+        if (date === new Date().toISOString().split('T')[0]) {
+            localPayload.ceisa_completed_numbers = cleanCompleted;
+            localPayload.ceisa_pibpeb_numbers = cleanPibPeb;
+        }
         await storageSet(localPayload);
 
         // Immediate broadcast to ensure instantaneous color change with 0 latency
@@ -541,6 +543,7 @@ async function syncWithSupabase(force = false) {
             }
         }
 
+        const todayDate = new Date().toISOString().split('T')[0];
         if (serverCompletedByDate[activeDate] !== undefined) {
             const currentList = Array.isArray(currentStored.ceisa_completed_numbers)
                 ? currentStored.ceisa_completed_numbers
@@ -549,13 +552,24 @@ async function syncWithSupabase(force = false) {
                 storagePayload.ceisa_completed_numbers = serverCompletedByDate[activeDate];
                 hasNumberChanges = true;
             }
+        } else if (activeDate === todayDate) {
+            if (currentStored.ceisa_completed_numbers && currentStored.ceisa_completed_numbers.length > 0) {
+                storagePayload.ceisa_completed_numbers = [];
+                hasNumberChanges = true;
+            }
         }
+
         if (serverPibPebByDate[activeDate] !== undefined) {
             const currentList = Array.isArray(currentStored.ceisa_pibpeb_numbers)
                 ? currentStored.ceisa_pibpeb_numbers
                 : [];
             if (!areArraysEqual(currentList, serverPibPebByDate[activeDate])) {
                 storagePayload.ceisa_pibpeb_numbers = serverPibPebByDate[activeDate];
+                hasNumberChanges = true;
+            }
+        } else if (activeDate === todayDate) {
+            if (currentStored.ceisa_pibpeb_numbers && currentStored.ceisa_pibpeb_numbers.length > 0) {
+                storagePayload.ceisa_pibpeb_numbers = [];
                 hasNumberChanges = true;
             }
         }

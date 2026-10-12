@@ -68,10 +68,7 @@
         const dateList = Array.isArray(data[`ceisa_completed_numbers_${activeDate}`])
             ? data[`ceisa_completed_numbers_${activeDate}`]
             : [];
-        const globalList = Array.isArray(data.ceisa_completed_numbers)
-            ? data.ceisa_completed_numbers
-            : [];
-        const list = dateList.length > 0 ? dateList : globalList;
+        const list = dateList;
 
         completedNumbers = new Set(
             list
@@ -90,10 +87,7 @@
         const dateList = Array.isArray(data[`ceisa_pibpeb_numbers_${activeDate}`])
             ? data[`ceisa_pibpeb_numbers_${activeDate}`]
             : [];
-        const globalList = Array.isArray(data.ceisa_pibpeb_numbers)
-            ? data.ceisa_pibpeb_numbers
-            : [];
-        const list = dateList.length > 0 ? dateList : globalList;
+        const list = dateList;
 
         pibPebNumbers = new Set(
             list
@@ -2416,11 +2410,17 @@
 
             await saveScanCache();
             if (typeof pushExactStateToWifiServer === "function") {
-                const data = await chrome.storage.local.get(["ceisa_completed_numbers", "ceisa_pibpeb_numbers", "ceisa_scan_cache"]);
+                const activeDate = await getActiveScanDate();
+                const data = await chrome.storage.local.get([
+                    `ceisa_completed_numbers_${activeDate}`,
+                    `ceisa_pibpeb_numbers_${activeDate}`,
+                    "ceisa_scan_cache"
+                ]);
                 await pushExactStateToWifiServer(
-                    data.ceisa_completed_numbers || [],
-                    data.ceisa_pibpeb_numbers || [],
-                    data.ceisa_scan_cache || {}
+                    data[`ceisa_completed_numbers_${activeDate}`] || [],
+                    data[`ceisa_pibpeb_numbers_${activeDate}`] || [],
+                    data.ceisa_scan_cache || {},
+                    activeDate
                 );
             }
 
@@ -2499,11 +2499,17 @@
 
         await saveScanCache();
         if (typeof pushExactStateToWifiServer === "function") {
-            const data = await chrome.storage.local.get(["ceisa_completed_numbers", "ceisa_pibpeb_numbers", "ceisa_scan_cache"]);
+            const activeDate = await getActiveScanDate();
+            const data = await chrome.storage.local.get([
+                `ceisa_completed_numbers_${activeDate}`,
+                `ceisa_pibpeb_numbers_${activeDate}`,
+                "ceisa_scan_cache"
+            ]);
             await pushExactStateToWifiServer(
-                data.ceisa_completed_numbers || [],
-                data.ceisa_pibpeb_numbers || [],
-                data.ceisa_scan_cache || {}
+                data[`ceisa_completed_numbers_${activeDate}`] || [],
+                data[`ceisa_pibpeb_numbers_${activeDate}`] || [],
+                data.ceisa_scan_cache || {},
+                activeDate
             );
         }
 
