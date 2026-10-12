@@ -364,8 +364,13 @@ function doGet(e) {
  */
 function doPost(e) {
   const lock = LockService.getScriptLock();
+  let hasLock = false;
   try {
-    lock.waitLock(10000);
+    try {
+      hasLock = lock.tryLock(5000);
+    } catch (_) {
+      hasLock = false;
+    }
 
     let payload = {};
     if (e && e.postData && e.postData.contents) {
@@ -456,7 +461,9 @@ function doPost(e) {
   } catch (err) {
     return jsonResponse({ success: false, error: err.message });
   } finally {
-    lock.releaseLock();
+    if (hasLock) {
+      try { lock.releaseLock(); } catch (_) {}
+    }
   }
 }
 
@@ -493,8 +500,8 @@ function upsertMasterRow(date, completed, pibpeb, now) {
     compCount,
     pibCount,
     totalCount,
-    cleanCompletedStr,
-    cleanPibpebStr,
+    cleanCompletedStr ? ("'" + cleanCompletedStr) : "",
+    cleanPibpebStr ? ("'" + cleanPibpebStr) : "",
     humanTime
   ];
 
@@ -545,8 +552,8 @@ function upsertMonthlyRow(date, completed, pibpeb, now) {
     compCount,
     pibCount,
     totalCount,
-    cleanCompletedStr,
-    cleanPibpebStr,
+    cleanCompletedStr ? ("'" + cleanCompletedStr) : "",
+    cleanPibpebStr ? ("'" + cleanPibpebStr) : "",
     humanTime
   ];
 
@@ -734,6 +741,7 @@ function tidyAndReformatAllSheets() {
     const headers = masterData[0].map(h => String(h).trim().toLowerCase());
     
     // Deteksi dinamis kolom berdasarkan header
+    const isLegacyFourCols = headers.length <= 4 || (headers.includes("date") && !headers.includes("bulan"));
     let colDate = headers.indexOf("tanggal");
     if (colDate === -1) colDate = headers.indexOf("date");
     if (colDate === -1) colDate = isLegacyFourCols ? 0 : 2;
@@ -922,7 +930,9 @@ function parseNumbersFromSheet(val) {
     try {
       const parsed = JSON.parse(str);
       if (Array.isArray(parsed)) {
-        return parsed.map(n => String(n).trim()).filter(isValidDocNumber);
+        return parsed.map(n => String(n).trim())
+          .map(s => /^\d{1,5}$/.test(s) ? s.padStart(6, "0") : s)
+          .filter(isValidDocNumber);
       }
     } catch (_) {}
   }
@@ -930,6 +940,7 @@ function parseNumbersFromSheet(val) {
   // Jika format baru: teks dipisah koma atau baris baru
   return str.split(/[\r\n,]+/)
     .map(s => s.trim().replace(/^['"]|['"]$/g, ""))
+    .map(s => /^\d{1,5}$/.test(s) ? s.padStart(6, "0") : s)
     .filter(isValidDocNumber);
 }
 
