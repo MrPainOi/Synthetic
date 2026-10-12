@@ -131,7 +131,11 @@ async function run() {
     console.log(`v${nextVersion} saat mereka membuka dashboard atau melakukan sync.\n`);
 }
 
-run().catch((err) => {
-    console.error('Fatal Error:', err);
-    process.exit(1);
-});
+if (require.main === module) {
+    run().catch((err) => {
+        console.error('Fatal Error:', err);
+        process.exit(1);
+    });
+}
+
+module.exports = { bumpVersion };
