@@ -24,6 +24,8 @@
 
     "host_permissions": [
         "https://portal.beacukai.go.id/*",
+        "https://script.google.com/*",
+        "https://*.googleusercontent.com/*",
         "https://*.supabase.co/*",
         "http://localhost/*",
         "http://127.0.0.1/*"

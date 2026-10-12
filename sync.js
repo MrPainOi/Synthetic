@@ -5,12 +5,41 @@
 
 // Konfigurasi diambil dari config.js (file yang di-gitignore).
 // Jika config.js tidak ada (misal: clone baru), buat dari config.example.js
+const SYNC_PROVIDER = (typeof CEISA_CONFIG !== "undefined" && CEISA_CONFIG.SYNC_PROVIDER)
+    ? CEISA_CONFIG.SYNC_PROVIDER
+    : "google_sheets";
+const GOOGLE_SCRIPT_URL = (typeof CEISA_CONFIG !== "undefined" && CEISA_CONFIG.GOOGLE_SCRIPT_URL)
+    ? CEISA_CONFIG.GOOGLE_SCRIPT_URL
+    : "";
 const SUPABASE_URL = (typeof CEISA_CONFIG !== "undefined" && CEISA_CONFIG.SUPABASE_URL)
     ? CEISA_CONFIG.SUPABASE_URL
     : "";
 const SUPABASE_ANON_KEY = (typeof CEISA_CONFIG !== "undefined" && CEISA_CONFIG.SUPABASE_ANON_KEY)
     ? CEISA_CONFIG.SUPABASE_ANON_KEY
     : "";
+
+function isGoogleSheetsActive() {
+    return Boolean(GOOGLE_SCRIPT_URL && GOOGLE_SCRIPT_URL.trim() !== "");
+}
+
+async function postGoogleSheetsAction(payload) {
+    if (!GOOGLE_SCRIPT_URL) return false;
+    try {
+        const res = await fetch(GOOGLE_SCRIPT_URL, {
+            method: "POST",
+            headers: {
+                "Content-Type": "text/plain;charset=utf-8"
+            },
+            body: JSON.stringify(payload)
+        });
+        if (!res.ok) return false;
+        const data = await res.json().catch(() => null);
+        return Boolean(data && data.success);
+    } catch (err) {
+        console.warn("Gagal kirim ke Google Sheets:", err.message);
+        return false;
+    }
+}
 
 let supabaseSyncInterval = null;
 let isSupabaseSyncing = false;
@@ -105,6 +134,23 @@ async function storageRemove(key) {
 // ------------------------------------------------------------
 // SANITIZE & CLEAN DATA HELPERS
 // ------------------------------------------------------------
+function normalizeIsoDate(dateVal) {
+    if (!dateVal) return "";
+    const str = String(dateVal).trim();
+    const match = str.match(/^(\d{4}-\d{2}-\d{2})/);
+    if (match) return match[1];
+    try {
+        const d = new Date(str);
+        if (!isNaN(d.getTime())) {
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, "0");
+            const day = String(d.getDate()).padStart(2, "0");
+            return `${year}-${month}-${day}`;
+        }
+    } catch (_) {}
+    return str;
+}
+
 function sanitizeRegistrationItem(item) {
     if (!item) return null;
     let str = "";
@@ -201,7 +247,60 @@ async function pushExactStateToSupabase(completed, pibpeb, cache, targetDate, is
         // Immediate broadcast to ensure instantaneous color change with 0 latency
         await broadcastRefreshColor();
 
-        // 2. Upsert to Supabase ceisa_sync_state
+        // 2. Prepare Cache Rows
+        const cacheEntries = Object.values(cleanCache);
+        let cacheRows = [];
+        if (cacheEntries.length > 0) {
+            let targetCacheEntries = cacheEntries;
+            if (!isFullBackup) {
+                const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+                targetCacheEntries = cacheEntries
+                    .filter(item => item && (now - Number(item.timestamp || 0)) < ONE_DAY_MS)
+                    .slice(0, 50);
+            }
+
+            cacheRows = targetCacheEntries.map(item => {
+                if (!item) return null;
+                const regNo = sanitizeRegistrationItem(item.registrationNumber);
+                if (!regNo) return null;
+                return {
+                    registration_number: regNo,
+                    document_number: item.documentNumber || null,
+                    document_type: item.documentType || null,
+                    company_name: item.companyName || null,
+                    location: item.location || null,
+                    status: item.status || null,
+                    row_date: (item.rowDate && /^\d{4}-\d{2}-\d{2}$/.test(item.rowDate)) ? item.rowDate : null,
+                    timestamp: typeof item.timestamp === "number" ? item.timestamp : Date.now(),
+                    raw_data: item,
+                    updated_at: new Date().toISOString()
+                };
+            }).filter(Boolean);
+        }
+
+        // Jalur A: Google Sheets Web App (jika aktif)
+        if (isGoogleSheetsActive()) {
+            postGoogleSheetsAction({
+                action: "push_state",
+                date: date,
+                completed_numbers: cleanCompleted,
+                pibpeb_numbers: cleanPibPeb
+            }).then(ok => {
+                if (ok) storageSet({ ceisa_supabase_status: "connected" });
+            });
+
+            if (cacheRows.length > 0) {
+                postGoogleSheetsAction({
+                    action: "push_cache_batch",
+                    items: cacheRows
+                });
+            }
+
+            isLocalPushInProgress = false;
+            return true;
+        }
+
+        // Jalur B: Supabase Cloud (fallback)
         const syncRow = {
             date: date,
             completed_numbers: cleanCompleted,
@@ -225,63 +324,31 @@ async function pushExactStateToSupabase(completed, pibpeb, cache, targetDate, is
             console.warn("Supabase sync state warning:", res.status, await res.text().catch(() => ""));
         }
 
-        // 3. Upsert cache in background without blocking UI
-        // Supabase Quota Protection: Hanya upload item yang baru (24 jam terakhir, max 50 item)
-        // kecuali saat full backup import (isFullBackup = true).
-        const cacheEntries = Object.values(cleanCache);
-        if (cacheEntries.length > 0) {
-            let targetCacheEntries = cacheEntries;
-            if (!isFullBackup) {
-                const ONE_DAY_MS = 24 * 60 * 60 * 1000;
-                targetCacheEntries = cacheEntries
-                    .filter(item => item && (now - Number(item.timestamp || 0)) < ONE_DAY_MS)
-                    .slice(0, 50);
-            }
-
-            const cacheRows = targetCacheEntries.map(item => {
-                if (!item) return null;
-                const regNo = sanitizeRegistrationItem(item.registrationNumber);
-                if (!regNo) return null;
-                return {
-                    registration_number: regNo,
-                    document_number: item.documentNumber || null,
-                    document_type: item.documentType || null,
-                    company_name: item.companyName || null,
-                    location: item.location || null,
-                    status: item.status || null,
-                    row_date: (item.rowDate && /^\d{4}-\d{2}-\d{2}$/.test(item.rowDate)) ? item.rowDate : null,
-                    timestamp: typeof item.timestamp === "number" ? item.timestamp : Date.now(),
-                    raw_data: item,
-                    updated_at: new Date().toISOString()
-                };
-            }).filter(Boolean);
-
-            if (cacheRows.length > 0) {
-                (async () => {
-                    for (let i = 0; i < cacheRows.length; i += 50) {
-                        const batch = cacheRows.slice(i, i + 50);
-                        await fetch(`${SUPABASE_URL}/rest/v1/ceisa_scan_cache`, {
-                            method: "POST",
-                            headers: getSupabaseHeaders({
-                                "Prefer": "resolution=merge-duplicates"
-                            }),
-                            body: JSON.stringify(batch)
-                        }).catch(() => {});
-                    }
-                })();
-            }
+        if (cacheRows.length > 0) {
+            (async () => {
+                for (let i = 0; i < cacheRows.length; i += 50) {
+                    const batch = cacheRows.slice(i, i + 50);
+                    await fetch(`${SUPABASE_URL}/rest/v1/ceisa_scan_cache`, {
+                        method: "POST",
+                        headers: getSupabaseHeaders({
+                            "Prefer": "resolution=merge-duplicates"
+                        }),
+                        body: JSON.stringify(batch)
+                    }).catch(() => {});
+                }
+            })();
         }
 
         return true;
     } catch (err) {
         isLocalPushInProgress = false;
-        console.warn("Gagal menyimpan ke Supabase:", err.message);
+        console.warn("Gagal menyimpan ke cloud:", err.message);
         return false;
     }
 }
 
 // ------------------------------------------------------------
-// INSTANT PUSH SINGLE CACHE ITEM TO SUPABASE
+// INSTANT PUSH SINGLE CACHE ITEM TO CLOUD (GOOGLE SHEETS / SUPABASE)
 // ------------------------------------------------------------
 async function pushSingleCacheItemToSupabase(item) {
     if (!item) return false;
@@ -301,6 +368,14 @@ async function pushSingleCacheItemToSupabase(item) {
         updated_at: new Date().toISOString()
     };
 
+    if (isGoogleSheetsActive()) {
+        postGoogleSheetsAction({
+            action: "push_cache_single",
+            item: row
+        });
+        return true;
+    }
+
     try {
         await fetch(`${SUPABASE_URL}/rest/v1/ceisa_scan_cache`, {
             method: "POST",
@@ -316,10 +391,10 @@ async function pushSingleCacheItemToSupabase(item) {
 }
 
 // ------------------------------------------------------------
-// SYNC WITH SUPABASE CLOUD (FETCH & MERGE)
+// SYNC WITH CLOUD (GOOGLE SHEETS / SUPABASE) (FETCH & MERGE)
 // ------------------------------------------------------------
 async function syncWithSupabase(force = false) {
-    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
+    if (!isGoogleSheetsActive() && (!SUPABASE_URL || !SUPABASE_ANON_KEY)) return null;
     if (isSupabaseSyncing || isLocalPushInProgress) return null;
 
     // 1. Tab Visibility Guard: Hentikan polling jika tab sedang di-minimize / tidak aktif
@@ -343,41 +418,69 @@ async function syncWithSupabase(force = false) {
 
     try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 4000);
+        const timeoutId = setTimeout(() => controller.abort(), 6000);
 
-        // Fetch sync state & scan cache in parallel (DELTA INCREMENTAL SYNC)
-        let syncUrl = `${SUPABASE_URL}/rest/v1/ceisa_sync_state?select=*&order=date.desc&limit=15`;
-        let cacheUrl = `${SUPABASE_URL}/rest/v1/ceisa_scan_cache?select=registration_number,document_number,document_type,company_name,location,status,row_date,timestamp,updated_at&status=not.is.null&order=timestamp.desc.nullslast&limit=250`;
+        let syncData = [];
+        let cacheData = [];
 
-        // Jika sudah pernah sync sebelumnya, cukup ambil data yang baru diperbarui (hemat 99% egress)
-        if (lastSuccessfulSupabaseSyncIso && !force) {
-            syncUrl = `${SUPABASE_URL}/rest/v1/ceisa_sync_state?select=*&updated_at=gt.${encodeURIComponent(lastSuccessfulSupabaseSyncIso)}`;
-            cacheUrl = `${SUPABASE_URL}/rest/v1/ceisa_scan_cache?select=registration_number,document_number,document_type,company_name,location,status,row_date,timestamp,updated_at&updated_at=gt.${encodeURIComponent(lastSuccessfulSupabaseSyncIso)}&limit=100`;
+        // Jalur A: Google Sheets Web App
+        if (isGoogleSheetsActive()) {
+            let gUrl = `${GOOGLE_SCRIPT_URL}?action=sync`;
+            if (lastSuccessfulSupabaseSyncIso && !force) {
+                gUrl += `&since=${encodeURIComponent(lastSuccessfulSupabaseSyncIso)}`;
+            }
+
+            const gRes = await fetch(gUrl, {
+                method: "GET",
+                signal: controller.signal
+            });
+
+            clearTimeout(timeoutId);
+
+            if (!gRes.ok) {
+                isSupabaseSyncing = false;
+                await storageSet({ ceisa_supabase_status: "offline" });
+                return null;
+            }
+
+            const gJson = await gRes.json();
+            syncData = Array.isArray(gJson.sync_state) ? gJson.sync_state : [];
+            cacheData = Array.isArray(gJson.scan_cache) ? gJson.scan_cache : [];
+        } else {
+            // Jalur B: Supabase (Delta Incremental Sync)
+            let syncUrl = `${SUPABASE_URL}/rest/v1/ceisa_sync_state?select=*&order=date.desc&limit=15`;
+            let cacheUrl = `${SUPABASE_URL}/rest/v1/ceisa_scan_cache?select=registration_number,document_number,document_type,company_name,location,status,row_date,timestamp,updated_at&status=not.is.null&order=timestamp.desc.nullslast&limit=250`;
+
+            if (lastSuccessfulSupabaseSyncIso && !force) {
+                syncUrl = `${SUPABASE_URL}/rest/v1/ceisa_sync_state?select=*&updated_at=gt.${encodeURIComponent(lastSuccessfulSupabaseSyncIso)}`;
+                cacheUrl = `${SUPABASE_URL}/rest/v1/ceisa_scan_cache?select=registration_number,document_number,document_type,company_name,location,status,row_date,timestamp,updated_at&updated_at=gt.${encodeURIComponent(lastSuccessfulSupabaseSyncIso)}&limit=100`;
+            }
+
+            const [syncRes, cacheRes] = await Promise.all([
+                fetch(syncUrl, {
+                    method: "GET",
+                    headers: getSupabaseHeaders(),
+                    signal: controller.signal
+                }),
+                fetch(cacheUrl, {
+                    method: "GET",
+                    headers: getSupabaseHeaders(),
+                    signal: controller.signal
+                })
+            ]);
+
+            clearTimeout(timeoutId);
+
+            if (!syncRes.ok) {
+                isSupabaseSyncing = false;
+                await storageSet({ ceisa_supabase_status: "offline" });
+                return null;
+            }
+
+            syncData = await syncRes.json();
+            cacheData = cacheRes.ok ? await cacheRes.json() : [];
         }
 
-        const [syncRes, cacheRes] = await Promise.all([
-            fetch(syncUrl, {
-                method: "GET",
-                headers: getSupabaseHeaders(),
-                signal: controller.signal
-            }),
-            fetch(cacheUrl, {
-                method: "GET",
-                headers: getSupabaseHeaders(),
-                signal: controller.signal
-            })
-        ]);
-
-        clearTimeout(timeoutId);
-
-        if (!syncRes.ok) {
-            isSupabaseSyncing = false;
-            await storageSet({ ceisa_supabase_status: "offline" });
-            return null;
-        }
-
-        const syncData = await syncRes.json();
-        const cacheData = cacheRes.ok ? await cacheRes.json() : [];
         lastSuccessfulSupabaseSyncIso = new Date().toISOString();
         try {
             localStorage.setItem("ceisa_last_supabase_sync_iso", lastSuccessfulSupabaseSyncIso);
@@ -397,7 +500,10 @@ async function syncWithSupabase(force = false) {
         const localTimeKeys = ["ceisa_last_local_save_time", `ceisa_last_save_${activeDate}`];
         if (Array.isArray(syncData)) {
             syncData.forEach(r => {
-                if (r && r.date) localTimeKeys.push(`ceisa_last_save_${r.date}`);
+                if (r && r.date) {
+                    r.date = normalizeIsoDate(r.date);
+                    localTimeKeys.push(`ceisa_last_save_${r.date}`);
+                }
             });
         }
         const localTimeData = await storageGet(localTimeKeys);
@@ -409,7 +515,7 @@ async function syncWithSupabase(force = false) {
         if (Array.isArray(syncData)) {
             for (const row of syncData) {
                 if (!row || !row.date) continue;
-                const d = row.date;
+                const d = normalizeIsoDate(row.date);
                 const serverTime = row.updated_at ? new Date(row.updated_at).getTime() : 0;
                 const localDateSaveTime = Math.max(
                     lastLocalSaveTimestamp,
@@ -541,13 +647,20 @@ async function syncWithSupabase(force = false) {
 
         // Upload unsynced local cache rows to cloud in background
         if (unsyncedCacheRows.length > 0) {
-            fetch(`${SUPABASE_URL}/rest/v1/ceisa_scan_cache`, {
-                method: "POST",
-                headers: getSupabaseHeaders({
-                    "Prefer": "resolution=merge-duplicates"
-                }),
-                body: JSON.stringify(unsyncedCacheRows)
-            }).catch(() => {});
+            if (isGoogleSheetsActive()) {
+                postGoogleSheetsAction({
+                    action: "push_cache_batch",
+                    items: unsyncedCacheRows.slice(0, 50)
+                });
+            } else {
+                fetch(`${SUPABASE_URL}/rest/v1/ceisa_scan_cache`, {
+                    method: "POST",
+                    headers: getSupabaseHeaders({
+                        "Prefer": "resolution=merge-duplicates"
+                    }),
+                    body: JSON.stringify(unsyncedCacheRows.slice(0, 50))
+                }).catch(() => {});
+            }
         }
 
         // Only broadcast REFRESH_COLOR if numbers actually changed or new cache arrived
@@ -566,17 +679,21 @@ async function syncWithSupabase(force = false) {
 }
 
 // ------------------------------------------------------------
-// CLEAR ALL SCAN CACHE (LOCAL + SUPABASE)
+// CLEAR ALL SCAN CACHE (LOCAL + CLOUD)
 // ------------------------------------------------------------
 async function clearAllScanCache() {
     await storageRemove("ceisa_scan_cache");
 
-    try {
-        await fetch(`${SUPABASE_URL}/rest/v1/ceisa_scan_cache?registration_number=not.is.null`, {
-            method: "DELETE",
-            headers: getSupabaseHeaders()
-        });
-    } catch (_) {}
+    if (isGoogleSheetsActive()) {
+        await postGoogleSheetsAction({ action: "clear_cache" });
+    } else if (SUPABASE_URL && SUPABASE_ANON_KEY) {
+        try {
+            await fetch(`${SUPABASE_URL}/rest/v1/ceisa_scan_cache?registration_number=not.is.null`, {
+                method: "DELETE",
+                headers: getSupabaseHeaders()
+            });
+        } catch (_) {}
+    }
 
     try {
         window.dispatchEvent(new CustomEvent("ceisa_storage_changed"));
