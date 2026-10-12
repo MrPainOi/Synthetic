@@ -242,18 +242,79 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
 
     if (message.type === "CHECK_BACKEND_STATUS") {
-        handleNativeServerAction("status", sendResponse);
+        handleNativeServerAction({ action: "status" }, sendResponse);
+        return true;
+    }
+
+    // --------------------------------------------------------
+    // Sistem Pembaruan Proyek (Auto-Update & Push-Update)
+    // --------------------------------------------------------
+    if (message.type === "GET_SYSTEM_VERSION") {
+        handleNativeServerAction({ action: "get_version" }, sendResponse);
+        return true;
+    }
+
+    if (message.type === "CHECK_UPDATE") {
+        handleNativeServerAction({ action: "check_update" }, sendResponse);
+        return true;
+    }
+
+    if (message.type === "PERFORM_PULL_UPDATE") {
+        handleNativeServerAction({ action: "pull_update" }, (res) => {
+            sendResponse(res);
+            if (res && res.ok && res.data && res.data.status === "success") {
+                setTimeout(() => {
+                    chrome.runtime.reload();
+                }, 1200);
+            }
+        });
+        return true;
+    }
+
+    if (message.type === "PERFORM_PUSH_UPDATE") {
+        handleNativeServerAction({
+            action: "push_update",
+            commit_message: message.commit_message || ""
+        }, async (res) => {
+            if (res && res.ok && res.data && res.data.status === "success") {
+                // Broadcast ke Google Apps Script agar client lain langsung dapat sinyal update
+                try {
+                    const scriptUrl = "https://script.google.com/macros/s/AKfycbyGBHuIkhsLawwQ1V48bKXmg8MXu35sc7iD91Re2We6mOsDvFm0uM8g6lnZxxKYfl0/exec";
+                    await fetch(scriptUrl, {
+                        method: "POST",
+                        headers: { "Content-Type": "text/plain;charset=utf-8" },
+                        body: JSON.stringify({
+                            action: "publish_update",
+                            commit: res.data.commit,
+                            version: res.data.version || "2.1.0",
+                            message: message.commit_message || "Update otomatis",
+                            branch: "SupabaseV2"
+                        })
+                    });
+                } catch (_) {}
+            }
+            sendResponse(res);
+        });
+        return true;
+    }
+
+    if (message.type === "RELOAD_EXTENSION") {
+        sendResponse({ ok: true });
+        setTimeout(() => {
+            chrome.runtime.reload();
+        }, 500);
         return true;
     }
 
 });
 
 // Helper komunikasi Native Messaging Host
-function handleNativeServerAction(action, sendResponse) {
+function handleNativeServerAction(actionPayload, sendResponse) {
     try {
+        const payload = typeof actionPayload === "string" ? { action: actionPayload } : actionPayload;
         chrome.runtime.sendNativeMessage(
             "com.ceisa.server_launcher",
-            { action: action },
+            payload,
             (response) => {
                 if (chrome.runtime.lastError) {
                     sendResponse({

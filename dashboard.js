@@ -513,3 +513,225 @@ async function clearCache() {
     showToast("Cache scan di seluruh perangkat telah dibersihkan");
     loadDashboardData();
 }
+
+// ==========================================================================
+// PUSAT PEMBARUAN SISTEM (SYSTEM UPDATE CENTER - AUTO-UPDATE & PUSH-UPDATE)
+// ==========================================================================
+(function initSystemUpdateModule() {
+    const modal = document.getElementById("updateModal");
+    const openBtn = document.getElementById("openUpdateModalBtn");
+    const closeBtn = document.getElementById("closeUpdateModalBtn");
+
+    const localVersionBadge = document.getElementById("localVersionBadge");
+    const localCommitText = document.getElementById("localCommitText");
+    const updateBtnLabel = document.getElementById("updateBtnLabel");
+    const updatePulseDot = document.getElementById("updatePulseDot");
+
+    const autoUpdateToggle = document.getElementById("autoUpdateToggle");
+    const updateNoticeBox = document.getElementById("updateNoticeBox");
+    const remoteCommitMsg = document.getElementById("remoteCommitMsg");
+    const checkUpdateBtn = document.getElementById("checkUpdateBtn");
+    const applyUpdateBtn = document.getElementById("applyUpdateBtn");
+    const applyUpdateBtnText = document.getElementById("applyUpdateBtnText");
+    const updateStatusFeedback = document.getElementById("updateStatusFeedback");
+
+    const devCommitMsgInput = document.getElementById("devCommitMsgInput");
+    const devPushUpdateBtn = document.getElementById("devPushUpdateBtn");
+    const devPushBtnText = document.getElementById("devPushBtnText");
+    const devPushFeedback = document.getElementById("devPushFeedback");
+
+    if (!modal || !openBtn) return;
+
+    // 1. Inisialisasi Versi Lokal
+    function refreshLocalVersion() {
+        if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.sendMessage) {
+            chrome.runtime.sendMessage({ type: "GET_SYSTEM_VERSION" }, (res) => {
+                if (res && res.ok && res.data && res.data.data) {
+                    const info = res.data.data;
+                    const v = info.version || "2.1.0";
+                    const sha = info.commit || "";
+                    if (localVersionBadge) localVersionBadge.textContent = "v" + v;
+                    if (updateBtnLabel) updateBtnLabel.textContent = "v" + v;
+                    if (localCommitText) localCommitText.textContent = sha ? sha.substring(0, 7) : "Local";
+                    if (typeof storageSet === "function" && sha) {
+                        storageSet({ ceisa_local_commit: sha });
+                    }
+                }
+            });
+        }
+    }
+
+    // 2. Ambil preferensi Auto-Update
+    if (typeof storageGet === "function") {
+        storageGet(["ceisa_auto_update_enabled"]).then(data => {
+            if (autoUpdateToggle) {
+                autoUpdateToggle.checked = data.ceisa_auto_update_enabled !== false;
+            }
+        }).catch(() => {});
+    }
+
+    if (autoUpdateToggle) {
+        autoUpdateToggle.addEventListener("change", () => {
+            if (typeof storageSet === "function") {
+                storageSet({ ceisa_auto_update_enabled: autoUpdateToggle.checked });
+            }
+            showToast(autoUpdateToggle.checked ? "⚡ Auto-Update aktif" : "Auto-Update dinonaktifkan");
+        });
+    }
+
+    // 3. Kontrol Modal Buka / Tutup
+    openBtn.addEventListener("click", () => {
+        modal.classList.remove("hidden");
+        refreshLocalVersion();
+        checkUpdate(false);
+    });
+
+    if (closeBtn) {
+        closeBtn.addEventListener("click", () => {
+            modal.classList.add("hidden");
+        });
+    }
+
+    modal.addEventListener("click", (e) => {
+        if (e.target === modal) {
+            modal.classList.add("hidden");
+        }
+    });
+
+    // 4. Periksa Pembaruan
+    function checkUpdate(isManualClick = true) {
+        if (isManualClick && updateStatusFeedback) {
+            updateStatusFeedback.textContent = "🔍 Memeriksa pembaruan di GitHub...";
+            updateStatusFeedback.style.color = "var(--text-muted)";
+        }
+
+        if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.sendMessage) {
+            chrome.runtime.sendMessage({ type: "CHECK_UPDATE" }, (res) => {
+                if (chrome.runtime.lastError || !res || !res.ok) {
+                    if (updateStatusFeedback && isManualClick) {
+                        updateStatusFeedback.textContent = "Gagal menghubungi server pembaruan.";
+                        updateStatusFeedback.style.color = "#dc2626";
+                    }
+                    return;
+                }
+
+                const data = res.data || {};
+                if (data.update_available) {
+                    if (updatePulseDot) updatePulseDot.classList.add("has-update");
+                    if (updateNoticeBox) updateNoticeBox.classList.remove("hidden");
+                    if (remoteCommitMsg) {
+                        remoteCommitMsg.textContent = data.remote_message
+                            ? `Commit: ${data.remote_commit.substring(0, 7)} — "${data.remote_message}"`
+                            : `Commit terbaru: ${data.remote_commit.substring(0, 7)}`;
+                    }
+                    if (applyUpdateBtn) applyUpdateBtn.disabled = false;
+                    if (updateStatusFeedback) {
+                        updateStatusFeedback.textContent = "🚀 Pembaruan tersedia! Klik tombol di atas untuk memasang.";
+                        updateStatusFeedback.style.color = "#d97706";
+                    }
+                } else {
+                    if (updatePulseDot) updatePulseDot.classList.remove("has-update");
+                    if (updateNoticeBox) updateNoticeBox.classList.add("hidden");
+                    if (applyUpdateBtn) applyUpdateBtn.disabled = true;
+                    if (updateStatusFeedback) {
+                        updateStatusFeedback.textContent = "✅ Versi yang Anda gunakan adalah yang paling baru.";
+                        updateStatusFeedback.style.color = "#059669";
+                    }
+                }
+            });
+        }
+    }
+
+    if (checkUpdateBtn) {
+        checkUpdateBtn.addEventListener("click", () => checkUpdate(true));
+    }
+
+    // 5. Terapkan Pembaruan (Pull & Reload)
+    if (applyUpdateBtn) {
+        applyUpdateBtn.addEventListener("click", () => {
+            if (applyUpdateBtn.disabled) return;
+            applyUpdateBtn.disabled = true;
+            if (applyUpdateBtnText) applyUpdateBtnText.textContent = "Mengunduh & Memasang...";
+            if (updateStatusFeedback) {
+                updateStatusFeedback.textContent = "⏳ Sedang mengunduh file terbaru dari GitHub...";
+                updateStatusFeedback.style.color = "var(--text-muted)";
+            }
+
+            chrome.runtime.sendMessage({ type: "PERFORM_PULL_UPDATE" }, (res) => {
+                if (chrome.runtime.lastError || !res || !res.ok) {
+                    applyUpdateBtn.disabled = false;
+                    if (applyUpdateBtnText) applyUpdateBtnText.textContent = "Perbarui Sekarang";
+                    if (updateStatusFeedback) {
+                        updateStatusFeedback.textContent = "❌ Gagal mengunduh pembaruan. Silakan coba lagi.";
+                        updateStatusFeedback.style.color = "#dc2626";
+                    }
+                    return;
+                }
+
+                if (updateStatusFeedback) {
+                    updateStatusFeedback.textContent = "✅ Pembaruan berhasil dipasang! Memuat ulang ekstensi...";
+                    updateStatusFeedback.style.color = "#059669";
+                }
+                showToast("✅ Pembaruan berhasil dipasang! Memuat ulang sistem...");
+            });
+        });
+    }
+
+    // 6. Push Update (Khusus Pengembang / Master PC)
+    if (devPushUpdateBtn) {
+        devPushUpdateBtn.addEventListener("click", () => {
+            const commitMsg = devCommitMsgInput ? devCommitMsgInput.value.trim() : "";
+            if (!confirm(`Publikasikan pembaruan ini sekarang ke seluruh komputer pengguna?\n\nSemua komputer karyawan akan otomatis memperbarui file mereka.`)) {
+                return;
+            }
+
+            devPushUpdateBtn.disabled = true;
+            if (devPushBtnText) devPushBtnText.textContent = "Mendorong ke GitHub...";
+            if (devPushFeedback) {
+                devPushFeedback.textContent = "⏳ Memproses git commit, git push & menyiarkan sinyal...";
+                devPushFeedback.style.color = "var(--text-muted)";
+            }
+
+            chrome.runtime.sendMessage({
+                type: "PERFORM_PUSH_UPDATE",
+                commit_message: commitMsg
+            }, (res) => {
+                devPushUpdateBtn.disabled = false;
+                if (devPushBtnText) devPushBtnText.textContent = "Push Update ke Semua Komputer";
+
+                if (chrome.runtime.lastError || !res || !res.ok) {
+                    if (devPushFeedback) {
+                        devPushFeedback.textContent = "❌ Gagal melakukan push update. Periksa koneksi internet.";
+                        devPushFeedback.style.color = "#dc2626";
+                    }
+                    return;
+                }
+
+                const commitSha = res.data && res.data.commit ? res.data.commit.substring(0, 7) : "";
+                if (devPushFeedback) {
+                    devPushFeedback.textContent = `✅ Berhasil! Commit [${commitSha}] telah di-push dan disiarkan ke semua komputer client!`;
+                    devPushFeedback.style.color = "#059669";
+                }
+                if (devCommitMsgInput) devCommitMsgInput.value = "";
+                showToast("🚀 Update berhasil dipublikasikan ke seluruh komputer!");
+                refreshLocalVersion();
+            });
+        });
+    }
+
+    // 7. Event Listener dari sync.js (saat remote update terdeteksi)
+    window.addEventListener("ceisa_update_available", (e) => {
+        if (updatePulseDot) updatePulseDot.classList.add("has-update");
+        if (updateNoticeBox) updateNoticeBox.classList.remove("hidden");
+        if (applyUpdateBtn) applyUpdateBtn.disabled = false;
+        if (remoteCommitMsg && e.detail) {
+            remoteCommitMsg.textContent = e.detail.message
+                ? `Versi baru dirilis: "${e.detail.message}"`
+                : "Pembaruan sistem baru tersedia di cloud!";
+        }
+    });
+
+    // Inisialisasi awal saat halaman dashboard dibuka
+    refreshLocalVersion();
+})();
+

@@ -452,3 +452,60 @@ if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onMessage)
         }
     });
 }
+
+// ============================================================
+// POPUP UPDATE BAR LOGIC
+// ============================================================
+(function initPopupUpdate() {
+    const versionText = document.getElementById("popupVersionText");
+    const updateDot = document.getElementById("popupUpdateDot");
+    const updateBtn = document.getElementById("popupCheckUpdateBtn");
+
+    if (!updateBtn) return;
+
+    let isUpdateReady = false;
+
+    // Ambil info versi lokal
+    if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.sendMessage) {
+        chrome.runtime.sendMessage({ type: "GET_SYSTEM_VERSION" }, (res) => {
+            if (res && res.ok && res.data && res.data.data) {
+                const info = res.data.data;
+                if (versionText) versionText.textContent = "v" + (info.version || "2.1.0");
+            }
+        });
+    }
+
+    updateBtn.addEventListener("click", () => {
+        if (isUpdateReady) {
+            updateBtn.disabled = true;
+            updateBtn.textContent = "Memasang...";
+            chrome.runtime.sendMessage({ type: "PERFORM_PULL_UPDATE" }, (res) => {
+                if (res && res.ok && res.data && res.data.status === "success") {
+                    updateBtn.textContent = "Selesai!";
+                } else {
+                    updateBtn.disabled = false;
+                    updateBtn.textContent = "Gagal. Coba lagi";
+                }
+            });
+            return;
+        }
+
+        updateBtn.disabled = true;
+        updateBtn.textContent = "Memeriksa...";
+
+        chrome.runtime.sendMessage({ type: "CHECK_UPDATE" }, (res) => {
+            updateBtn.disabled = false;
+            if (res && res.ok && res.data && res.data.update_available) {
+                isUpdateReady = true;
+                updateBtn.textContent = "🚀 Update Sekarang!";
+                updateBtn.classList.add("btn-has-update");
+                if (updateDot) updateDot.classList.add("has-update");
+            } else {
+                updateBtn.textContent = "Versi Terbaru";
+                setTimeout(() => {
+                    updateBtn.textContent = "Cek Update";
+                }, 2500);
+            }
+        });
+    });
+})();

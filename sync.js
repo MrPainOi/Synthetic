@@ -446,6 +446,26 @@ async function syncWithSupabase(force = false) {
             const gJson = await gRes.json();
             syncData = Array.isArray(gJson.sync_state) ? gJson.sync_state : [];
             cacheData = Array.isArray(gJson.scan_cache) ? gJson.scan_cache : [];
+
+            // Broadcast Auto-Update Detection
+            if (gJson && gJson.latest_update && gJson.latest_update.commit) {
+                storageSet({ ceisa_remote_update: gJson.latest_update }).catch(() => {});
+                storageGet(["ceisa_local_commit", "ceisa_auto_update_enabled"]).then(store => {
+                    const localSha = store.ceisa_local_commit;
+                    const remoteSha = gJson.latest_update.commit;
+                    if (localSha && remoteSha && localSha !== remoteSha) {
+                        try {
+                            window.dispatchEvent(new CustomEvent("ceisa_update_available", { detail: gJson.latest_update }));
+                        } catch (_) {}
+
+                        if (store.ceisa_auto_update_enabled === true) {
+                            try {
+                                chrome.runtime.sendMessage({ type: "PERFORM_PULL_UPDATE" });
+                            } catch (_) {}
+                        }
+                    }
+                }).catch(() => {});
+            }
         } else {
             // Jalur B: Supabase (Delta Incremental Sync)
             let syncUrl = `${SUPABASE_URL}/rest/v1/ceisa_sync_state?select=*&order=date.desc&limit=15`;

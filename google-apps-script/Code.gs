@@ -136,10 +136,20 @@ function doGet(e) {
       }
     }
 
+    // 3. Ambil data versi terbaru dari Script Properties (Broadcast Auto-Update)
+    let latestUpdateInfo = null;
+    try {
+      const updateInfoStr = PropertiesService.getScriptProperties().getProperty("LATEST_UPDATE_INFO");
+      if (updateInfoStr) {
+        latestUpdateInfo = JSON.parse(updateInfoStr);
+      }
+    } catch (_) {}
+
     return jsonResponse({
       success: true,
       sync_state: syncStateList,
       scan_cache: scanCacheList,
+      latest_update: latestUpdateInfo,
       server_time: new Date().toISOString()
     });
   }
@@ -229,6 +239,31 @@ function doPost(e) {
         sheet.deleteRows(2, lastRow - 1);
       }
       return jsonResponse({ success: true, cleared: true });
+    }
+
+    // 5. Aksi Publikasi Pembaruan (Push Update dari Developer / PC Master)
+    if (action === "publish_update") {
+      const commit = String(payload.commit || "").trim();
+      const version = String(payload.version || "2.1.0").trim();
+      const message = String(payload.message || "Pembaruan otomatis sistem").trim();
+      const branch = String(payload.branch || "SupabaseV2").trim();
+      const timestamp = new Date().toISOString();
+
+      const updatePayload = {
+        commit: commit,
+        version: version,
+        branch: branch,
+        message: message,
+        timestamp: timestamp
+      };
+
+      PropertiesService.getScriptProperties().setProperty("LATEST_UPDATE_INFO", JSON.stringify(updatePayload));
+
+      return jsonResponse({
+        success: true,
+        message: "Update berhasil dipublikasikan ke seluruh komputer pengguna!",
+        latest_update: updatePayload
+      });
     }
 
     return jsonResponse({ error: "Unknown action" });

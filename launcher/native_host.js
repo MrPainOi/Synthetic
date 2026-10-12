@@ -132,6 +132,208 @@ async function startServer() {
     return { status: 'starting', pid: child.pid, port: SERVER_PORT };
 }
 
+// ------------------------------------------------------------
+// SISTEM PEMBARUAN OTOMATIS (AUTO-UPDATE & PUSH-UPDATE)
+// ------------------------------------------------------------
+const https = require('https');
+
+function getVersionInfo() {
+    const vFile = path.join(PROJECT_ROOT, 'version.json');
+    let vData = { version: '2.1.0', branch: 'SupabaseV2' };
+    if (fs.existsSync(vFile)) {
+        try { vData = JSON.parse(fs.readFileSync(vFile, 'utf8')); } catch (_) {}
+    }
+    try {
+        if (fs.existsSync(path.join(PROJECT_ROOT, '.git'))) {
+            const currentSha = execSync('git rev-parse HEAD', { cwd: PROJECT_ROOT, windowsHide: true, stdio: 'pipe' }).toString().trim();
+            vData.commit = currentSha;
+        }
+    } catch (_) {}
+    return vData;
+}
+
+function fetchGithubCommit() {
+    return new Promise((resolve, reject) => {
+        https.get('https://api.github.com/repos/MrPainOi/Synthetic/commits/SupabaseV2', {
+            headers: { 'User-Agent': 'Node-CEISA-Updater' }
+        }, (res) => {
+            let raw = '';
+            res.on('data', chunk => raw += chunk);
+            res.on('end', () => {
+                try {
+                    const json = JSON.parse(raw);
+                    if (json && json.sha) {
+                        resolve({
+                            sha: json.sha,
+                            message: json.commit?.message || '',
+                            author: json.commit?.author?.name || '',
+                            date: json.commit?.author?.date || ''
+                        });
+                    } else {
+                        reject(new Error(json.message || 'Gagal membaca commit dari GitHub'));
+                    }
+                } catch (e) {
+                    reject(e);
+                }
+            });
+        }).on('error', reject);
+    });
+}
+
+function copyDirRecursive(src, dest) {
+    if (!fs.existsSync(dest)) fs.mkdirSync(dest, { recursive: true });
+    const entries = fs.readdirSync(src, { withFileTypes: true });
+    for (const entry of entries) {
+        if (entry.name === '.git' || entry.name === 'node_modules' || entry.name === 'temp' || 
+            entry.name === 'autostart.log' || entry.name === 'server.log') {
+            continue;
+        }
+        const srcPath = path.join(src, entry.name);
+        const destPath = path.join(dest, entry.name);
+        if (entry.isDirectory()) {
+            copyDirRecursive(srcPath, destPath);
+        } else {
+            fs.copyFileSync(srcPath, destPath);
+        }
+    }
+}
+
+function downloadAndExtractZip() {
+    return new Promise((resolve, reject) => {
+        const zipUrl = 'https://codeload.github.com/MrPainOi/Synthetic/zip/refs/heads/SupabaseV2';
+        const tempZip = path.join(PROJECT_ROOT, 'temp_update.zip');
+        const tempExtractDir = path.join(PROJECT_ROOT, 'temp_extracted_update');
+
+        const fileStream = fs.createWriteStream(tempZip);
+
+        function fetchFile(url) {
+            https.get(url, { headers: { 'User-Agent': 'Node-CEISA-Updater' } }, (res) => {
+                if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+                    return fetchFile(res.headers.location);
+                }
+                if (res.statusCode !== 200) {
+                    return reject(new Error(`Download zip gagal: HTTP ${res.statusCode}`));
+                }
+                res.pipe(fileStream);
+                fileStream.on('finish', () => {
+                    fileStream.close();
+                    try {
+                        if (fs.existsSync(tempExtractDir)) {
+                            fs.rmSync(tempExtractDir, { recursive: true, force: true });
+                        }
+                        fs.mkdirSync(tempExtractDir, { recursive: true });
+
+                        execSync(`tar -xf "${tempZip}" -C "${tempExtractDir}"`, { windowsHide: true, stdio: 'pipe' });
+
+                        const subdirs = fs.readdirSync(tempExtractDir);
+                        const sourceDir = subdirs.length > 0 ? path.join(tempExtractDir, subdirs[0]) : tempExtractDir;
+
+                        copyDirRecursive(sourceDir, PROJECT_ROOT);
+
+                        try { fs.unlinkSync(tempZip); } catch (_) {}
+                        try { fs.rmSync(tempExtractDir, { recursive: true, force: true }); } catch (_) {}
+                        resolve(true);
+                    } catch (e) {
+                        reject(e);
+                    }
+                });
+            }).on('error', reject);
+        }
+
+        fetchFile(zipUrl);
+    });
+}
+
+async function performPullUpdate() {
+    log('Menjalankan pull update...');
+    let methodUsed = 'git';
+    let hasGit = false;
+
+    try {
+        execSync('git --version', { windowsHide: true, stdio: 'ignore' });
+        if (fs.existsSync(path.join(PROJECT_ROOT, '.git'))) {
+            hasGit = true;
+        }
+    } catch (_) {}
+
+    if (hasGit) {
+        try {
+            log('Mengambil update via git fetch & reset hard...');
+            execSync('git fetch origin SupabaseV2', { cwd: PROJECT_ROOT, windowsHide: true, stdio: 'pipe' });
+            execSync('git reset --hard origin/SupabaseV2', { cwd: PROJECT_ROOT, windowsHide: true, stdio: 'pipe' });
+        } catch (gitErr) {
+            log(`Git pull gagal: ${gitErr.message}, beralih ke zip...`);
+            hasGit = false;
+        }
+    }
+
+    if (!hasGit) {
+        log('Mengunduh pembaruan rilis ZIP dari GitHub...');
+        await downloadAndExtractZip();
+        methodUsed = 'zip';
+    }
+
+    let finalCommit = '';
+    try {
+        if (fs.existsSync(path.join(PROJECT_ROOT, '.git'))) {
+            finalCommit = execSync('git rev-parse HEAD', { cwd: PROJECT_ROOT, windowsHide: true, stdio: 'pipe' }).toString().trim();
+        }
+    } catch (_) {}
+
+    const vFile = path.join(PROJECT_ROOT, 'version.json');
+    let vData = { version: '2.1.0', branch: 'SupabaseV2' };
+    if (fs.existsSync(vFile)) {
+        try { vData = JSON.parse(fs.readFileSync(vFile, 'utf8')); } catch (_) {}
+    }
+    if (finalCommit) vData.commit = finalCommit;
+    vData.updated_at = new Date().toISOString();
+    fs.writeFileSync(vFile, JSON.stringify(vData, null, 2), 'utf8');
+
+    try { ensureDependencies(); } catch (_) {}
+
+    log(`Pembaruan selesai (Metode: ${methodUsed}, Commit: ${finalCommit.substring(0, 7) || 'latest'})`);
+    return {
+        status: 'success',
+        method: methodUsed,
+        commit: finalCommit,
+        version: vData.version,
+        message: 'Pembaruan berhasil diterapkan!'
+    };
+}
+
+async function performPushUpdate(commitMsg) {
+    log('Menjalankan push update (Developer Mode)...');
+    const msg = commitMsg || `Rilis update sistem: ${new Date().toLocaleString('id-ID')}`;
+
+    execSync('git add -A', { cwd: PROJECT_ROOT, windowsHide: true, stdio: 'pipe' });
+    try {
+        execSync(`git commit -m "${msg.replace(/"/g, '\\"')}"`, { cwd: PROJECT_ROOT, windowsHide: true, stdio: 'pipe' });
+    } catch (_) {
+        // Abaikan jika tidak ada file yang berubah
+    }
+
+    execSync('git push origin SupabaseV2', { cwd: PROJECT_ROOT, windowsHide: true, stdio: 'pipe' });
+
+    const newSha = execSync('git rev-parse HEAD', { cwd: PROJECT_ROOT, windowsHide: true, stdio: 'pipe' }).toString().trim();
+
+    const vFile = path.join(PROJECT_ROOT, 'version.json');
+    let vData = { version: '2.1.0', branch: 'SupabaseV2' };
+    if (fs.existsSync(vFile)) {
+        try { vData = JSON.parse(fs.readFileSync(vFile, 'utf8')); } catch (_) {}
+    }
+    vData.commit = newSha;
+    vData.updated_at = new Date().toISOString();
+    fs.writeFileSync(vFile, JSON.stringify(vData, null, 2), 'utf8');
+
+    log(`Push update berhasil ke GitHub (Commit: ${newSha.substring(0, 7)})`);
+    return {
+        status: 'success',
+        commit: newSha,
+        version: vData.version,
+        message: `Pembaruan berhasil di-push ke GitHub! (Commit: ${newSha.substring(0, 7)})`
+    };
+}
+
 // Handler pesan Native Messaging (Chrome STDIO)
 let inputChunks = [];
 let expectedLength = null;
@@ -160,6 +362,32 @@ process.stdin.on('data', async (chunk) => {
                     sendNativeMessage({ status: online ? 'online' : 'offline', port: SERVER_PORT });
                 } else if (message.action === 'start') {
                     const result = await startServer();
+                    sendNativeMessage(result);
+                } else if (message.action === 'get_version') {
+                    const info = getVersionInfo();
+                    sendNativeMessage({ status: 'success', data: info });
+                } else if (message.action === 'check_update') {
+                    const localInfo = getVersionInfo();
+                    let remoteInfo = null;
+                    try {
+                        remoteInfo = await fetchGithubCommit();
+                    } catch (e) {
+                        log(`Peringatan cek remote GitHub: ${e.message}`);
+                    }
+                    const updateAvailable = remoteInfo && remoteInfo.sha !== localInfo.commit;
+                    sendNativeMessage({
+                        status: 'success',
+                        update_available: Boolean(updateAvailable),
+                        local_commit: localInfo.commit,
+                        remote_commit: remoteInfo?.sha || '',
+                        remote_message: remoteInfo?.message || '',
+                        remote_date: remoteInfo?.date || ''
+                    });
+                } else if (message.action === 'pull_update') {
+                    const result = await performPullUpdate();
+                    sendNativeMessage(result);
+                } else if (message.action === 'push_update') {
+                    const result = await performPushUpdate(message.commit_message);
                     sendNativeMessage(result);
                 } else {
                     sendNativeMessage({ status: 'unknown_action', action: message.action });

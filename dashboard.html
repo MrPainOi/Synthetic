@@ -75,6 +75,18 @@
                         <line x1="14" y1="11" x2="14" y2="17"></line>
                     </svg>
                 </button>
+                <!-- Tombol Pusat Pembaruan Sistem (Update / Auto-Update) -->
+                <button type="button" id="openUpdateModalBtn" class="btn btn-header-update"
+                    title="Pusat Pembaruan Sistem (Update / Auto-Update)" aria-label="Update Sistem">
+                    <span class="update-pulse-dot" id="updatePulseDot"></span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    <span id="updateBtnLabel">v2.1.0</span>
+                </button>
             </div>
         </div>
     </header>
@@ -364,6 +376,105 @@
                         </section>
                     </div>
                 </main>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL PUSAT PEMBARUAN SISTEM (AUTO-UPDATE & PUSH-UPDATE) -->
+    <div id="updateModal" class="ceisa-modal-overlay hidden" aria-modal="true" role="dialog">
+        <div class="ceisa-modal-card update-modal-card">
+            <div class="ceisa-modal-header">
+                <div class="ceisa-modal-title-wrap">
+                    <div class="modal-icon-badge">🚀</div>
+                    <div>
+                        <h2 class="ceisa-modal-title">Pusat Pembaruan Sistem CEISA</h2>
+                        <p class="ceisa-modal-desc">Kelola pembaruan otomatis untuk seluruh komputer pengguna.</p>
+                    </div>
+                </div>
+                <button type="button" id="closeUpdateModalBtn" class="ceisa-modal-close" aria-label="Tutup Modal">&times;</button>
+            </div>
+
+            <div class="ceisa-modal-body">
+                <!-- Status Komputer Ini -->
+                <div class="update-status-row">
+                    <div class="update-status-card">
+                        <span class="status-card-label">Versi Terpasang</span>
+                        <div class="status-card-val"><span id="localVersionBadge" class="version-tag">v2.1.0</span></div>
+                    </div>
+                    <div class="update-status-card">
+                        <span class="status-card-label">Commit Lokal</span>
+                        <div class="status-card-val"><code id="localCommitText" class="commit-code">Memeriksa...</code></div>
+                    </div>
+                    <div class="update-status-card">
+                        <span class="status-card-label">Status Remote</span>
+                        <div class="status-card-val"><span id="remoteSyncBadge" class="status-pill status-synced">Tersinkron</span></div>
+                    </div>
+                </div>
+
+                <!-- Bagian 1: Untuk Komputer Karyawan / Client (Pull & Auto-Update) -->
+                <div class="update-section-box">
+                    <div class="section-box-header">
+                        <h3 class="section-box-title">Pembaruan Komputer Ini</h3>
+                        <label class="auto-update-toggle-label" title="Otomatis terapkan update saat versi baru tersedia">
+                            <input type="checkbox" id="autoUpdateToggle" checked>
+                            <span class="toggle-switch"></span>
+                            <span class="toggle-text">Auto-Update Otomatis</span>
+                        </label>
+                    </div>
+
+                    <div id="updateNoticeBox" class="update-notice-banner hidden">
+                        <div class="notice-icon">🔔</div>
+                        <div class="notice-text">
+                            <strong>Versi Baru Tersedia di GitHub!</strong>
+                            <p id="remoteCommitMsg" class="notice-sub">Memuat catatan rilis...</p>
+                        </div>
+                    </div>
+
+                    <div class="update-action-buttons">
+                        <button type="button" id="checkUpdateBtn" class="btn btn-secondary-subtle">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                            </svg>
+                            <span>Periksa Pembaruan</span>
+                        </button>
+                        <button type="button" id="applyUpdateBtn" class="btn btn-primary-action" disabled>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="7 10 12 15 17 10"></polyline>
+                                <line x1="12" y1="15" x2="12" y2="3"></line>
+                            </svg>
+                            <span id="applyUpdateBtnText">Perbarui Sekarang</span>
+                        </button>
+                    </div>
+                    <p id="updateStatusFeedback" class="update-feedback-text"></p>
+                </div>
+
+                <!-- Bagian 2: Khusus Pengembang / Master PC ("Tinggal Tekan Dari Sini") -->
+                <div class="update-section-box developer-box">
+                    <div class="section-box-header">
+                        <div class="dev-title-wrap">
+                            <span class="dev-badge">👑 PENGEMBANG / MASTER PC</span>
+                            <h3 class="section-box-title">Rilis Pembaruan ke Semua Komputer</h3>
+                        </div>
+                    </div>
+                    <p class="dev-desc">
+                        Tekan tombol di bawah untuk otomatis melakukan <code>git push</code> dan menyiarkan sinyal update ke seluruh komputer rekan/karyawan. Komputer mereka akan otomatis memperbarui ekstensi tanpa perlu didatangi satu per satu.
+                    </p>
+
+                    <div class="dev-push-form">
+                        <input type="text" id="devCommitMsgInput" class="dev-input" placeholder="Catatan perubahan (opsional, contoh: perbaikan format tanggal)...">
+                        <button type="button" id="devPushUpdateBtn" class="btn btn-push-master">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="16 16 12 12 8 16"></polyline>
+                                <line x1="12" y1="12" x2="12" y2="21"></line>
+                                <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"></path>
+                            </svg>
+                            <span id="devPushBtnText">Push Update ke Semua Komputer</span>
+                        </button>
+                    </div>
+                    <p id="devPushFeedback" class="dev-feedback-text"></p>
+                </div>
             </div>
         </div>
     </div>

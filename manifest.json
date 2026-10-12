@@ -2,7 +2,7 @@
     "manifest_version": 3,
 
     "name": "Beacukai for Developers",
-    "version": "2.0.0",
+    "version": "2.1.0",
 
     "description": "Smart Customs Automation Hub & CEISA 4.0 Suite for Developers.",
 
@@ -27,6 +27,10 @@
         "https://script.google.com/*",
         "https://*.googleusercontent.com/*",
         "https://*.supabase.co/*",
+        "https://api.github.com/*",
+        "https://raw.githubusercontent.com/*",
+        "https://github.com/*",
+        "https://codeload.github.com/*",
         "http://localhost/*",
         "http://127.0.0.1/*"
     ],
