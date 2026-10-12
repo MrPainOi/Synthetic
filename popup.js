@@ -472,7 +472,7 @@ if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onMessage)
         chrome.runtime.sendMessage({ type: "GET_SYSTEM_VERSION" }, (res) => {
             if (res && res.ok && res.data && res.data.data) {
                 const info = res.data.data;
-                if (versionText) versionText.textContent = "v" + (info.version || "2.1.0");
+                if (versionText) versionText.textContent = "v" + (info.version || "2.1.1");
             }
         });
     }

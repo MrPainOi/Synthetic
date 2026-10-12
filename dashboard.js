@@ -548,7 +548,7 @@ async function clearCache() {
             chrome.runtime.sendMessage({ type: "GET_SYSTEM_VERSION" }, (res) => {
                 if (res && res.ok && res.data && res.data.data) {
                     const info = res.data.data;
-                    const v = info.version || "2.1.0";
+                    const v = info.version || "2.1.1";
                     const sha = info.commit || "";
                     if (localVersionBadge) localVersionBadge.textContent = "v" + v;
                     if (updateBtnLabel) updateBtnLabel.textContent = "v" + v;
@@ -561,11 +561,12 @@ async function clearCache() {
         }
     }
 
-    // 2. Ambil preferensi Auto-Update
+    // 2. Ambil preferensi Auto-Update (Default: MATI / False)
     if (typeof storageGet === "function") {
         storageGet(["ceisa_auto_update_enabled"]).then(data => {
             if (autoUpdateToggle) {
-                autoUpdateToggle.checked = data.ceisa_auto_update_enabled !== false;
+                // Secara default nonaktif (mati) kecuali diaktifkan secara eksplisit oleh user
+                autoUpdateToggle.checked = Boolean(data.ceisa_auto_update_enabled === true);
             }
         }).catch(() => {});
     }

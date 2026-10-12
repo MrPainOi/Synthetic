@@ -250,7 +250,23 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     // Sistem Pembaruan Proyek (Auto-Update & Push-Update)
     // --------------------------------------------------------
     if (message.type === "GET_SYSTEM_VERSION") {
-        handleNativeServerAction({ action: "get_version" }, sendResponse);
+        const manifestVer = (chrome.runtime.getManifest && chrome.runtime.getManifest().version) || "2.1.1";
+        handleNativeServerAction({ action: "get_version" }, (res) => {
+            if (res && res.ok && res.data && res.data.data) {
+                sendResponse(res);
+            } else {
+                sendResponse({
+                    ok: true,
+                    data: {
+                        status: "success",
+                        data: {
+                            version: manifestVer,
+                            commit: "local"
+                        }
+                    }
+                });
+            }
+        });
         return true;
     }
 
@@ -286,7 +302,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                         body: JSON.stringify({
                             action: "publish_update",
                             commit: res.data.commit,
-                            version: res.data.version || "2.1.0",
+                            version: res.data.version || "2.1.1",
                             message: message.commit_message || "Update otomatis",
                             branch: "SupabaseV2"
                         })

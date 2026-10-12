@@ -139,7 +139,7 @@ const https = require('https');
 
 function getVersionInfo() {
     const vFile = path.join(PROJECT_ROOT, 'version.json');
-    let vData = { version: '2.1.0', branch: 'SupabaseV2' };
+    let vData = { version: '2.1.1', branch: 'SupabaseV2' };
     if (fs.existsSync(vFile)) {
         try { vData = JSON.parse(fs.readFileSync(vFile, 'utf8')); } catch (_) {}
     }
@@ -281,7 +281,7 @@ async function performPullUpdate() {
     } catch (_) {}
 
     const vFile = path.join(PROJECT_ROOT, 'version.json');
-    let vData = { version: '2.1.0', branch: 'SupabaseV2' };
+    let vData = { version: '2.1.1', branch: 'SupabaseV2' };
     if (fs.existsSync(vFile)) {
         try { vData = JSON.parse(fs.readFileSync(vFile, 'utf8')); } catch (_) {}
     }
@@ -301,9 +301,42 @@ async function performPullUpdate() {
     };
 }
 
+function bumpVersion(v) {
+    if (!v) return '2.1.1';
+    const parts = v.replace(/^v/i, '').trim().split('.');
+    if (parts.length >= 3) {
+        const patch = parseInt(parts[2], 10);
+        return `${parts[0]}.${parts[1]}.${isNaN(patch) ? 1 : patch + 1}`;
+    }
+    return '2.1.1';
+}
+
 async function performPushUpdate(commitMsg) {
     log('Menjalankan push update (Developer Mode)...');
-    const msg = commitMsg || `Rilis update sistem: ${new Date().toLocaleString('id-ID')}`;
+
+    // 1. Auto-increment versi sistem di version.json & manifest.json
+    const vFile = path.join(PROJECT_ROOT, 'version.json');
+    const mFile = path.join(PROJECT_ROOT, 'manifest.json');
+    let vData = { version: '2.1.1', branch: 'SupabaseV2' };
+    if (fs.existsSync(vFile)) {
+        try { vData = JSON.parse(fs.readFileSync(vFile, 'utf8')); } catch (_) {}
+    }
+    const nextVersion = bumpVersion(vData.version);
+    vData.version = nextVersion;
+    vData.updated_at = new Date().toISOString();
+    fs.writeFileSync(vFile, JSON.stringify(vData, null, 2), 'utf8');
+
+    if (fs.existsSync(mFile)) {
+        try {
+            const mData = JSON.parse(fs.readFileSync(mFile, 'utf8'));
+            mData.version = nextVersion;
+            fs.writeFileSync(mFile, JSON.stringify(mData, null, 4), 'utf8');
+        } catch (_) {}
+    }
+
+    const msg = commitMsg
+        ? `${commitMsg} (v${nextVersion})`
+        : `Rilis update sistem v${nextVersion}: ${new Date().toLocaleString('id-ID')}`;
 
     execSync('git add -A', { cwd: PROJECT_ROOT, windowsHide: true, stdio: 'pipe' });
     try {
@@ -316,21 +349,15 @@ async function performPushUpdate(commitMsg) {
 
     const newSha = execSync('git rev-parse HEAD', { cwd: PROJECT_ROOT, windowsHide: true, stdio: 'pipe' }).toString().trim();
 
-    const vFile = path.join(PROJECT_ROOT, 'version.json');
-    let vData = { version: '2.1.0', branch: 'SupabaseV2' };
-    if (fs.existsSync(vFile)) {
-        try { vData = JSON.parse(fs.readFileSync(vFile, 'utf8')); } catch (_) {}
-    }
     vData.commit = newSha;
-    vData.updated_at = new Date().toISOString();
     fs.writeFileSync(vFile, JSON.stringify(vData, null, 2), 'utf8');
 
-    log(`Push update berhasil ke GitHub (Commit: ${newSha.substring(0, 7)})`);
+    log(`Push update berhasil ke GitHub (v${nextVersion}, Commit: ${newSha.substring(0, 7)})`);
     return {
         status: 'success',
         commit: newSha,
-        version: vData.version,
-        message: `Pembaruan berhasil di-push ke GitHub! (Commit: ${newSha.substring(0, 7)})`
+        version: nextVersion,
+        message: `Pembaruan v${nextVersion} berhasil di-push ke GitHub! (Commit: ${newSha.substring(0, 7)})`
     };
 }
 
