@@ -546,6 +546,14 @@
                 : {};
 
         scanCache = pruneScanCache3Days(rawCache);
+        for (const item of Object.values(scanCache)) {
+            if (item && isBatuAmpar(item) && item.status === "orange") {
+                item.status = "red";
+                if (!item.location || item.location === "SEWU") {
+                    item.location = "IDBTU - BATU AMPAR";
+                }
+            }
+        }
     }
 
 
@@ -575,8 +583,9 @@
         }
         const str = (
             (itemOrCache?.location || "") + " " +
-            (itemOrCache?.target || "") + " " +
             (itemOrCache?.value || "") + " " +
+            (itemOrCache?.target || "") + " " +
+            (itemOrCache?.preview || "") + " " +
             (itemOrCache?.companyName || "") + " " +
             rowText
         ).toUpperCase();
@@ -623,15 +632,20 @@
         // 4. Belum Di-Print (TIDAK ADA di daftar Nomor Selesai Hijau maupun PIB/PEB)
         // DILARANG mengembalikan status selesai (green/yellow/blue/purple/pink/aqua) jika nomor tidak ada di daftar!
         if (cached) {
+            // Batu Ampar belum selesai WAJIB merah, dilarang oren!
+            if (batuAmpar) {
+                return "red";
+            }
+
             if (cached.status === "orange" || cached.status === "red") {
-                return batuAmpar ? "red" : "orange";
+                return "orange";
             }
 
             // Jika sebelumnya di-cache sebagai status selesai (misal green/yellow), tetapi sekarang sudah dihapus dari daftar selesai:
             // Kembalikan ke warna hasil scan aslinya jika pernah di-scan
-            if (cached.companyName || cached.location || cached.documentNumber) {
+            if (cached.companyName || cached.location || cached.documentNumber || cached.value) {
                 const docType = cached.documentType || "";
-                const loc = cached.location || cached.target || cached.value || "";
+                const loc = cached.location || cached.value || cached.target || "";
                 let targetFound = false;
                 if (docType === "SPPB") {
                     targetFound = isSppbSewu(loc);
@@ -641,7 +655,7 @@
                     targetFound = isSppbSewu(loc) || isNppbSekupang(loc);
                 }
 
-                return targetFound ? (batuAmpar ? "red" : "orange") : "red";
+                return targetFound ? "orange" : "red";
             }
         }
 
@@ -2161,11 +2175,19 @@
             isBatuAmpar(result) ||
             isBatuAmpar(null, row?.innerText);
 
-        const finalStatus =
-            computedColor ||
-            (isCompleted
-                ? (isBatuAmparItem ? "yellow" : "green")
-                : (found ? "orange" : "red"));
+        let finalStatus = computedColor;
+        if (!finalStatus) {
+            if (isCompleted) {
+                finalStatus = isBatuAmparItem ? "yellow" : "green";
+            } else {
+                finalStatus = isBatuAmparItem ? "red" : (found ? "orange" : "red");
+            }
+        }
+
+        // Proteksi ketat: Batu Ampar dilarang berwarna oren dalam kondisi apapun!
+        if (isBatuAmparItem && finalStatus === "orange") {
+            finalStatus = isCompleted ? "yellow" : "red";
+        }
 
 
         colorRegistrationNumber(
@@ -2174,7 +2196,7 @@
             finalStatus
         );
 
-        if (finalStatus === "green" || finalStatus === "yellow" || finalStatus === "blue" || finalStatus === "purple" || finalStatus === "cream") {
+        if (finalStatus === "green" || finalStatus === "yellow" || finalStatus === "blue" || finalStatus === "purple" || finalStatus === "cream" || finalStatus === "pink" || finalStatus === "aqua") {
             stats.green++;
         } else if (finalStatus === "orange") {
             stats.orange++;
@@ -2198,7 +2220,9 @@
                 result?.companyName || "",
 
             location:
-                result?.value || result?.target || "",
+                isBatuAmparItem && (!result?.value || result?.value === "SEWU")
+                    ? "IDBTU - BATU AMPAR"
+                    : (result?.value || result?.target || (isBatuAmparItem ? "IDBTU - BATU AMPAR" : "SEWU")),
 
             rowDate:
                 item.rowDate,

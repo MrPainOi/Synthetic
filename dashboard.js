@@ -197,8 +197,9 @@ function isBatuAmpar(itemOrCache) {
     }
     const str = (
         (itemOrCache?.location || "") + " " +
-        (itemOrCache?.target || "") + " " +
         (itemOrCache?.value || "") + " " +
+        (itemOrCache?.target || "") + " " +
+        (itemOrCache?.preview || "") + " " +
         (itemOrCache?.companyName || "")
     ).toUpperCase();
     return str.includes("BATU AMPAR") || str.includes("BATUAMPAR") || str.includes("IDBTU");
@@ -346,6 +347,16 @@ async function loadDashboardData() {
 
     const rawCache = (data.ceisa_scan_cache && typeof data.ceisa_scan_cache === "object") ? data.ceisa_scan_cache : {};
     const scanCache = pruneScanCache3Days(rawCache);
+
+    // Self-heal: pastikan item Batu Ampar berstatus red dan bukan orange
+    for (const item of Object.values(scanCache)) {
+        if (item && isBatuAmpar(item) && item.status === "orange") {
+            item.status = "red";
+            if (!item.location || item.location === "SEWU") {
+                item.location = "IDBTU - BATU AMPAR";
+            }
+        }
+    }
 
     // Filter cache items strictly for chosenDate
     const dateCacheValues = Object.values(scanCache).filter(item => {

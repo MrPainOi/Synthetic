@@ -253,10 +253,10 @@ function cleanLocation(val, targetFound, defaultTarget = "SEWU") {
     }
     let str = String(val).toUpperCase().trim();
 
-    // Check for explicit known port locations first
-    if (str.includes("SEWU")) return "SEWU";
+    // Check for explicit known port locations first (Batu Ampar didahulukan sebelum Sewu)
     if (str.includes("IDBTU") || str.includes("BATU AMPAR") || str.includes("BATUAMPAR")) return "IDBTU - BATU AMPAR";
     if (str.includes("IDKSP") || str.includes("SEKUPANG")) return "IDKSP - SEKUPANG";
+    if (str.includes("SEWU")) return "SEWU";
     if (str.includes("IDCTS") || str.includes("CITRA TUSA") || str.includes("CITRATUSA")) return "IDCTS - CITRA TUSA";
     if (str.includes("IDKDA") || str.includes("KABIL")) return "IDKDA - KABIL";
 
@@ -264,9 +264,9 @@ function cleanLocation(val, targetFound, defaultTarget = "SEWU") {
     str = str.split(/\b(?:NAMA|SARANA|PENGANGKUT|NO\.|B\/L|NO\s|VOY|VOYAGE|FLIGHT|KAPAL|B\.\s*PELABUHAN|PELABUHAN\s+MUAT\s+EKSPOR|TANGGAL|NOMOR|NPWP|ALAMAT)\b/i)[0].trim();
     str = str.replace(/^(?:[A-Z0-9\.\s]*PELABUHAN[A-Z0-9\.\s]*:|LOKASI\s+BARANG\s*:|LOCATION\s+OF\s+GOODS\s*:|[:\-\s]+)+/i, "").trim();
 
-    if (str.includes("SEWU")) return "SEWU";
     if (str.includes("IDBTU") || str.includes("BATU AMPAR") || str.includes("BATUAMPAR")) return "IDBTU - BATU AMPAR";
     if (str.includes("IDKSP") || str.includes("SEKUPANG")) return "IDKSP - SEKUPANG";
+    if (str.includes("SEWU")) return "SEWU";
     if (str.includes("IDCTS") || str.includes("CITRA TUSA") || str.includes("CITRATUSA")) return "IDCTS - CITRA TUSA";
     if (str.includes("IDKDA") || str.includes("KABIL")) return "IDKDA - KABIL";
 
@@ -309,19 +309,30 @@ function analyzeSPPB(text) {
         );
 
 
+    const isBatuAmpar =
+        /BATU\s*AMPAR|IDBTU/i.test(normalized) ||
+        /BATU\s*AMPAR|IDBTU/i.test(value);
+
+
     const targetFound =
+        !isBatuAmpar &&
         /\bSEWU\b/i.test(
             normalized
         );
 
 
     const cleanLoc =
-        cleanLocation(value, targetFound, "SEWU");
+        cleanLocation(
+            value,
+            targetFound || isBatuAmpar,
+            isBatuAmpar ? "IDBTU - BATU AMPAR" : "SEWU"
+        );
 
 
     return {
 
-        target: "SEWU",
+        target:
+            isBatuAmpar ? "IDBTU - BATU AMPAR" : "SEWU",
 
         found:
             targetFound,
@@ -366,19 +377,29 @@ function analyzeNPPB(text) {
         );
 
 
+    const isBatuAmpar =
+        /BATU\s*AMPAR|IDBTU/i.test(normalized) ||
+        /BATU\s*AMPAR|IDBTU/i.test(value);
+
+
     const targetFound =
+        !isBatuAmpar &&
         normalized.includes("IDKSP") &&
         normalized.includes("SEKUPANG");
 
 
     const cleanLoc =
-        cleanLocation(value, targetFound, "IDKSP - Sekupang");
+        cleanLocation(
+            value,
+            targetFound || isBatuAmpar,
+            isBatuAmpar ? "IDBTU - BATU AMPAR" : "IDKSP - Sekupang"
+        );
 
 
     return {
 
         target:
-            "IDKSP - Sekupang",
+            isBatuAmpar ? "IDBTU - BATU AMPAR" : "IDKSP - Sekupang",
 
         found:
             targetFound,

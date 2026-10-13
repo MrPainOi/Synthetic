@@ -207,7 +207,7 @@ function reconcileCacheWithCompletedNumbers(cache, completedList, pibpebList, ta
         if (!item) return false;
         const status = item.status;
         if (status === "red" || status === "yellow" || status === "pink" || status === "cream" || status === "aqua") return true;
-        const str = ((item.location || "") + " " + (item.target || "") + " " + (item.value || "") + " " + (item.companyName || "")).toUpperCase();
+        const str = ((item.location || "") + " " + (item.value || "") + " " + (item.target || "") + " " + (item.preview || "") + " " + (item.companyName || "")).toUpperCase();
         return str.includes("BATU AMPAR") || str.includes("BATUAMPAR") || str.includes("IDBTU");
     };
 
@@ -227,6 +227,14 @@ function reconcileCacheWithCompletedNumbers(cache, completedList, pibpebList, ta
         const status = item.status;
         const isBatu = isBatuAmparObj(item);
 
+        // Self-heal: jika item Batu Ampar tapi tersimpan status orange, perbaiki menjadi red
+        if (isBatu && item.status === "orange") {
+            item.status = "red";
+            if (!item.location || item.location === "SEWU") {
+                item.location = "IDBTU - BATU AMPAR";
+            }
+        }
+
         const isCompletedStatus = (status === "green" || status === "yellow" || status === "blue" || status === "purple" || status === "pink" || status === "aqua");
 
         if (isCompletedStatus) {
@@ -238,15 +246,15 @@ function reconcileCacheWithCompletedNumbers(cache, completedList, pibpebList, ta
                 item.status = isBatu ? "pink" : "purple";
             } else {
                 // Nomor dihapus dari daftar selesai oleh pengguna
-                if (item.companyName || item.location || item.documentNumber) {
+                if (item.companyName || item.location || item.documentNumber || item.value) {
                     const docType = item.documentType || "";
-                    const loc = ((item.location || "") + " " + (item.target || "") + " " + (item.value || "")).toUpperCase();
+                    const loc = ((item.location || "") + " " + (item.value || "") + " " + (item.target || "")).toUpperCase();
                     let targetFound = false;
-                    if (docType === "SPPB") targetFound = loc.includes("SEWU");
-                    else if (docType === "NPPB") targetFound = loc.includes("SEKUPANG") || loc.includes("IDKSP") || loc.includes("IDSKP");
-                    else targetFound = loc.includes("SEWU") || loc.includes("SEKUPANG") || loc.includes("IDKSP");
+                    if (docType === "SPPB") targetFound = !isBatu && loc.includes("SEWU");
+                    else if (docType === "NPPB") targetFound = !isBatu && (loc.includes("SEKUPANG") || loc.includes("IDKSP") || loc.includes("IDSKP"));
+                    else targetFound = !isBatu && (loc.includes("SEWU") || loc.includes("SEKUPANG") || loc.includes("IDKSP"));
 
-                    item.status = targetFound ? (isBatu ? "red" : "orange") : "red";
+                    item.status = isBatu ? "red" : (targetFound ? "orange" : "red");
                 } else {
                     delete cache[key];
                 }
