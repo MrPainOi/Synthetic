@@ -67,7 +67,7 @@
 
         const dateList = Array.isArray(data[`ceisa_completed_numbers_${activeDate}`])
             ? data[`ceisa_completed_numbers_${activeDate}`]
-            : [];
+            : (activeDate === todayISO() && Array.isArray(data.ceisa_completed_numbers) ? data.ceisa_completed_numbers : []);
         const list = dateList;
 
         completedNumbers = new Set(
@@ -86,7 +86,7 @@
 
         const dateList = Array.isArray(data[`ceisa_pibpeb_numbers_${activeDate}`])
             ? data[`ceisa_pibpeb_numbers_${activeDate}`]
-            : [];
+            : (activeDate === todayISO() && Array.isArray(data.ceisa_pibpeb_numbers) ? data.ceisa_pibpeb_numbers : []);
         const list = dateList;
 
         pibPebNumbers = new Set(
@@ -2453,11 +2453,19 @@
                 const data = await chrome.storage.local.get([
                     `ceisa_completed_numbers_${activeDate}`,
                     `ceisa_pibpeb_numbers_${activeDate}`,
+                    "ceisa_completed_numbers",
+                    "ceisa_pibpeb_numbers",
                     "ceisa_scan_cache"
                 ]);
+                const comp = Array.isArray(data[`ceisa_completed_numbers_${activeDate}`])
+                    ? data[`ceisa_completed_numbers_${activeDate}`]
+                    : (activeDate === todayISO() && Array.isArray(data.ceisa_completed_numbers) ? data.ceisa_completed_numbers : []);
+                const pib = Array.isArray(data[`ceisa_pibpeb_numbers_${activeDate}`])
+                    ? data[`ceisa_pibpeb_numbers_${activeDate}`]
+                    : (activeDate === todayISO() && Array.isArray(data.ceisa_pibpeb_numbers) ? data.ceisa_pibpeb_numbers : []);
                 await pushExactStateToWifiServer(
-                    data[`ceisa_completed_numbers_${activeDate}`] || [],
-                    data[`ceisa_pibpeb_numbers_${activeDate}`] || [],
+                    comp,
+                    pib,
                     data.ceisa_scan_cache || {},
                     activeDate
                 );

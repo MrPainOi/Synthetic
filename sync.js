@@ -192,7 +192,7 @@ async function broadcastRefreshColor() {
 // Memastikan status 'green'/'yellow'/'blue' dsb langsung dibersihkan/dikembalikan
 // jika nomor bersangkutan dihapus dari daftar selesai
 // ------------------------------------------------------------
-function reconcileCacheWithCompletedNumbers(cache, completedList, pibpebList) {
+function reconcileCacheWithCompletedNumbers(cache, completedList, pibpebList, targetDate) {
     if (!cache || typeof cache !== "object") return {};
     const compSet = new Set((cleanNumberArray(completedList) || []).map(s => String(s).trim().padStart(6, "0")));
     const pibSet = new Set((cleanNumberArray(pibpebList) || []).map(s => String(s).trim().padStart(6, "0")));
@@ -213,6 +213,14 @@ function reconcileCacheWithCompletedNumbers(cache, completedList, pibpebList) {
 
     for (const [key, item] of Object.entries(cache)) {
         if (!item) continue;
+        // Hanya rekonsiliasi cache untuk tanggal yang ditargetkan (jangan hapus/ubah cache tanggal lain!)
+        if (targetDate) {
+            const itemDate = item.rowDate || (item.timestamp ? new Date(item.timestamp).toISOString().split('T')[0] : "");
+            if (itemDate && itemDate !== targetDate) {
+                continue;
+            }
+        }
+
         const reg = item.registrationNumber || key;
         const isComp = isNumInSet(compSet, reg);
         const isPib = isNumInSet(pibSet, reg);
@@ -267,8 +275,8 @@ async function pushExactStateToSupabase(completed, pibpeb, cache, targetDate, is
         const cleanPibPeb = cleanNumberArray(pibpeb);
         let cleanCache = (cache && typeof cache === "object") ? { ...cache } : {};
 
-        // Rekonsiliasi cache agar nomor selesai yang dihapus tidak lagi berstatus 'green'/'yellow'
-        cleanCache = reconcileCacheWithCompletedNumbers(cleanCache, cleanCompleted, cleanPibPeb);
+        // Rekonsiliasi cache khusus untuk tanggal target agar tanggal lain tidak tersenggol
+        cleanCache = reconcileCacheWithCompletedNumbers(cleanCache, cleanCompleted, cleanPibPeb, date);
 
         // 1. Instantly update local storage for zero latency
         const localPayload = {
@@ -498,9 +506,9 @@ async function syncWithSupabase(force = false) {
                 );
                 const timeSinceSave = Date.now() - localDateSaveTime;
 
-                // Anti-flicker: If local client saved recently (< 6s) and server is not newer,
+                // Anti-flicker: If local client saved recently (< 30s) and server is not newer,
                 // NEVER overwrite fresh local numbers with stale server data!
-                if (timeSinceSave < 6000 && serverTime <= localDateSaveTime) {
+                if (localDateSaveTime > 0 && timeSinceSave < 30000 && serverTime <= localDateSaveTime) {
                     continue;
                 }
 
@@ -581,7 +589,7 @@ async function syncWithSupabase(force = false) {
         // Rekonsiliasi mergedCache dengan daftar selesai aktif agar nomor yang dihapus tidak pernah dibangkitkan kembali
         const effectiveCompleted = serverCompletedByDate[activeDate] !== undefined ? serverCompletedByDate[activeDate] : (currentStored[`ceisa_completed_numbers_${activeDate}`] || currentStored.ceisa_completed_numbers || []);
         const effectivePibpeb = serverPibPebByDate[activeDate] !== undefined ? serverPibPebByDate[activeDate] : (currentStored[`ceisa_pibpeb_numbers_${activeDate}`] || currentStored.ceisa_pibpeb_numbers || []);
-        reconcileCacheWithCompletedNumbers(mergedCache, effectiveCompleted, effectivePibpeb);
+        reconcileCacheWithCompletedNumbers(mergedCache, effectiveCompleted, effectivePibpeb, activeDate);
 
         let hasNumberChanges = false;
         const storagePayload = {
@@ -610,7 +618,7 @@ async function syncWithSupabase(force = false) {
         }
 
         const todayDate = new Date().toISOString().split('T')[0];
-        if (serverCompletedByDate[activeDate] !== undefined) {
+        if (serverCompletedByDate[activeDate] !== undefined && activeDate === todayDate) {
             const currentList = Array.isArray(currentStored.ceisa_completed_numbers)
                 ? currentStored.ceisa_completed_numbers
                 : [];
@@ -618,24 +626,14 @@ async function syncWithSupabase(force = false) {
                 storagePayload.ceisa_completed_numbers = serverCompletedByDate[activeDate];
                 hasNumberChanges = true;
             }
-        } else if (activeDate === todayDate) {
-            if (currentStored.ceisa_completed_numbers && currentStored.ceisa_completed_numbers.length > 0) {
-                storagePayload.ceisa_completed_numbers = [];
-                hasNumberChanges = true;
-            }
         }
 
-        if (serverPibPebByDate[activeDate] !== undefined) {
+        if (serverPibPebByDate[activeDate] !== undefined && activeDate === todayDate) {
             const currentList = Array.isArray(currentStored.ceisa_pibpeb_numbers)
                 ? currentStored.ceisa_pibpeb_numbers
                 : [];
             if (!areArraysEqual(currentList, serverPibPebByDate[activeDate])) {
                 storagePayload.ceisa_pibpeb_numbers = serverPibPebByDate[activeDate];
-                hasNumberChanges = true;
-            }
-        } else if (activeDate === todayDate) {
-            if (currentStored.ceisa_pibpeb_numbers && currentStored.ceisa_pibpeb_numbers.length > 0) {
-                storagePayload.ceisa_pibpeb_numbers = [];
                 hasNumberChanges = true;
             }
         }

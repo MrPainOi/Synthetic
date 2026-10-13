@@ -95,8 +95,8 @@ function initDashboard() {
     }
 
     if (saveAllBtn) saveAllBtn.addEventListener("click", saveAllDataDashboard);
-    if (saveCompletedBtn) saveCompletedBtn.addEventListener("click", saveAllDataDashboard);
-    if (savePibPebBtn) savePibPebBtn.addEventListener("click", saveAllDataDashboard);
+    if (saveCompletedBtn) saveCompletedBtn.addEventListener("click", saveCompletedOnlyDashboard);
+    if (savePibPebBtn) savePibPebBtn.addEventListener("click", savePibPebOnlyDashboard);
     if (refreshBtn) refreshBtn.addEventListener("click", loadDashboardData);
     if (clearCacheBtn) clearCacheBtn.addEventListener("click", clearCache);
     if (copyOrangeBtn) copyOrangeBtn.addEventListener("click", () => copyText("orangeTextarea", "Daftar Oren & Merah disalin!"));
@@ -104,9 +104,19 @@ function initDashboard() {
 
     if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.onChanged) {
         chrome.storage.onChanged.addListener((changes, area) => {
-            if (area === "local" && (changes.ceisa_scan_cache || changes.ceisa_completed_numbers || changes.ceisa_pibpeb_numbers || changes.ceisa_supabase_status)) {
-                loadDashboardData();
-                updateSyncBadge();
+            if (area === "local") {
+                const keys = Object.keys(changes);
+                const hasRelevantChange = keys.some(k =>
+                    k.includes("ceisa_completed_numbers") ||
+                    k.includes("ceisa_pibpeb_numbers") ||
+                    k === "ceisa_scan_cache" ||
+                    k === "ceisa_supabase_status" ||
+                    k === "ceisa_last_scan_date"
+                );
+                if (hasRelevantChange) {
+                    loadDashboardData();
+                    updateSyncBadge();
+                }
             }
         });
     }
@@ -317,11 +327,11 @@ async function loadDashboardData() {
 
     const rawCompleted = Array.isArray(data[`ceisa_completed_numbers_${chosenDate}`])
         ? data[`ceisa_completed_numbers_${chosenDate}`]
-        : [];
+        : (chosenDate === todayISO() && Array.isArray(data.ceisa_completed_numbers) ? data.ceisa_completed_numbers : []);
 
     const rawPibPeb = Array.isArray(data[`ceisa_pibpeb_numbers_${chosenDate}`])
         ? data[`ceisa_pibpeb_numbers_${chosenDate}`]
-        : [];
+        : (chosenDate === todayISO() && Array.isArray(data.ceisa_pibpeb_numbers) ? data.ceisa_pibpeb_numbers : []);
 
     const completed = cleanNumberList(rawCompleted);
     const pibPeb = cleanNumberList(rawPibPeb);
@@ -452,10 +462,11 @@ async function saveAllDataDashboard() {
     if (completedInput) completedInput.value = uniqueCompleted.join("\n");
     if (pibPebInput) pibPebInput.value = uniquePibPeb.join("\n");
 
-    const payload = {
-        ceisa_completed_numbers: uniqueCompleted,
-        ceisa_pibpeb_numbers: uniquePibPeb
-    };
+    const payload = {};
+    if (chosenDate === todayISO()) {
+        payload.ceisa_completed_numbers = uniqueCompleted;
+        payload.ceisa_pibpeb_numbers = uniquePibPeb;
+    }
     payload[`ceisa_completed_numbers_${chosenDate}`] = uniqueCompleted;
     payload[`ceisa_pibpeb_numbers_${chosenDate}`] = uniquePibPeb;
     await storageSet(payload);
@@ -489,8 +500,72 @@ async function saveAllDataDashboard() {
     await loadDashboardData();
 }
 
-const saveCompletedNumbers = saveAllDataDashboard;
-const savePibPebNumbers = saveAllDataDashboard;
+async function saveCompletedOnlyDashboard() {
+    const datePicker = document.getElementById("scanDate");
+    const chosenDate = datePicker ? datePicker.value || todayISO() : todayISO();
+    const completedInput = document.getElementById("completedInput");
+    const rawCompleted = completedInput ? completedInput.value : "";
+    const uniqueCompleted = parseRegistrationNumbersFromText(rawCompleted);
+    if (completedInput) completedInput.value = uniqueCompleted.join("\n");
+
+    const existing = await storageGet([`ceisa_pibpeb_numbers_${chosenDate}`, "ceisa_pibpeb_numbers", "ceisa_scan_cache"]);
+    const currentPibPeb = cleanNumberList(existing[`ceisa_pibpeb_numbers_${chosenDate}`] || (chosenDate === todayISO() ? existing.ceisa_pibpeb_numbers : []) || []);
+    const cache = (existing.ceisa_scan_cache && typeof existing.ceisa_scan_cache === "object") ? existing.ceisa_scan_cache : {};
+
+    const payload = {};
+    if (chosenDate === todayISO()) {
+        payload.ceisa_completed_numbers = uniqueCompleted;
+    }
+    payload[`ceisa_completed_numbers_${chosenDate}`] = uniqueCompleted;
+    await storageSet(payload);
+
+    if (typeof pushExactStateToSupabase === "function") {
+        await pushExactStateToSupabase(uniqueCompleted, currentPibPeb, cache, chosenDate);
+    } else if (typeof pushExactStateToWifiServer === "function") {
+        await pushExactStateToWifiServer(uniqueCompleted, currentPibPeb, cache, chosenDate);
+    }
+
+    if (typeof broadcastRefreshColor === "function") {
+        await broadcastRefreshColor();
+    }
+    showToast("Nomor Selesai Hijau berhasil disimpan & disinkronkan ke Google Cloud.");
+    await loadDashboardData();
+}
+
+async function savePibPebOnlyDashboard() {
+    const datePicker = document.getElementById("scanDate");
+    const chosenDate = datePicker ? datePicker.value || todayISO() : todayISO();
+    const pibPebInput = document.getElementById("pibPebInput");
+    const rawPibPeb = pibPebInput ? pibPebInput.value : "";
+    const uniquePibPeb = parseRegistrationNumbersFromText(rawPibPeb);
+    if (pibPebInput) pibPebInput.value = uniquePibPeb.join("\n");
+
+    const existing = await storageGet([`ceisa_completed_numbers_${chosenDate}`, "ceisa_completed_numbers", "ceisa_scan_cache"]);
+    const currentCompleted = cleanNumberList(existing[`ceisa_completed_numbers_${chosenDate}`] || (chosenDate === todayISO() ? existing.ceisa_completed_numbers : []) || []);
+    const cache = (existing.ceisa_scan_cache && typeof existing.ceisa_scan_cache === "object") ? existing.ceisa_scan_cache : {};
+
+    const payload = {};
+    if (chosenDate === todayISO()) {
+        payload.ceisa_pibpeb_numbers = uniquePibPeb;
+    }
+    payload[`ceisa_pibpeb_numbers_${chosenDate}`] = uniquePibPeb;
+    await storageSet(payload);
+
+    if (typeof pushExactStateToSupabase === "function") {
+        await pushExactStateToSupabase(currentCompleted, uniquePibPeb, cache, chosenDate);
+    } else if (typeof pushExactStateToWifiServer === "function") {
+        await pushExactStateToWifiServer(currentCompleted, uniquePibPeb, cache, chosenDate);
+    }
+
+    if (typeof broadcastRefreshColor === "function") {
+        await broadcastRefreshColor();
+    }
+    showToast("Nomor Selesai PIB/PEB berhasil disimpan & disinkronkan ke Google Cloud.");
+    await loadDashboardData();
+}
+
+const saveCompletedNumbers = saveCompletedOnlyDashboard;
+const savePibPebNumbers = savePibPebOnlyDashboard;
 
 function copyText(textareaId, toastMsg) {
     const textarea = document.getElementById(textareaId);

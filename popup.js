@@ -79,18 +79,20 @@ async function loadDataForDate(chosenDate) {
 
 async function loadLastDate() {
     if (!dateInput) return;
-    const today = todayISO();
-    dateInput.value = today;
-    await storageSet({ ceisa_last_scan_date: today });
-    await loadDataForDate(today);
+    const data = await storageGet(["ceisa_last_scan_date"]);
+    const targetDate = data.ceisa_last_scan_date || todayISO();
+    dateInput.value = targetDate;
+    await loadDataForDate(targetDate);
 }
 
 function syncDateFromActiveCeisaTab() {
     if (typeof chrome === "undefined" || !chrome.tabs) return;
     try {
-        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-            if (!tabs || !tabs[0]?.id) return;
-            chrome.tabs.sendMessage(tabs[0].id, { type: "GET_CEISA_PORTAL_DATE" }, async (resp) => {
+        chrome.tabs.query({ url: ["*://portal.beacukai.go.id/*", "*://*.beacukai.go.id/*"] }, (tabs) => {
+            if (!tabs || tabs.length === 0) return;
+            const targetTab = tabs.find(t => t.active) || tabs[0];
+            if (!targetTab?.id) return;
+            chrome.tabs.sendMessage(targetTab.id, { type: "GET_CEISA_PORTAL_DATE" }, async (resp) => {
                 if (chrome.runtime.lastError) return;
                 if (resp && resp.date && dateInput && dateInput.value !== resp.date) {
                     dateInput.value = resp.date;
@@ -164,10 +166,10 @@ async function loadCompleted(chosenDate) {
     if (!completedNumbers) return;
     if (document.activeElement === completedNumbers) return;
     const date = chosenDate || (dateInput ? dateInput.value : todayISO());
-    const data = await storageGet([`ceisa_completed_numbers_${date}`]);
+    const data = await storageGet([`ceisa_completed_numbers_${date}`, "ceisa_completed_numbers"]);
     const raw = Array.isArray(data[`ceisa_completed_numbers_${date}`])
         ? data[`ceisa_completed_numbers_${date}`]
-        : [];
+        : (date === todayISO() && Array.isArray(data.ceisa_completed_numbers) ? data.ceisa_completed_numbers : []);
     const numbers = cleanNumberList(raw);
     completedNumbers.value = numbers.join("\n");
 }
@@ -176,10 +178,10 @@ async function loadPibPeb(chosenDate) {
     if (!pibPebNumbers) return;
     if (document.activeElement === pibPebNumbers) return;
     const date = chosenDate || (dateInput ? dateInput.value : todayISO());
-    const data = await storageGet([`ceisa_pibpeb_numbers_${date}`]);
+    const data = await storageGet([`ceisa_pibpeb_numbers_${date}`, "ceisa_pibpeb_numbers"]);
     const raw = Array.isArray(data[`ceisa_pibpeb_numbers_${date}`])
         ? data[`ceisa_pibpeb_numbers_${date}`]
-        : [];
+        : (date === todayISO() && Array.isArray(data.ceisa_pibpeb_numbers) ? data.ceisa_pibpeb_numbers : []);
     const numbers = cleanNumberList(raw);
     pibPebNumbers.value = numbers.join("\n");
 }
@@ -198,10 +200,11 @@ async function saveAllData() {
     if (completedNumbers) completedNumbers.value = cleanCompleted.join("\n");
     if (pibPebNumbers) pibPebNumbers.value = cleanPibPeb.join("\n");
 
-    const payload = {
-        ceisa_completed_numbers: cleanCompleted,
-        ceisa_pibpeb_numbers: cleanPibPeb
-    };
+    const payload = {};
+    if (date === todayISO()) {
+        payload.ceisa_completed_numbers = cleanCompleted;
+        payload.ceisa_pibpeb_numbers = cleanPibPeb;
+    }
     payload[`ceisa_completed_numbers_${date}`] = cleanCompleted;
     payload[`ceisa_pibpeb_numbers_${date}`] = cleanPibPeb;
 
@@ -244,8 +247,80 @@ async function saveAllData() {
     }, 1500);
 }
 
-const saveCompleted = saveAllData;
-const savePibPeb = saveAllData;
+async function saveCompletedOnly() {
+    const date = dateInput ? dateInput.value || todayISO() : todayISO();
+    const rawCompleted = completedNumbers ? completedNumbers.value : "";
+    const cleanCompleted = parseRegistrationNumbersFromText(rawCompleted);
+    if (completedNumbers) completedNumbers.value = cleanCompleted.join("\n");
+
+    const existing = await storageGet([`ceisa_pibpeb_numbers_${date}`, "ceisa_pibpeb_numbers", "ceisa_scan_cache"]);
+    const currentPibPeb = cleanNumberList(existing[`ceisa_pibpeb_numbers_${date}`] || (date === todayISO() ? existing.ceisa_pibpeb_numbers : []) || []);
+    const cache = (existing.ceisa_scan_cache && typeof existing.ceisa_scan_cache === "object") ? existing.ceisa_scan_cache : {};
+
+    const payload = {};
+    if (date === todayISO()) {
+        payload.ceisa_completed_numbers = cleanCompleted;
+    }
+    payload[`ceisa_completed_numbers_${date}`] = cleanCompleted;
+    await storageSet(payload);
+
+    if (typeof pushExactStateToSupabase === "function") {
+        await pushExactStateToSupabase(cleanCompleted, currentPibPeb, cache, date);
+    } else if (typeof pushExactStateToWifiServer === "function") {
+        await pushExactStateToWifiServer(cleanCompleted, currentPibPeb, cache, date);
+    }
+    if (typeof broadcastRefreshColor === "function") {
+        await broadcastRefreshColor();
+    }
+    if (typeof loadDataForDate === "function") {
+        await loadDataForDate(date);
+    }
+    setStatus("TERSIMPAN");
+    setTimeout(() => {
+        if (statusText && (statusText.textContent === "TERSIMPAN" || statusText.textContent === "DATA TERSIMPAN!")) {
+            setStatus("SIAP");
+        }
+    }, 1500);
+}
+
+async function savePibPebOnly() {
+    const date = dateInput ? dateInput.value || todayISO() : todayISO();
+    const rawPibPeb = pibPebNumbers ? pibPebNumbers.value : "";
+    const cleanPibPeb = parseRegistrationNumbersFromText(rawPibPeb);
+    if (pibPebNumbers) pibPebNumbers.value = cleanPibPeb.join("\n");
+
+    const existing = await storageGet([`ceisa_completed_numbers_${date}`, "ceisa_completed_numbers", "ceisa_scan_cache"]);
+    const currentCompleted = cleanNumberList(existing[`ceisa_completed_numbers_${date}`] || (date === todayISO() ? existing.ceisa_completed_numbers : []) || []);
+    const cache = (existing.ceisa_scan_cache && typeof existing.ceisa_scan_cache === "object") ? existing.ceisa_scan_cache : {};
+
+    const payload = {};
+    if (date === todayISO()) {
+        payload.ceisa_pibpeb_numbers = cleanPibPeb;
+    }
+    payload[`ceisa_pibpeb_numbers_${date}`] = cleanPibPeb;
+    await storageSet(payload);
+
+    if (typeof pushExactStateToSupabase === "function") {
+        await pushExactStateToSupabase(currentCompleted, cleanPibPeb, cache, date);
+    } else if (typeof pushExactStateToWifiServer === "function") {
+        await pushExactStateToWifiServer(currentCompleted, cleanPibPeb, cache, date);
+    }
+    if (typeof broadcastRefreshColor === "function") {
+        await broadcastRefreshColor();
+    }
+    if (typeof loadDataForDate === "function") {
+        await loadDataForDate(date);
+    }
+    setStatus("TERSIMPAN");
+    setTimeout(() => {
+        if (statusText && (statusText.textContent === "TERSIMPAN" || statusText.textContent === "DATA TERSIMPAN!")) {
+            setStatus("SIAP");
+        }
+    }, 1500);
+}
+
+const saveCompleted = saveCompletedOnly;
+const savePibPeb = savePibPebOnly;
 
 // ============================================================
 // INITIALIZATION & EVENT LISTENERS
@@ -287,8 +362,9 @@ async function checkWifiStatus() {
 document.addEventListener("DOMContentLoaded", async () => {
     await checkWifiStatus();
     await loadLastDate();
-    await loadCompleted();
-    await loadPibPeb();
+    const activeDate = dateInput ? dateInput.value || todayISO() : todayISO();
+    await loadCompleted(activeDate);
+    await loadPibPeb(activeDate);
 
     const statsData = await storageGet(["ceisa_scan_stats", "ceisa_scan_status"]);
     updateStats(statsData.ceisa_scan_stats);
@@ -354,16 +430,27 @@ if (openDashboardButton) {
     };
 }
 
+if (dateInput) {
+    dateInput.addEventListener("change", async () => {
+        const selectedDate = dateInput.value;
+        if (!selectedDate) return;
+        await storageSet({ ceisa_last_scan_date: selectedDate });
+        await loadDataForDate(selectedDate);
+        await loadCompleted(selectedDate);
+        await loadPibPeb(selectedDate);
+    });
+}
+
 if (saveAllDataButton) {
     saveAllDataButton.onclick = saveAllData;
 }
 
 if (saveCompletedButton) {
-    saveCompletedButton.onclick = saveAllData;
+    saveCompletedButton.onclick = saveCompletedOnly;
 }
 
 if (savePibPebButton) {
-    savePibPebButton.onclick = saveAllData;
+    savePibPebButton.onclick = savePibPebOnly;
 }
 
 if (clearCacheButton) {
