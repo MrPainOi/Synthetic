@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
     "name": "CEISA 4.0 Automation",
-    "version": "2.1.6",
+    "version": "2.1.7",
     "description": "Smart Customs Automation Hub & CEISA 4.0 Suite.",
     "icons": {
         "16": "icons/icon-16.png",

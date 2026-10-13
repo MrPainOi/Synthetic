@@ -203,19 +203,27 @@ function reconcileCacheWithCompletedNumbers(cache, completedList, pibpebList, ta
         return setObj.has(s) || setObj.has(s.padStart(6, "0")) || setObj.has(s.replace(/^0+/, ""));
     };
 
+    const BATU_AMPAR_COMPANIES = ["VALEO", "TDK", "VOLEX", "SANJAYA", "WIK"];
+    const SEWU_COMPANIES = ["JMS", "SINAR ASIA", "HENG GUAN", "WOHLRAB", "EXCELITAS", "SCANJET", "SHYE CHANG", "RPC", "ENNOVI", "WARISAN"];
+
     const isBatuAmparObj = (item) => {
         if (!item) return false;
-        const status = item.status;
-        if (status === "yellow" || status === "pink" || status === "cream" || status === "aqua") return true;
-        if (status === "green" || status === "purple" || status === "blue" || status === "orange") return false;
+        const co = String(item.companyName || item.company_name || "").toUpperCase();
+        if (BATU_AMPAR_COMPANIES.some(c => co.includes(c))) return true;
+        if (SEWU_COMPANIES.some(c => co.includes(c))) return false;
 
         const loc = String(item.location || item.value || item.target || "").toUpperCase();
-        if (loc.includes("SEWU") || loc.includes("SEKUPANG") || loc.includes("IDKSP") || loc.includes("IDSKP")) {
-            return false;
-        }
         if (loc.includes("BATU AMPAR") || loc.includes("BATUAMPAR") || loc.includes("IDBTU")) {
             return true;
         }
+        if (loc.includes("SEWU") || loc.includes("SEKUPANG") || loc.includes("IDKSP") || loc.includes("IDSKP")) {
+            return false;
+        }
+
+        const status = item.status;
+        if (status === "yellow" || status === "pink" || status === "cream" || status === "aqua" || status === "red") return true;
+        if (status === "green" || status === "purple" || status === "blue" || status === "orange") return false;
+
         return false;
     };
 
@@ -235,35 +243,40 @@ function reconcileCacheWithCompletedNumbers(cache, completedList, pibpebList, ta
         const status = item.status;
         const isBatu = isBatuAmparObj(item);
 
-        const loc = String(item.location || item.value || "").toUpperCase();
-        const isSewuLoc = loc.includes("SEWU") || loc.includes("SEKUPANG") || loc.includes("IDKSP") || loc.includes("IDSKP");
-        const isBatuLoc = loc.includes("BATU AMPAR") || loc.includes("BATUAMPAR") || loc.includes("IDBTU");
-
-        // Self-heal: jika item Sewu tapi tersimpan status red, perbaiki menjadi orange
-        if (isSewuLoc && item.status === "red") {
-            item.status = "orange";
-        }
-        // Self-heal: jika item Batu Ampar tapi tersimpan status orange, perbaiki menjadi red
-        if (isBatuLoc && item.status === "orange") {
-            item.status = "red";
+        // Self-heal lokasi jika belum terisi / salah
+        if (isBatu) {
+            if (!item.location || item.location.includes("SEWU")) {
+                item.location = "IDBTU - BATU AMPAR";
+            }
+        } else {
+            if (!item.location || item.location.includes("BATU")) {
+                item.location = item.documentType === "NPPB" ? "IDKSP - SEKUPANG" : "SEWU";
+            }
         }
 
         const isCompletedStatus = (status === "green" || status === "yellow" || status === "blue" || status === "purple" || status === "pink" || status === "aqua");
 
-        if (isCompletedStatus) {
+        if (isComp || isPib) {
             if (isComp && isPib) {
                 item.status = isBatu ? "aqua" : "blue";
             } else if (isComp && !isPib) {
                 item.status = isBatu ? "yellow" : "green";
             } else if (!isComp && isPib) {
                 item.status = isBatu ? "pink" : "purple";
+            }
+        } else if (isCompletedStatus) {
+            // Nomor dihapus dari daftar selesai oleh pengguna
+            if (item.companyName || item.location || item.documentNumber || item.value) {
+                item.status = isBatu ? "red" : "orange";
             } else {
-                // Nomor dihapus dari daftar selesai oleh pengguna
-                if (item.companyName || item.location || item.documentNumber || item.value) {
-                    item.status = isBatu ? "red" : "orange";
-                } else {
-                    delete cache[key];
-                }
+                delete cache[key];
+            }
+        } else {
+            // Self-heal status belum selesai
+            if (isBatu && item.status === "orange") {
+                item.status = "red";
+            } else if (!isBatu && item.status === "red") {
+                item.status = "orange";
             }
         }
     }
