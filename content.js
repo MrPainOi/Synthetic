@@ -548,30 +548,17 @@
         scanCache = pruneScanCache3Days(rawCache);
         for (const item of Object.values(scanCache)) {
             if (!item) continue;
-            const batu = isBatuAmpar(item);
+            const loc = String(item.location || item.value || "").toUpperCase();
+            const isSewuLoc = loc.includes("SEWU") || loc.includes("SEKUPANG") || loc.includes("IDKSP") || loc.includes("IDSKP");
+            const isBatuLoc = loc.includes("BATU AMPAR") || loc.includes("BATUAMPAR") || loc.includes("IDBTU");
 
-            if (batu) {
-                // Perbaiki Batu Ampar yang salah berstatus hijau/oren
-                if (item.status === "green") {
-                    item.status = "yellow";
-                    item.location = "IDBTU - BATU AMPAR";
-                } else if (item.status === "orange") {
-                    item.status = "red";
-                    item.location = "IDBTU - BATU AMPAR";
-                }
-            } else {
-                // Perbaiki Sewu yang salah berstatus kuning/merah
-                if (item.status === "yellow") {
-                    item.status = "green";
-                    if (!item.location || item.location.includes("BATU")) {
-                        item.location = item.documentType === "NPPB" ? "IDKSP - SEKUPANG" : "SEWU";
-                    }
-                } else if (item.status === "red") {
-                    item.status = "orange";
-                    if (!item.location || item.location.includes("BATU")) {
-                        item.location = item.documentType === "NPPB" ? "IDKSP - SEKUPANG" : "SEWU";
-                    }
-                }
+            // Perbaiki Sewu yang salah berstatus red menjadi orange
+            if (isSewuLoc && item.status === "red") {
+                item.status = "orange";
+            }
+            // Perbaiki Batu Ampar yang salah berstatus orange menjadi red
+            if (isBatuLoc && item.status === "orange") {
+                item.status = "red";
             }
         }
     }
@@ -595,46 +582,41 @@
     // COLORING
     // ========================================================
 
-    const BATU_AMPAR_COMPANIES = ["VALEO", "TDK", "VOLEX", "SANJAYA", "WIK"];
-    const SEWU_COMPANIES = ["JMS", "SINAR ASIA", "HENG GUAN", "WOHLRAB", "EXCELITAS", "SCANJET", "SHYE CHANG", "RPC", "ENNOVI", "WARISAN"];
-
     function isBatuAmpar(itemOrCache, rowText = "") {
         if (!itemOrCache && !rowText) return false;
 
-        const co = String(itemOrCache?.companyName || itemOrCache?.company_name || "").toUpperCase();
-        const upperRow = String(rowText || "").toUpperCase();
-        const combinedText = co + " " + upperRow;
-
-        // 1. Prioritas Utama: Berdasarkan nama PT / Perusahaan
-        if (BATU_AMPAR_COMPANIES.some(c => combinedText.includes(c))) {
+        // 1. Status definitif khusus Batu Ampar
+        const status = itemOrCache?.status;
+        if (status === "yellow" || status === "pink" || status === "cream" || status === "aqua") {
             return true;
         }
-        if (SEWU_COMPANIES.some(c => combinedText.includes(c))) {
+        // Status definitif khusus Sewu
+        if (status === "green" || status === "purple" || status === "blue" || status === "orange") {
             return false;
         }
 
         // 2. Evaluasi lokasi spesifik
         const loc = String(itemOrCache?.location || itemOrCache?.value || itemOrCache?.target || "").toUpperCase();
-        if (loc.includes("BATU AMPAR") || loc.includes("BATUAMPAR") || loc.includes("IDBTU")) {
-            return true;
-        }
+
+        // Jika lokasi menyebutkan SEWU / SEKUPANG / IDKSP, maka pasti Sewu (BUKAN Batu Ampar!)
         if (loc.includes("SEWU") || loc.includes("SEKUPANG") || loc.includes("IDKSP") || loc.includes("IDSKP")) {
             return false;
         }
-        if (upperRow.includes("BATU AMPAR") || upperRow.includes("BATUAMPAR") || upperRow.includes("IDBTU")) {
+
+        // Jika lokasi menyebutkan BATU AMPAR / IDBTU, maka pasti Batu Ampar!
+        if (loc.includes("BATU AMPAR") || loc.includes("BATUAMPAR") || loc.includes("IDBTU")) {
             return true;
-        }
-        if (upperRow.includes("SEWU") || upperRow.includes("SEKUPANG") || upperRow.includes("IDKSP") || upperRow.includes("IDSKP")) {
-            return false;
         }
 
-        // 3. Status definitif jika perusahaan dan lokasi tidak terdefinisi
-        const status = itemOrCache?.status;
-        if (status === "yellow" || status === "pink" || status === "cream" || status === "aqua" || status === "red") {
-            return true;
-        }
-        if (status === "green" || status === "purple" || status === "blue" || status === "orange") {
-            return false;
+        // 3. Cek rowText di tabel CEISA jika ada
+        if (rowText) {
+            const upperRow = String(rowText).toUpperCase();
+            if (upperRow.includes("SEWU") || upperRow.includes("SEKUPANG") || upperRow.includes("IDKSP") || upperRow.includes("IDSKP")) {
+                return false;
+            }
+            if (upperRow.includes("BATU AMPAR") || upperRow.includes("BATUAMPAR") || upperRow.includes("IDBTU")) {
+                return true;
+            }
         }
 
         return false;

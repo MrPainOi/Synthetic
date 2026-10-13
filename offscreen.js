@@ -283,26 +283,36 @@ function cleanLocation(val, targetFound, defaultTarget = "SEWU") {
 }
 
 
-const BATU_AMPAR_COMPANIES = ["VALEO", "TDK", "VOLEX", "SANJAYA", "WIK"];
-const SEWU_COMPANIES = ["JMS", "SINAR ASIA", "HENG GUAN", "WOHLRAB", "EXCELITAS", "SCANJET", "SHYE CHANG", "RPC", "ENNOVI", "WARISAN"];
-
 function analyzeSPPB(text) {
-    const normalized = normalizeSearch(text);
 
-    const value = findAfterLabel(
-        text,
-        [
-            "LOKASI BARANG",
-            "LOKASI BARANG :",
-            "LOKASI BARANG:",
-            "LOCATION OF GOODS"
-        ]
-    );
+    const normalized =
+        normalizeSearch(text);
+
+
+    const value =
+        findAfterLabel(
+
+            text,
+
+            [
+
+                "LOKASI BARANG",
+
+                "LOKASI BARANG :",
+
+                "LOKASI BARANG:",
+
+                "LOCATION OF GOODS"
+
+            ]
+
+        );
+
 
     // Prioritaskan ekstraksi lokasi langsung dari field LOKASI BARANG
     let loc = cleanLocation(value, false, "");
 
-    // Fallback jika field LOKASI BARANG kosong / tidak ditemukan
+    // Fallback HANYA jika field LOKASI BARANG kosong / tidak ditemukan
     if (!loc) {
         if (/IDBTU|BATU\s*AMPAR/i.test(normalized)) {
             loc = "IDBTU - BATU AMPAR";
@@ -310,23 +320,30 @@ function analyzeSPPB(text) {
             loc = "SEWU";
         } else if (/IDKSP|SEKUPANG/i.test(normalized)) {
             loc = "IDKSP - SEKUPANG";
-        } else if (BATU_AMPAR_COMPANIES.some(c => normalized.includes(c))) {
-            loc = "IDBTU - BATU AMPAR";
-        } else if (SEWU_COMPANIES.some(c => normalized.includes(c))) {
-            loc = "SEWU";
         }
     }
 
     const isBatu = loc.includes("BATU AMPAR") || loc.includes("IDBTU");
     const isSewu = loc.includes("SEWU");
+
     const targetFound = isSewu;
+
     const finalLoc = loc || (isBatu ? "IDBTU - BATU AMPAR" : "SEWU");
 
+
     return {
-        target: isBatu ? "IDBTU - BATU AMPAR" : "SEWU",
-        found: targetFound,
-        value: finalLoc
+
+        target:
+            isBatu ? "IDBTU - BATU AMPAR" : "SEWU",
+
+        found:
+            targetFound,
+
+        value:
+            finalLoc
+
     };
+
 }
 
 
@@ -335,45 +352,66 @@ function analyzeSPPB(text) {
 // ============================================================
 
 function analyzeNPPB(text) {
-    const normalized = normalizeSearch(text);
 
-    const value = findAfterLabel(
-        text,
-        [
-            "PELABUHAN MUAT EKSPOR",
-            "A.PELABUHAN MUAT ASAL",
-            "A. PELABUHAN MUAT ASAL",
-            "PELABUHAN MUAT ASAL",
-            "PELABUHAN MUAT"
-        ]
-    );
+    const normalized =
+        normalizeSearch(text);
+
+
+    const value =
+        findAfterLabel(
+
+            text,
+
+            [
+
+                "PELABUHAN MUAT EKSPOR",
+
+                "A.PELABUHAN MUAT ASAL",
+
+                "A. PELABUHAN MUAT ASAL",
+
+                "PELABUHAN MUAT ASAL",
+
+                "PELABUHAN MUAT"
+
+            ]
+
+        );
+
 
     // Prioritaskan ekstraksi lokasi langsung dari field PELABUHAN MUAT
     let loc = cleanLocation(value, false, "");
 
-    // Fallback jika field PELABUHAN MUAT kosong / tidak ditemukan
+    // Fallback HANYA jika field PELABUHAN MUAT kosong / tidak ditemukan
     if (!loc) {
         if (/IDBTU|BATU\s*AMPAR/i.test(normalized)) {
             loc = "IDBTU - BATU AMPAR";
         } else if (/IDKSP|SEKUPANG/i.test(normalized)) {
-            loc = "IDKSP - SEKUPANG";
-        } else if (BATU_AMPAR_COMPANIES.some(c => normalized.includes(c))) {
-            loc = "IDBTU - BATU AMPAR";
-        } else if (SEWU_COMPANIES.some(c => normalized.includes(c))) {
             loc = "IDKSP - SEKUPANG";
         }
     }
 
     const isBatu = loc.includes("BATU AMPAR") || loc.includes("IDBTU");
     const isSekupang = loc.includes("SEKUPANG") || loc.includes("IDKSP");
+
     const targetFound = isSekupang;
-    const finalLoc = loc || (isBatu ? "IDBTU - BATU AMPAR" : "IDKSP - SEKUPANG");
+
+    const finalLoc = loc || (isBatu ? "IDBTU - BATU AMPAR" : "IDKSP - Sekupang");
+
 
     return {
-        target: isBatu ? "IDBTU - BATU AMPAR" : "IDKSP - SEKUPANG",
-        found: targetFound,
-        value: finalLoc
+
+        target:
+            isBatu ? "IDBTU - BATU AMPAR" : "IDKSP - Sekupang",
+
+        found:
+            targetFound,
+
+        value:
+            finalLoc
+
     };
+
 }
 
 
