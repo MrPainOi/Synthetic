@@ -591,7 +591,13 @@ if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onMessage)
                     updateBtn.textContent = "Selesai!";
                 } else {
                     updateBtn.disabled = false;
-                    updateBtn.textContent = "Gagal. Coba lagi";
+                    const errMsg = (res && res.error) || (chrome.runtime.lastError && chrome.runtime.lastError.message) || "";
+                    if (errMsg.toLowerCase().includes("native messaging") || errMsg.toLowerCase().includes("not found")) {
+                        updateBtn.textContent = "Aktifkan Updater";
+                        alert("Pembaruan Tersedia!\n\nAgar tombol ini bisa dipakai langsung tanpa Node.js:\nCukup klik 1x file 'AKTIFKAN_UPDATE_DI_CHROME.bat' di folder ekstensi (cuma 1 detik).\n\nAtau Anda juga bisa langsung klik 'UPDATE.bat' untuk memasang update.");
+                    } else {
+                        updateBtn.textContent = "Gagal. Coba lagi";
+                    }
                 }
             });
             return;

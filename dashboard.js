@@ -755,8 +755,14 @@ async function clearCache() {
                     applyUpdateBtn.disabled = false;
                     if (applyUpdateBtnText) applyUpdateBtnText.textContent = "Perbarui Sekarang";
                     if (updateStatusFeedback) {
-                        updateStatusFeedback.textContent = "Gagal mengunduh pembaruan. Silakan coba lagi.";
-                        updateStatusFeedback.style.color = "#dc2626";
+                        const errMsg = (res && res.error) || (chrome.runtime.lastError && chrome.runtime.lastError.message) || "";
+                        if (errMsg.toLowerCase().includes("native messaging") || errMsg.toLowerCase().includes("not found")) {
+                            updateStatusFeedback.innerHTML = "💡 <b>Aktifkan Sekali:</b> Klik 2x file <code>AKTIFKAN_UPDATE_DI_CHROME.bat</code> di folder ekstensi agar tombol ini bisa memperbarui otomatis seterusnya tanpa Node.js (atau klik <code>UPDATE.bat</code>).";
+                            updateStatusFeedback.style.color = "#d97706";
+                        } else {
+                            updateStatusFeedback.textContent = "Gagal mengunduh pembaruan. Silakan periksa koneksi internet atau jalankan UPDATE.bat di folder ekstensi.";
+                            updateStatusFeedback.style.color = "#dc2626";
+                        }
                     }
                     return;
                 }
