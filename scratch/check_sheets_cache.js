@@ -6,17 +6,31 @@ async function check() {
     const match = configText.match(/GOOGLE_SCRIPT_URL:\s*"([^"]+)"/);
     const scriptUrl = match[1];
 
-    const res = await fetch(scriptUrl + '?action=sync_mirror');
+    const res = await fetch(scriptUrl + '?action=sync');
     const data = await res.json();
-    console.log('Sync mirror result:');
-    console.log('State rows count:', data.state ? data.state.length : 0);
-    console.log('Scan cache count:', data.scan_cache ? data.scan_cache.length : 0);
-    if (data.scan_cache) {
-        console.log('\n--- SAMPLE CACHE ITEMS ---');
-        data.scan_cache.slice(0, 30).forEach(c => {
-            console.log(`Reg: ${c.registration_number} | Type: ${c.document_type} | Status: ${c.status} | Loc: "${c.location}" | Company: "${c.company_name}" | Date: ${c.row_date}`);
-        });
-    }
+    console.log('Total items in cache:', data.scan_cache.length);
+    
+    // Cari item yang berpotensi rancu / salah klasifikasi
+    const misclassified = [];
+    data.scan_cache.forEach(c => {
+        const loc = (c.location || '').toUpperCase();
+        const status = c.status || '';
+        const co = c.company_name || '';
+
+        // Sewu tapi status merah/kuning/pink
+        if ((loc.includes('SEWU') || loc.includes('SEKUPANG') || loc.includes('IDKSP')) && (status === 'red' || status === 'yellow' || status === 'pink')) {
+            misclassified.push({ issue: 'SEWU tetapi status ' + status, reg: c.registration_number, type: c.document_type, doc: c.document_number, loc: c.location, status, co });
+        }
+        // Batu Ampar tapi status hijau/ungu/oren
+        if ((loc.includes('BATU AMPAR') || loc.includes('IDBTU')) && (status === 'green' || status === 'purple' || status === 'orange')) {
+            misclassified.push({ issue: 'BATU AMPAR tetapi status ' + status, reg: c.registration_number, type: c.document_type, doc: c.document_number, loc: c.location, status, co });
+        }
+    });
+
+    console.log(`Ditemukan ${misclassified.length} item dengan potensi salah klasifikasi:`);
+    misclassified.forEach((m, i) => {
+        console.log(`[${i+1}] ${m.issue} | Reg: ${m.reg} | ${m.type} ${m.doc} | Loc: "${m.loc}" | Co: "${m.co}"`);
+    });
 }
 
 check().catch(console.error);

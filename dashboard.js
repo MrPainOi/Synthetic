@@ -192,17 +192,17 @@ function cleanLocation(loc) {
 function isBatuAmpar(itemOrCache) {
     if (!itemOrCache) return false;
     const status = itemOrCache?.status;
-    if (status === "red" || status === "yellow" || status === "pink" || status === "cream" || status === "aqua") {
+    if (status === "yellow" || status === "pink" || status === "cream" || status === "aqua") return true;
+    if (status === "green" || status === "purple" || status === "blue" || status === "orange") return false;
+
+    const loc = String(itemOrCache?.location || itemOrCache?.value || itemOrCache?.target || "").toUpperCase();
+    if (loc.includes("SEWU") || loc.includes("SEKUPANG") || loc.includes("IDKSP") || loc.includes("IDSKP")) {
+        return false;
+    }
+    if (loc.includes("BATU AMPAR") || loc.includes("BATUAMPAR") || loc.includes("IDBTU")) {
         return true;
     }
-    const str = (
-        (itemOrCache?.location || "") + " " +
-        (itemOrCache?.value || "") + " " +
-        (itemOrCache?.target || "") + " " +
-        (itemOrCache?.preview || "") + " " +
-        (itemOrCache?.companyName || "")
-    ).toUpperCase();
-    return str.includes("BATU AMPAR") || str.includes("BATUAMPAR") || str.includes("IDBTU");
+    return false;
 }
 
 function formatGroupedOutput(items) {
@@ -227,17 +227,17 @@ function formatGroupedOutput(items) {
     function formatItemLine(item, index) {
         const reg = item.registrationNumber;
         const name = cleanCompanyName(item.companyName);
-        let loc = cleanLocation(item.location || "");
+        let loc = cleanLocation(item.location || item.value || "");
 
-        const isRedOrBatuAmpar = item.status === "red" || isBatuAmpar(item);
+        const batuAmpar = isBatuAmpar(item);
 
-        if (isRedOrBatuAmpar) {
+        if (batuAmpar) {
             if (!loc || loc === "SEWU") {
                 loc = "IDBTU - BATU AMPAR";
             }
         } else {
-            if (!loc) {
-                loc = cleanLocation(item.target || "") || "SEWU";
+            if (!loc || loc === "IDBTU - BATU AMPAR") {
+                loc = cleanLocation(item.target || "") || (item.documentType === "NPPB" ? "IDKSP - SEKUPANG" : "SEWU");
             }
         }
 
@@ -348,13 +348,18 @@ async function loadDashboardData() {
     const rawCache = (data.ceisa_scan_cache && typeof data.ceisa_scan_cache === "object") ? data.ceisa_scan_cache : {};
     const scanCache = pruneScanCache3Days(rawCache);
 
-    // Self-heal: pastikan item Batu Ampar berstatus red dan bukan orange
+    // Self-heal: perbaiki status Sewu (ke orange) dan Batu Ampar (ke red)
     for (const item of Object.values(scanCache)) {
-        if (item && isBatuAmpar(item) && item.status === "orange") {
+        if (!item) continue;
+        const loc = String(item.location || item.value || "").toUpperCase();
+        const isSewuLoc = loc.includes("SEWU") || loc.includes("SEKUPANG") || loc.includes("IDKSP") || loc.includes("IDSKP");
+        const isBatuLoc = loc.includes("BATU AMPAR") || loc.includes("BATUAMPAR") || loc.includes("IDBTU");
+
+        if (isSewuLoc && item.status === "red") {
+            item.status = "orange";
+        }
+        if (isBatuLoc && item.status === "orange") {
             item.status = "red";
-            if (!item.location || item.location === "SEWU") {
-                item.location = "IDBTU - BATU AMPAR";
-            }
         }
     }
 
@@ -377,31 +382,32 @@ async function loadDashboardData() {
     document.getElementById("statOrange").textContent = orangeItems.length;
     document.getElementById("orangeTextarea").value = formatGroupedOutput(orangeItems);
 
-    // Green Items for chosenDate (Strict Fuzzy Match so Company Names Always Resolve)
-    const greenItems = completed.map(code => {
+    // Completed Items for chosenDate (Strict Fuzzy Match so Company Names Always Resolve)
+    const completedItems = completed.map(code => {
         const reg = String(code).trim();
         const cached = findInScanCache(scanCache, reg);
+        const batu = isBatuAmpar(cached);
         return {
             registrationNumber: reg,
             companyName: cached?.companyName || "",
-            location: cached?.location || cached?.target || "",
+            location: cached?.location || (batu ? "IDBTU - BATU AMPAR" : (cached?.target || (cached?.documentType === "NPPB" ? "IDKSP - SEKUPANG" : "SEWU"))),
             documentType: cached?.documentType || "SPPB",
-            status: cached?.status || "green"
+            status: cached?.status || (batu ? "yellow" : "green"),
+            isBatuAmpar: batu
         };
     });
 
-    document.getElementById("statGreen").textContent = greenItems.length;
-    document.getElementById("greenTextarea").value = formatGroupedOutput(greenItems);
+    // Pisahkan Sewu (Selesai Hijau) dan Batu Ampar (Selesai Kuning) secara ketat
+    const sewuCompleted = completedItems.filter(x => !x.isBatuAmpar);
+    const batuAmparCompleted = completedItems.filter(x => x.isBatuAmpar);
 
-    // Batu Ampar Count
-    let yellowCount = 0;
-    completed.forEach(code => {
-        const cached = findInScanCache(scanCache, String(code).trim());
-        if (cached?.status === "yellow" || isBatuAmpar(cached)) {
-            yellowCount++;
-        }
-    });
-    document.getElementById("statYellow").textContent = yellowCount;
+    // Stat Selesai Hijau: HANYA Sewu / Sekupang
+    document.getElementById("statGreen").textContent = sewuCompleted.length;
+    // Stat Batu Ampar: HANYA Batu Ampar
+    document.getElementById("statYellow").textContent = batuAmparCompleted.length;
+
+    // greenTextarea menampilkan daftar dokumen selesai
+    document.getElementById("greenTextarea").value = formatGroupedOutput(completedItems);
 
     // Set completedInput
     const completedInput = document.getElementById("completedInput");

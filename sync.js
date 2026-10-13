@@ -206,9 +206,17 @@ function reconcileCacheWithCompletedNumbers(cache, completedList, pibpebList, ta
     const isBatuAmparObj = (item) => {
         if (!item) return false;
         const status = item.status;
-        if (status === "red" || status === "yellow" || status === "pink" || status === "cream" || status === "aqua") return true;
-        const str = ((item.location || "") + " " + (item.value || "") + " " + (item.target || "") + " " + (item.preview || "") + " " + (item.companyName || "")).toUpperCase();
-        return str.includes("BATU AMPAR") || str.includes("BATUAMPAR") || str.includes("IDBTU");
+        if (status === "yellow" || status === "pink" || status === "cream" || status === "aqua") return true;
+        if (status === "green" || status === "purple" || status === "blue" || status === "orange") return false;
+
+        const loc = String(item.location || item.value || item.target || "").toUpperCase();
+        if (loc.includes("SEWU") || loc.includes("SEKUPANG") || loc.includes("IDKSP") || loc.includes("IDSKP")) {
+            return false;
+        }
+        if (loc.includes("BATU AMPAR") || loc.includes("BATUAMPAR") || loc.includes("IDBTU")) {
+            return true;
+        }
+        return false;
     };
 
     for (const [key, item] of Object.entries(cache)) {
@@ -227,12 +235,17 @@ function reconcileCacheWithCompletedNumbers(cache, completedList, pibpebList, ta
         const status = item.status;
         const isBatu = isBatuAmparObj(item);
 
+        const loc = String(item.location || item.value || "").toUpperCase();
+        const isSewuLoc = loc.includes("SEWU") || loc.includes("SEKUPANG") || loc.includes("IDKSP") || loc.includes("IDSKP");
+        const isBatuLoc = loc.includes("BATU AMPAR") || loc.includes("BATUAMPAR") || loc.includes("IDBTU");
+
+        // Self-heal: jika item Sewu tapi tersimpan status red, perbaiki menjadi orange
+        if (isSewuLoc && item.status === "red") {
+            item.status = "orange";
+        }
         // Self-heal: jika item Batu Ampar tapi tersimpan status orange, perbaiki menjadi red
-        if (isBatu && item.status === "orange") {
+        if (isBatuLoc && item.status === "orange") {
             item.status = "red";
-            if (!item.location || item.location === "SEWU") {
-                item.location = "IDBTU - BATU AMPAR";
-            }
         }
 
         const isCompletedStatus = (status === "green" || status === "yellow" || status === "blue" || status === "purple" || status === "pink" || status === "aqua");
@@ -247,14 +260,7 @@ function reconcileCacheWithCompletedNumbers(cache, completedList, pibpebList, ta
             } else {
                 // Nomor dihapus dari daftar selesai oleh pengguna
                 if (item.companyName || item.location || item.documentNumber || item.value) {
-                    const docType = item.documentType || "";
-                    const loc = ((item.location || "") + " " + (item.value || "") + " " + (item.target || "")).toUpperCase();
-                    let targetFound = false;
-                    if (docType === "SPPB") targetFound = !isBatu && loc.includes("SEWU");
-                    else if (docType === "NPPB") targetFound = !isBatu && (loc.includes("SEKUPANG") || loc.includes("IDKSP") || loc.includes("IDSKP"));
-                    else targetFound = !isBatu && (loc.includes("SEWU") || loc.includes("SEKUPANG") || loc.includes("IDKSP"));
-
-                    item.status = isBatu ? "red" : (targetFound ? "orange" : "red");
+                    item.status = isBatu ? "red" : "orange";
                 } else {
                     delete cache[key];
                 }

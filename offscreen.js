@@ -309,36 +309,38 @@ function analyzeSPPB(text) {
         );
 
 
-    const isBatuAmpar =
-        /BATU\s*AMPAR|IDBTU/i.test(normalized) ||
-        /BATU\s*AMPAR|IDBTU/i.test(value);
+    // Prioritaskan ekstraksi lokasi langsung dari field LOKASI BARANG
+    let loc = cleanLocation(value, false, "");
 
+    // Fallback HANYA jika field LOKASI BARANG kosong / tidak ditemukan
+    if (!loc) {
+        if (/IDBTU|BATU\s*AMPAR/i.test(normalized)) {
+            loc = "IDBTU - BATU AMPAR";
+        } else if (/\bSEWU\b/i.test(normalized)) {
+            loc = "SEWU";
+        } else if (/IDKSP|SEKUPANG/i.test(normalized)) {
+            loc = "IDKSP - SEKUPANG";
+        }
+    }
 
-    const targetFound =
-        !isBatuAmpar &&
-        /\bSEWU\b/i.test(
-            normalized
-        );
+    const isBatu = loc.includes("BATU AMPAR") || loc.includes("IDBTU");
+    const isSewu = loc.includes("SEWU");
 
+    const targetFound = isSewu;
 
-    const cleanLoc =
-        cleanLocation(
-            value,
-            targetFound || isBatuAmpar,
-            isBatuAmpar ? "IDBTU - BATU AMPAR" : "SEWU"
-        );
+    const finalLoc = loc || (isBatu ? "IDBTU - BATU AMPAR" : "SEWU");
 
 
     return {
 
         target:
-            isBatuAmpar ? "IDBTU - BATU AMPAR" : "SEWU",
+            isBatu ? "IDBTU - BATU AMPAR" : "SEWU",
 
         found:
             targetFound,
 
         value:
-            cleanLoc
+            finalLoc
 
     };
 
@@ -377,35 +379,36 @@ function analyzeNPPB(text) {
         );
 
 
-    const isBatuAmpar =
-        /BATU\s*AMPAR|IDBTU/i.test(normalized) ||
-        /BATU\s*AMPAR|IDBTU/i.test(value);
+    // Prioritaskan ekstraksi lokasi langsung dari field PELABUHAN MUAT
+    let loc = cleanLocation(value, false, "");
 
+    // Fallback HANYA jika field PELABUHAN MUAT kosong / tidak ditemukan
+    if (!loc) {
+        if (/IDBTU|BATU\s*AMPAR/i.test(normalized)) {
+            loc = "IDBTU - BATU AMPAR";
+        } else if (/IDKSP|SEKUPANG/i.test(normalized)) {
+            loc = "IDKSP - SEKUPANG";
+        }
+    }
 
-    const targetFound =
-        !isBatuAmpar &&
-        normalized.includes("IDKSP") &&
-        normalized.includes("SEKUPANG");
+    const isBatu = loc.includes("BATU AMPAR") || loc.includes("IDBTU");
+    const isSekupang = loc.includes("SEKUPANG") || loc.includes("IDKSP");
 
+    const targetFound = isSekupang;
 
-    const cleanLoc =
-        cleanLocation(
-            value,
-            targetFound || isBatuAmpar,
-            isBatuAmpar ? "IDBTU - BATU AMPAR" : "IDKSP - Sekupang"
-        );
+    const finalLoc = loc || (isBatu ? "IDBTU - BATU AMPAR" : "IDKSP - Sekupang");
 
 
     return {
 
         target:
-            isBatuAmpar ? "IDBTU - BATU AMPAR" : "IDKSP - Sekupang",
+            isBatu ? "IDBTU - BATU AMPAR" : "IDKSP - Sekupang",
 
         found:
             targetFound,
 
         value:
-            cleanLoc
+            finalLoc
 
     };
 

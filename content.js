@@ -547,11 +547,18 @@
 
         scanCache = pruneScanCache3Days(rawCache);
         for (const item of Object.values(scanCache)) {
-            if (item && isBatuAmpar(item) && item.status === "orange") {
+            if (!item) continue;
+            const loc = String(item.location || item.value || "").toUpperCase();
+            const isSewuLoc = loc.includes("SEWU") || loc.includes("SEKUPANG") || loc.includes("IDKSP") || loc.includes("IDSKP");
+            const isBatuLoc = loc.includes("BATU AMPAR") || loc.includes("BATUAMPAR") || loc.includes("IDBTU");
+
+            // Perbaiki Sewu yang salah berstatus red menjadi orange
+            if (isSewuLoc && item.status === "red") {
+                item.status = "orange";
+            }
+            // Perbaiki Batu Ampar yang salah berstatus orange menjadi red
+            if (isBatuLoc && item.status === "orange") {
                 item.status = "red";
-                if (!item.location || item.location === "SEWU") {
-                    item.location = "IDBTU - BATU AMPAR";
-                }
             }
         }
     }
@@ -577,24 +584,46 @@
 
     function isBatuAmpar(itemOrCache, rowText = "") {
         if (!itemOrCache && !rowText) return false;
+
+        // 1. Status definitif khusus Batu Ampar
         const status = itemOrCache?.status;
-        if (status === "red" || status === "yellow" || status === "pink" || status === "cream" || status === "aqua") {
+        if (status === "yellow" || status === "pink" || status === "cream" || status === "aqua") {
             return true;
         }
-        const str = (
-            (itemOrCache?.location || "") + " " +
-            (itemOrCache?.value || "") + " " +
-            (itemOrCache?.target || "") + " " +
-            (itemOrCache?.preview || "") + " " +
-            (itemOrCache?.companyName || "") + " " +
-            rowText
-        ).toUpperCase();
-        return str.includes("BATU AMPAR") || str.includes("BATUAMPAR") || str.includes("IDBTU");
+        // Status definitif khusus Sewu
+        if (status === "green" || status === "purple" || status === "blue" || status === "orange") {
+            return false;
+        }
+
+        // 2. Evaluasi lokasi spesifik
+        const loc = String(itemOrCache?.location || itemOrCache?.value || itemOrCache?.target || "").toUpperCase();
+
+        // Jika lokasi menyebutkan SEWU / SEKUPANG / IDKSP, maka pasti Sewu (BUKAN Batu Ampar!)
+        if (loc.includes("SEWU") || loc.includes("SEKUPANG") || loc.includes("IDKSP") || loc.includes("IDSKP")) {
+            return false;
+        }
+
+        // Jika lokasi menyebutkan BATU AMPAR / IDBTU, maka pasti Batu Ampar!
+        if (loc.includes("BATU AMPAR") || loc.includes("BATUAMPAR") || loc.includes("IDBTU")) {
+            return true;
+        }
+
+        // 3. Cek rowText di tabel CEISA jika ada
+        if (rowText) {
+            const upperRow = String(rowText).toUpperCase();
+            if (upperRow.includes("SEWU") || upperRow.includes("SEKUPANG") || upperRow.includes("IDKSP") || upperRow.includes("IDSKP")) {
+                return false;
+            }
+            if (upperRow.includes("BATU AMPAR") || upperRow.includes("BATUAMPAR") || upperRow.includes("IDBTU")) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     function isSekupang(itemOrCache, rowText = "") {
-        if (isBatuAmpar(itemOrCache, rowText)) return false;
-        return true;
+        return !isBatuAmpar(itemOrCache, rowText);
     }
 
     function isNumberInSet(setObj, numStr) {
@@ -624,39 +653,20 @@
             return batuAmpar ? "pink" : "purple";
         }
 
-        // 3. Only SPPB/NPPB Printed (ALWAYS OVERRIDES STALE ORANGE STATUS)
+        // 3. Only SPPB/NPPB Printed
         if (isSppbPrinted && !isPibPebPrinted) {
             return batuAmpar ? "yellow" : "green";
         }
 
         // 4. Belum Di-Print (TIDAK ADA di daftar Nomor Selesai Hijau maupun PIB/PEB)
-        // DILARANG mengembalikan status selesai (green/yellow/blue/purple/pink/aqua) jika nomor tidak ada di daftar!
         if (cached) {
             // Batu Ampar belum selesai WAJIB merah, dilarang oren!
             if (batuAmpar) {
                 return "red";
             }
 
-            if (cached.status === "orange" || cached.status === "red") {
-                return "orange";
-            }
-
-            // Jika sebelumnya di-cache sebagai status selesai (misal green/yellow), tetapi sekarang sudah dihapus dari daftar selesai:
-            // Kembalikan ke warna hasil scan aslinya jika pernah di-scan
-            if (cached.companyName || cached.location || cached.documentNumber || cached.value) {
-                const docType = cached.documentType || "";
-                const loc = cached.location || cached.value || cached.target || "";
-                let targetFound = false;
-                if (docType === "SPPB") {
-                    targetFound = isSppbSewu(loc);
-                } else if (docType === "NPPB") {
-                    targetFound = isNppbSekupang(loc);
-                } else {
-                    targetFound = isSppbSewu(loc) || isNppbSekupang(loc);
-                }
-
-                return targetFound ? "orange" : "red";
-            }
+            // Sewu belum selesai WAJIB oren, dilarang merah!
+            return "orange";
         }
 
         // Jika cache kosong & tidak di daftar selesai -> Tanpa Warna ("")
