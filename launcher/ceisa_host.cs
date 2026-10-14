@@ -85,7 +85,7 @@ namespace CeisaLauncher
             {
                 try { return File.ReadAllText(vFile, Encoding.UTF8).Trim(); } catch { }
             }
-            return "{\"version\":\"2.1.8\",\"branch\":\"SupabaseV2\"}";
+            return "{\"version\":\"2.1.2\",\"branch\":\"SupabaseV2\"}";
         }
 
         static string ExtractCommitFromVersion(string json)
@@ -97,7 +97,7 @@ namespace CeisaLauncher
         static string ExtractVersionString(string json)
         {
             Match m = Regex.Match(json, "\"version\"\\s*:\\s*\"([^\"]+)\"");
-            return m.Success ? m.Groups[1].Value : "2.1.8";
+            return m.Success ? m.Groups[1].Value : "2.1.2";
         }
 
         static void CopyDirectory(string sourceDir, string destDir)

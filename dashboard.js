@@ -174,8 +174,9 @@ function cleanLocation(loc) {
     if (!loc) return "";
     let val = loc.toUpperCase().trim();
 
-    if (val.includes("IDBTU") || val.includes("BATU AMPAR") || val.includes("BATUAMPAR")) return "IDBTU - BATU AMPAR";
+    if (val.includes("SEWU")) return "SEWU";
     if (val.includes("IDKSP") || val.includes("SEKUPANG")) return "IDKSP - SEKUPANG";
+    if (val.includes("IDBTU") || val.includes("BATU AMPAR") || val.includes("BATUAMPAR")) return "IDBTU - BATU AMPAR";
     if (val.includes("IDCTS") || val.includes("CITRA TUSA") || val.includes("CITRATUSA")) return "IDCTS - CITRA TUSA";
     if (val.includes("IDKDA") || val.includes("KABIL")) return "IDKDA - KABIL";
 
@@ -232,11 +233,11 @@ function formatGroupedOutput(items) {
         const batuAmpar = isBatuAmpar(item);
 
         if (batuAmpar) {
-            if (!loc || loc === "SEWU") {
+            if (!loc) {
                 loc = "IDBTU - BATU AMPAR";
             }
         } else {
-            if (!loc || loc === "IDBTU - BATU AMPAR") {
+            if (!loc) {
                 loc = cleanLocation(item.target || "") || (item.documentType === "NPPB" ? "IDKSP - SEKUPANG" : "SEWU");
             }
         }

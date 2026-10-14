@@ -1,0 +1,104 @@
+{
+  "safeCheck": {
+    "isRelated": true,
+    "confidenceScore": 100,
+    "summary": "Semua halaman dokumen (Commercial Invoice dan Packing List/Delivery Note) berasal dari satu kesatuan pengiriman yang sama (Bott Systems GmbH ke PT TDK Electronics Indonesia), dengan nomor invoice dan delivery note yang konsisten.",
+    "matchedIdentifiers": [
+      "Nomor Invoice: 0349000408",
+      "Nomor Delivery Note: 0248008982",
+      "Customer No: 0003014106",
+      "Shipper: Bott Systems GmbH dan Consignee: PT TDK ELECTRONICS INDONESIA"
+    ],
+    "discrepanciesOrWarnings": [],
+    "documentList": [
+      {
+        "fileName": "INV BOTT.pdf",
+        "documentType": "INVOICE",
+        "belongsToShipment": true,
+        "notes": "Commercial Invoice dan Packing-List / Delivery Note dari Bott Systems GmbH"
+      }
+    ]
+  },
+  "blNumber": null,
+  "blDate": null,
+  "invoiceNumber": "0349000408",
+  "invoiceDate": "23.09.2026",
+  "invoices": [
+    {
+      "invoiceNumber": "0349000408",
+      "invoiceDate": "23.09.2026",
+      "amount": "3.143,00 EUR",
+      "currency": "EUR",
+      "containerNumber": null,
+      "type": "COMMERCIAL"
+    }
+  ],
+  "packingListNumber": "0248008982",
+  "packingListDate": "24.09.2026",
+  "containerNumber": null,
+  "shipperName": "Bott Systems GmbH",
+  "shipperAddress": "Roßfelder Straße 56 D-74564 Crailsheim",
+  "consigneeName": "PT TDK ELECTRONICS INDONESIA",
+  "consigneeAddress": "Elvina Hutabarat\nJalan Epcos Jaya\nPanbil Industri Block\nB1-10 - Muka Kuning\n29433 PULAU BATAM\nINDONESIA",
+  "loadingPort": null,
+  "dischargePort": "PULAU BATAM",
+  "totalKemasan": "1 wooden case",
+  "totalGrossWeightKGM": "60,000 kg",
+  "totalNetWeightKGM": "36,000 kg",
+  "items": [
+    {
+      "hsCode": "9030 39 00",
+      "uraianJenisBarang": "BestPerformance Combitester PE/IS/HVAC equipped with a switching unit and a touch LC display Drawer module 19\" / 4 HE",
+      "jumlahDanSatuanBarang": "1,000 PCE",
+      "kemasan": "1 wooden case",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "2.159,00 EUR"
+    },
+    {
+      "hsCode": "9030 39 00",
+      "uraianJenisBarang": "99-KE ZG7-1X-0 bott-Calibration Combitester type G7-1A, G7-1B, G7-1G G7-1M, G7-1N, G7-1T, G7-1X inclusive bott-Calibration-Certificate",
+      "jumlahDanSatuanBarang": "1,000 PCE",
+      "kemasan": "1 wooden case",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "528,00 EUR"
+    },
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "99-KE ZDGUV V Safety Test DGUV Regulation 3 / BGVA3 incl. Test Certificate",
+      "jumlahDanSatuanBarang": "1,000 PCE",
+      "kemasan": "1 wooden case",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "88,00 EUR"
+    },
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "Fee for customs clearance import",
+      "jumlahDanSatuanBarang": "1,000 PCE",
+      "kemasan": "1 wooden case",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "90,00 EUR"
+    },
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "Cost for creating export documents",
+      "jumlahDanSatuanBarang": "1,000 PCE",
+      "kemasan": "1 wooden case",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "203,00 EUR"
+    },
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "Costs for packaging",
+      "jumlahDanSatuanBarang": "1,000 PCE",
+      "kemasan": "1 wooden case",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "75,00 EUR"
+    }
+  ]
+}

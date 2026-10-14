@@ -561,6 +561,7 @@
                 item.status = "red";
             }
         }
+
     }
 
 
@@ -2179,11 +2180,16 @@
 
         const computedColor = determineRowColor(registrationNumber, row, result || scanCache[registrationNumber]);
 
-        const isBatuAmparItem =
-            scanCache[registrationNumber]?.status === "yellow" ||
-            isBatuAmpar(scanCache[registrationNumber]) ||
-            isBatuAmpar(result) ||
-            isBatuAmpar(null, row?.innerText);
+        // Prioritaskan hasil scan PDF (result) yang definitif!
+        // Jangan timpa dengan row.innerText jika result dari PDF sudah jelas menyatakan SEWU atau Sekupang.
+        let isBatuAmparItem = false;
+        if (result && (result.value || result.target)) {
+            isBatuAmparItem = isBatuAmpar(result);
+        } else if (scanCache[registrationNumber]) {
+            isBatuAmparItem = isBatuAmpar(scanCache[registrationNumber]);
+        } else {
+            isBatuAmparItem = isBatuAmpar(null, row?.innerText);
+        }
 
         let finalStatus = computedColor;
         if (!finalStatus) {
@@ -2230,9 +2236,7 @@
                 result?.companyName || "",
 
             location:
-                isBatuAmparItem && (!result?.value || result?.value === "SEWU")
-                    ? "IDBTU - BATU AMPAR"
-                    : (result?.value || result?.target || (isBatuAmparItem ? "IDBTU - BATU AMPAR" : "SEWU")),
+                result?.value || result?.target || (isBatuAmparItem ? "IDBTU - BATU AMPAR" : "SEWU"),
 
             rowDate:
                 item.rowDate,

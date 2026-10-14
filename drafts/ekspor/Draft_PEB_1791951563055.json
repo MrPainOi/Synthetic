@@ -1,0 +1,91 @@
+{
+  "safeCheck": {
+    "isRelated": true,
+    "confidenceScore": 100,
+    "summary": "Semua dokumen saling berhubungan dan merupakan satu kesatuan pengiriman (shipment) lokal ekspor dari C.T.S. Industries Pte Ltd ke PT. TDK Electronics Indonesia.",
+    "matchedIdentifiers": [
+      "Nomor Invoice IV26100075 cocok antara Local Export Order, Tax Invoice, Packing List, dan Delivery Order",
+      "Shipper C.T.S. INDUSTRIES PTE LTD dan Consignee PT. TDK ELECTRONICS INDONESIA konsisten di semua dokumen",
+      "Nomor Tag L4624 tertera konsisten pada Local Export Order dan Tax Invoice"
+    ],
+    "discrepanciesOrWarnings": [],
+    "documentList": [
+      {
+        "fileName": "14 OCT - LOCAL EXPORT ORDER - 2ND VESSEL.pdf (Page 1)",
+        "documentType": "OTHER",
+        "belongsToShipment": true,
+        "notes": "Instruction sheet / cover for local export order"
+      },
+      {
+        "fileName": "14 OCT - LOCAL EXPORT ORDER - 2ND VESSEL.pdf (Page 2)",
+        "documentType": "OTHER",
+        "belongsToShipment": true,
+        "notes": "Local export order summary from CEVA Logistics"
+      },
+      {
+        "fileName": "14 OCT - LOCAL EXPORT ORDER - 2ND VESSEL.pdf (Page 3 & 4)",
+        "documentType": "INVOICE",
+        "belongsToShipment": true,
+        "notes": "Tax Invoice from C.T.S. Industries Pte Ltd"
+      },
+      {
+        "fileName": "14 OCT - LOCAL EXPORT ORDER - 2ND VESSEL.pdf (Page 5)",
+        "documentType": "PACKING_LIST",
+        "belongsToShipment": true,
+        "notes": "Packing List from C.T.S. Industries Pte Ltd"
+      },
+      {
+        "fileName": "14 OCT - LOCAL EXPORT ORDER - 2ND VESSEL.pdf (Page 6)",
+        "documentType": "OTHER",
+        "belongsToShipment": true,
+        "notes": "Delivery Order from C.T.S. Industries Pte Ltd"
+      }
+    ]
+  },
+  "blNumber": null,
+  "blDate": null,
+  "invoiceNumber": "IV26100075",
+  "invoiceDate": "13/10/2026",
+  "invoices": [
+    {
+      "invoiceNumber": "IV26100075",
+      "invoiceDate": "13/10/2026",
+      "amount": "EUR 6,549.55",
+      "currency": "EUR",
+      "containerNumber": null,
+      "type": "COMMERCIAL"
+    }
+  ],
+  "packingListNumber": "PL26100075",
+  "packingListDate": "13/10/2026",
+  "containerNumber": null,
+  "shipperName": "C.T.S. INDUSTRIES PTE LTD",
+  "shipperAddress": "53 SERANGOON NORTH AVENUE 4, #03-02/03, SINGAPORE 555852",
+  "consigneeName": "PT. TDK ELECTRONICS INDONESIA",
+  "consigneeAddress": "JALAN EPCOS JAYA BLOK B1-10 KAWASAN INDUSTRI PANBIL, MUKA KUNING, PULAU BATAM 29433 INDONESIA",
+  "loadingPort": "SINGAPORE",
+  "dischargePort": "INDONESIA",
+  "totalKemasan": "1 PALLET",
+  "totalGrossWeightKGM": "148.00",
+  "totalNetWeightKGM": "0.000",
+  "items": [
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "RSB 7999 V 0.5 BRASS UNPLATED",
+      "jumlahDanSatuanBarang": "270,000.000 PCS",
+      "kemasan": "1 PALLET",
+      "beratBersih": "0.000 KGS",
+      "beratKotor": "0.000 KGS",
+      "amount": "810.00"
+    },
+    {
+      "hsCode": null,
+      "uraianJenisBarang": "MFMP 7234-003-007-960-000-00-G",
+      "jumlahDanSatuanBarang": "91,104.000 PCS",
+      "kemasan": "1 PALLET",
+      "beratBersih": "0.000 KGS",
+      "beratKotor": "0.000 KGS",
+      "amount": "5,739.55"
+    }
+  ]
+}

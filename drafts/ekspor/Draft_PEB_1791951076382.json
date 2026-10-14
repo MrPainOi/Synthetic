@@ -1,0 +1,58 @@
+{
+  "safeCheck": {
+    "isRelated": true,
+    "confidenceScore": 100,
+    "summary": "Seluruh dokumen terlampir saling berkaitan dan membentuk satu kesatuan pengiriman (shipment) ekspor/impor yang valid dari TOA ELECTRIC INDUSTRIAL CO., LTD. ke PT TDK Electronics Indonesia, mencakup Local DG Export Order, Delivery Instruction, House Airway Bill, Commercial Invoice, Packing List, Cargo Clearance Permit, serta Safety Data Sheet.",
+    "matchedIdentifiers": [
+      "Nomor Invoice AIN 2610 - 52A cocok pada Invoice, Packing List, House Airway Bill, dan Local DG Export Order",
+      "Shipper TOA ELECTRIC INDUSTRIAL CO., LTD. dan Consignee PT TDK Electronics Indonesia konsisten di seluruh dokumen",
+      "Nomor B/L / HAWB 61856944355 konsisten pada dokumen pengangkutan dan kepabeanan"
+    ],
+    "discrepanciesOrWarnings": [],
+    "documentList": [
+      {
+        "fileName": "14 OCT - LOCAL DG - 2ND VESSEL - TOA ELECTRIC INDUSTRIAL CO.LTD.pdf",
+        "documentType": "OTHER",
+        "belongsToShipment": true,
+        "notes": "DG Local Export Order"
+      }
+    ]
+  },
+  "blNumber": "61856944355",
+  "blDate": "08-Oct-26",
+  "invoiceNumber": "AIN 2610 - 52A",
+  "invoiceDate": "2-Oct-2026",
+  "invoices": [
+    {
+      "invoiceNumber": "AIN 2610 - 52A",
+      "invoiceDate": "2-Oct-2026",
+      "amount": "80,800.0",
+      "currency": "JPY",
+      "containerNumber": null,
+      "type": "COMMERCIAL"
+    }
+  ],
+  "packingListNumber": "AIN 2610 - 52A",
+  "packingListDate": "2-Oct-2026",
+  "containerNumber": null,
+  "shipperName": "TOA ELECTRIC INDUSTRIAL CO., LTD.",
+  "shipperAddress": "1-4, SOTOKANDA, 5-CHOME, CHIYODA-KU, TOKYO 101-0021, JAPAN",
+  "consigneeName": "PT TDK Electronics Indonesia",
+  "consigneeAddress": "Jalan Epcos Jaya, Panbil Industri Block B1-10 Kawasan Industri Panbil Muka Kuning, Pulau Batam, 29433 Indonesia",
+  "loadingPort": "NARITA APT/TOKYO",
+  "dischargePort": "SINGAPORE",
+  "totalKemasan": "2 PACKAGES",
+  "totalGrossWeightKGM": "37.00 KGS",
+  "totalNetWeightKGM": "32.00 KGS",
+  "items": [
+    {
+      "hsCode": "39073090",
+      "uraianJenisBarang": "EPOXY RESIN ME105 WHITE 4KG/UNCAN",
+      "jumlahDanSatuanBarang": "32 KGS",
+      "kemasan": "2 PACKAGES",
+      "beratBersih": "32.00 KGS",
+      "beratKotor": "37.00 KGS",
+      "amount": "80,800.0"
+    }
+  ]
+}

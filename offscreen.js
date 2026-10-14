@@ -135,31 +135,54 @@ async function extractPdfText(base64) {
         const content =
             await page.getTextContent();
 
+        // 1. Filter item teks valid
+        const validItems = (content.items || []).filter(item => typeof item.str === "string" && item.str.length > 0);
 
-        const pageText =
-            content.items
+        // 2. Rekonstruksi baris secara visual berdasarkan koordinat (Y descending, X ascending)
+        // Koordinat PDF: transform[4] = X, transform[5] = Y (Y=0 di bawah, semakin ke atas Y semakin besar)
+        // Toleransi baris: item dalam rentang ~4px vertikal dianggap berada pada baris visual yang sama.
+        validItems.sort((a, b) => {
+            const yA = (a.transform && typeof a.transform[5] === "number") ? a.transform[5] : 0;
+            const yB = (b.transform && typeof b.transform[5] === "number") ? b.transform[5] : 0;
+            const xA = (a.transform && typeof a.transform[4] === "number") ? a.transform[4] : 0;
+            const xB = (b.transform && typeof b.transform[4] === "number") ? b.transform[4] : 0;
 
-                .map(item =>
-                    typeof item.str === "string"
-                        ? item.str
-                        : ""
-                )
+            if (Math.abs(yA - yB) <= 4) {
+                return xA - xB;
+            }
+            return yB - yA;
+        });
 
-                .join(" ");
+        // 3. Kelompokkan menjadi baris-baris terpisah
+        const lines = [];
+        let currentLine = [];
+        let currentY = null;
 
+        for (const item of validItems) {
+            const y = (item.transform && typeof item.transform[5] === "number") ? item.transform[5] : 0;
+            if (currentY === null || Math.abs(currentY - y) <= 4) {
+                currentLine.push(item.str);
+                if (currentY === null) currentY = y;
+            } else {
+                if (currentLine.length > 0) {
+                    lines.push(currentLine.join(" "));
+                }
+                currentLine = [item.str];
+                currentY = y;
+            }
+        }
+        if (currentLine.length > 0) {
+            lines.push(currentLine.join(" "));
+        }
 
+        const pageText = lines.join("\n");
         const clean =
             normalizeText(pageText);
 
-
         pages.push({
-
             page: pageNumber,
-
             text: clean
-
         });
-
 
         allText +=
             "\n" +
@@ -185,54 +208,41 @@ async function extractPdfText(base64) {
 // ============================================================
 
 function findAfterLabel(text, labels) {
-
-    const source =
-        normalizeSearch(text);
-
+    const raw = String(text || "");
+    const normalizedText = normalizeText(raw);
+    const sourceWithLines = normalizedText.toUpperCase();
+    const sourceFlat = normalizeSearch(raw);
 
     for (const label of labels) {
+        const normalizedLabel = label.toUpperCase().trim();
 
-        const normalizedLabel =
-            normalizeSearch(label);
-
-
-        const index =
-            source.indexOf(normalizedLabel);
-
-
-        if (index === -1) {
-            continue;
+        // 1. Coba cari di teks yang mempertahankan baris baru (\n)
+        let index = sourceWithLines.indexOf(normalizedLabel);
+        if (index !== -1) {
+            const after = sourceWithLines.substring(index + normalizedLabel.length);
+            // Ambil baris pertama tepat setelah label
+            const firstLine = after.replace(/^[:\-\s]+/, "").split(/\r?\n/)[0].trim();
+            if (firstLine && firstLine.length > 0) {
+                return firstLine.substring(0, 150).trim();
+            }
         }
 
-
-        const after =
-            source.substring(
-                index +
-                normalizedLabel.length
-            );
-
-
-        const clean =
-            after
-
+        // 2. Fallback pencarian teks satu baris (potong pada delimiter label berikutnya)
+        index = sourceFlat.indexOf(normalizedLabel);
+        if (index !== -1) {
+            const after = sourceFlat.substring(index + normalizedLabel.length);
+            const clean = after
                 .replace(/^[:\-\s]+/, "")
-
-                .split(/\n{2,}/)[0]
-
-                .substring(0, 300)
-
+                .split(/\b(?:NAMA|SARANA|PENGANGKUT|NO\.|NO\s|B\/L|AWB|VOY|VOYAGE|FLIGHT|KAPAL|B\.\s*PELABUHAN|PELABUHAN\s+MUAT\s+EKSPOR|TANGGAL|NOMOR|NPWP|ALAMAT|NITKU|PPJK)\b/i)[0]
+                .substring(0, 150)
                 .trim();
-
-
-        if (clean) {
-            return clean;
+            if (clean) {
+                return clean;
+            }
         }
-
     }
 
-
     return "";
-
 }
 
 
@@ -253,24 +263,18 @@ function cleanLocation(val, targetFound, defaultTarget = "SEWU") {
     }
     let str = String(val).toUpperCase().trim();
 
-    // Check for explicit known port locations first (Batu Ampar didahulukan sebelum Sewu)
-    if (str.includes("IDBTU") || str.includes("BATU AMPAR") || str.includes("BATUAMPAR")) return "IDBTU - BATU AMPAR";
+    // 1. Potong terlebih dahulu pada batas delimiter / label berikutnya agar teks alamat / pengangkut / dll TIDAK ikut terbawa!
+    str = str.split(/\b(?:NAMA|SARANA|PENGANGKUT|NO\.|B\/L|NO\s|AWB|VOY|VOYAGE|FLIGHT|KAPAL|B\.\s*PELABUHAN|PELABUHAN\s+MUAT\s+EKSPOR|TANGGAL|NOMOR|NPWP|ALAMAT|NITKU|PPJK|JUMLAH|MERK|BERAT|KEMASAN|POS)\b/i)[0].trim();
+    str = str.replace(/^(?:[A-Z0-9\.\s]*PELABUHAN[A-Z0-9\.\s]*:|LOKASI\s+BARANG\s*:|LOCATION\s+OF\s+GOODS\s*:|[:：\-\s]+)+/i, "").trim();
+
+    // 2. Evaluasi nama lokasi barang definitif (Sewu dan Sekupang diutamakan sesuai nilai field)
+    if (str.includes("SEWU") || /^\bSEWU\b/i.test(str)) return "SEWU";
     if (str.includes("IDKSP") || str.includes("SEKUPANG")) return "IDKSP - SEKUPANG";
-    if (str.includes("SEWU")) return "SEWU";
+    if (str.includes("IDBTU") || str.includes("BATU AMPAR") || str.includes("BATUAMPAR")) return "IDBTU - BATU AMPAR";
     if (str.includes("IDCTS") || str.includes("CITRA TUSA") || str.includes("CITRATUSA")) return "IDCTS - CITRA TUSA";
     if (str.includes("IDKDA") || str.includes("KABIL")) return "IDKDA - KABIL";
 
-    // Potong pada label pengangkut / kapal / B. PELABUHAN / VOY / FLIGHT
-    str = str.split(/\b(?:NAMA|SARANA|PENGANGKUT|NO\.|B\/L|NO\s|VOY|VOYAGE|FLIGHT|KAPAL|B\.\s*PELABUHAN|PELABUHAN\s+MUAT\s+EKSPOR|TANGGAL|NOMOR|NPWP|ALAMAT)\b/i)[0].trim();
-    str = str.replace(/^(?:[A-Z0-9\.\s]*PELABUHAN[A-Z0-9\.\s]*:|LOKASI\s+BARANG\s*:|LOCATION\s+OF\s+GOODS\s*:|[:\-\s]+)+/i, "").trim();
-
-    if (str.includes("IDBTU") || str.includes("BATU AMPAR") || str.includes("BATUAMPAR")) return "IDBTU - BATU AMPAR";
-    if (str.includes("IDKSP") || str.includes("SEKUPANG")) return "IDKSP - SEKUPANG";
-    if (str.includes("SEWU")) return "SEWU";
-    if (str.includes("IDCTS") || str.includes("CITRA TUSA") || str.includes("CITRATUSA")) return "IDCTS - CITRA TUSA";
-    if (str.includes("IDKDA") || str.includes("KABIL")) return "IDKDA - KABIL";
-
-    str = str.replace(/^[:\/\-\,\.\s]+|[:\/\-\,\.\s]+$/, "").trim();
+    str = str.replace(/^[:：\/\-\,\.\s]+|[:：\/\-\,\.\s]+$/, "").trim();
 
     // Filter out Voyage / Flight / BL codes (e.g. 03D890, 1779A, P30G26, 1234F, V.1779, or alphanumeric codes)
     const isAlphanumericCode = /^(?=.*\d)[A-Z0-9\.\-\/]{3,20}$/i.test(str);
@@ -284,41 +288,37 @@ function cleanLocation(val, targetFound, defaultTarget = "SEWU") {
 
 
 function analyzeSPPB(text) {
+    const raw = String(text || "");
+    const normalized = normalizeSearch(raw);
 
-    const normalized =
-        normalizeSearch(text);
+    // 1. Ekstraksi langsung field LOKASI BARANG secara presisi
+    let loc = "";
+    const directMatch = raw.match(/(?:LOKASI\s+BARANG|LOCATION\s+OF\s+GOODS)\s*[:：\-\s]+\s*([A-Z0-9\s\/\.\-]+?)(?=\s*(?:NO[\.\s]|B\/L|AWB|SARANA|PENGANGKUT|VOY|TANGGAL|BC|JUMLAH|MERK|BERAT|KEMASAN|POS|ALAMAT|NPWP|PPJK|$|\r?\n))/i);
+    if (directMatch && directMatch[1]) {
+        loc = cleanLocation(directMatch[1], false, "");
+    }
 
-
-    const value =
-        findAfterLabel(
-
-            text,
-
-            [
-
-                "LOKASI BARANG",
-
-                "LOKASI BARANG :",
-
-                "LOKASI BARANG:",
-
-                "LOCATION OF GOODS"
-
-            ]
-
-        );
-
-
-    // Prioritaskan ekstraksi lokasi langsung dari field LOKASI BARANG
-    let loc = cleanLocation(value, false, "");
-
-    // Fallback HANYA jika field LOKASI BARANG kosong / tidak ditemukan
+    // 2. Jika regex langsung belum dapat, gunakan findAfterLabel
     if (!loc) {
-        if (/IDBTU|BATU\s*AMPAR/i.test(normalized)) {
+        const value = findAfterLabel(
+            text,
+            [
+                "LOKASI BARANG",
+                "LOKASI BARANG :",
+                "LOKASI BARANG:",
+                "LOCATION OF GOODS"
+            ]
+        );
+        loc = cleanLocation(value, false, "");
+    }
+
+    // 3. Fallback HANYA jika field LOKASI BARANG kosong / tidak ditemukan
+    if (!loc) {
+        if (/LOKASI\s*BARANG[^\n]{0,80}(?:IDBTU|BATU\s*AMPAR)/i.test(normalized) || /\bIDBTU\b/i.test(normalized)) {
             loc = "IDBTU - BATU AMPAR";
-        } else if (/\bSEWU\b/i.test(normalized)) {
+        } else if (/LOKASI\s*BARANG[^\n]{0,80}SEWU/i.test(normalized) || /\bSEWU\b/i.test(normalized)) {
             loc = "SEWU";
-        } else if (/IDKSP|SEKUPANG/i.test(normalized)) {
+        } else if (/LOKASI\s*BARANG[^\n]{0,80}(?:IDKSP|SEKUPANG)/i.test(normalized) || /IDKSP|SEKUPANG/i.test(normalized)) {
             loc = "IDKSP - SEKUPANG";
         }
     }
@@ -330,20 +330,11 @@ function analyzeSPPB(text) {
 
     const finalLoc = loc || (isBatu ? "IDBTU - BATU AMPAR" : "SEWU");
 
-
     return {
-
-        target:
-            isBatu ? "IDBTU - BATU AMPAR" : "SEWU",
-
-        found:
-            targetFound,
-
-        value:
-            finalLoc
-
+        target: isBatu ? "IDBTU - BATU AMPAR" : "SEWU",
+        found: targetFound,
+        value: finalLoc
     };
-
 }
 
 
@@ -352,41 +343,36 @@ function analyzeSPPB(text) {
 // ============================================================
 
 function analyzeNPPB(text) {
+    const raw = String(text || "");
+    const normalized = normalizeSearch(raw);
 
-    const normalized =
-        normalizeSearch(text);
+    // 1. Ekstraksi langsung field PELABUHAN MUAT secara presisi
+    let loc = "";
+    const directMatch = raw.match(/(?:PELABUHAN\s+MUAT\s+EKSPOR|PELABUHAN\s+MUAT\s+ASAL|PELABUHAN\s+MUAT)\s*[:：\-\s]+\s*([A-Z0-9\s\/\.\-]+?)(?=\s*(?:PELABUHAN|TUJUAN|B\.|SARANA|PENGANGKUT|VOY|TANGGAL|BC|JUMLAH|MERK|BERAT|KEMASAN|POS|ALAMAT|NPWP|PPJK|$|\r?\n))/i);
+    if (directMatch && directMatch[1]) {
+        loc = cleanLocation(directMatch[1], false, "");
+    }
 
-
-    const value =
-        findAfterLabel(
-
-            text,
-
-            [
-
-                "PELABUHAN MUAT EKSPOR",
-
-                "A.PELABUHAN MUAT ASAL",
-
-                "A. PELABUHAN MUAT ASAL",
-
-                "PELABUHAN MUAT ASAL",
-
-                "PELABUHAN MUAT"
-
-            ]
-
-        );
-
-
-    // Prioritaskan ekstraksi lokasi langsung dari field PELABUHAN MUAT
-    let loc = cleanLocation(value, false, "");
-
-    // Fallback HANYA jika field PELABUHAN MUAT kosong / tidak ditemukan
+    // 2. Jika regex langsung belum dapat, gunakan findAfterLabel
     if (!loc) {
-        if (/IDBTU|BATU\s*AMPAR/i.test(normalized)) {
+        const value = findAfterLabel(
+            text,
+            [
+                "PELABUHAN MUAT EKSPOR",
+                "A.PELABUHAN MUAT ASAL",
+                "A. PELABUHAN MUAT ASAL",
+                "PELABUHAN MUAT ASAL",
+                "PELABUHAN MUAT"
+            ]
+        );
+        loc = cleanLocation(value, false, "");
+    }
+
+    // 3. Fallback HANYA jika field PELABUHAN MUAT kosong / tidak ditemukan
+    if (!loc) {
+        if (/PELABUHAN\s*MUAT[^\n]{0,80}(?:IDBTU|BATU\s*AMPAR)/i.test(normalized) || /IDBTU|BATU\s*AMPAR/i.test(normalized)) {
             loc = "IDBTU - BATU AMPAR";
-        } else if (/IDKSP|SEKUPANG/i.test(normalized)) {
+        } else if (/PELABUHAN\s*MUAT[^\n]{0,80}(?:IDKSP|SEKUPANG)/i.test(normalized) || /IDKSP|SEKUPANG/i.test(normalized)) {
             loc = "IDKSP - SEKUPANG";
         }
     }
@@ -396,7 +382,7 @@ function analyzeNPPB(text) {
 
     const targetFound = isSekupang;
 
-    const finalLoc = loc || (isBatu ? "IDBTU - BATU AMPAR" : "IDKSP - Sekupang");
+    const finalLoc = loc || (isBatu ? "IDBTU - BATU AMPAR" : "IDKSP - SEKUPANG");
 
 
     return {

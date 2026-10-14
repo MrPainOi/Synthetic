@@ -1,0 +1,76 @@
+{
+  "safeCheck": {
+    "isRelated": true,
+    "confidenceScore": 100,
+    "summary": "Dokumen-dokumen terdiri dari DG Transhipment Export Order, House Air Bill, Commercial Invoice / Packing List dari Polytec PT GmbH, dan Safety Data Sheet yang saling berhubungan erat sebagai satu kesatuan pengiriman barang berbahaya (Polytec TC 417-2 Part A) dari Jerman ke PT TDK Electronics Indonesia di Batam.",
+    "matchedIdentifiers": [
+      "Nomor Invoice 0033940365 cocok antara Commercial Invoice dan Packing List",
+      "MAWB 172-04872243 dan HAWB DE307981299 cocok antara Transhipment Export Order dan House Air Waybill",
+      "Shipper POLYTEC PT GMBH dan Consignee PT TDK ELECTRONICS INDONESIA konsisten di seluruh dokumen"
+    ],
+    "discrepanciesOrWarnings": [],
+    "documentList": [
+      {
+        "fileName": "14 OCT - TRANSHIPMENT DG - 2ND VESSEL - POLYTEC PT GMBH.pdf",
+        "documentType": "OTHER",
+        "belongsToShipment": true,
+        "notes": "DG Transhipment Export Order"
+      },
+      {
+        "fileName": "14 OCT - TRANSHIPMENT DG - 2ND VESSEL - POLYTEC PT GMBH.pdf",
+        "documentType": "BILL_OF_LADING",
+        "belongsToShipment": true,
+        "notes": "House Air Waybill"
+      },
+      {
+        "fileName": "14 OCT - TRANSHIPMENT DG - 2ND VESSEL - POLYTEC PT GMBH.pdf",
+        "documentType": "INVOICE",
+        "belongsToShipment": true,
+        "notes": "Export Invoice & Packing List"
+      },
+      {
+        "fileName": "14 OCT - TRANSHIPMENT DG - 2ND VESSEL - POLYTEC PT GMBH.pdf",
+        "documentType": "CERTIFICATE",
+        "belongsToShipment": true,
+        "notes": "Safety Data Sheet (SDS)"
+      }
+    ]
+  },
+  "blNumber": "DE307981299",
+  "blDate": "06-Oct-26 10:00",
+  "invoiceNumber": "0033940365",
+  "invoiceDate": "23.09.2026",
+  "invoices": [
+    {
+      "invoiceNumber": "0033940365",
+      "invoiceDate": "23.09.2026",
+      "amount": "1.850,00",
+      "currency": "USD",
+      "containerNumber": null,
+      "type": "COMMERCIAL"
+    }
+  ],
+  "packingListNumber": "0033940365",
+  "packingListDate": "23.09.2026",
+  "containerNumber": null,
+  "shipperName": "POLYTEC PT GMBH",
+  "shipperAddress": "POLYMERE TECHNOLOGIEN ETTLINGER STR. 30 KARLSBAD DE",
+  "consigneeName": "PT. TDK ELECTRONICS INDONESIA",
+  "consigneeAddress": "JL. EPCOS JAYA BLOK B1-10 KAW. INDUSTRI PANBIL, MUKA KUNING, KABIL BATAM 29433 ID SARAGIH",
+  "loadingPort": "FRANKFURT AM MAIN",
+  "dischargePort": "SINGAPORE",
+  "totalKemasan": "1 PKG",
+  "totalGrossWeightKGM": "19.00",
+  "totalNetWeightKGM": "10.500",
+  "items": [
+    {
+      "hsCode": "35069900",
+      "uraianJenisBarang": "POLYTEC TC 417-2 PART A HOBBOCK",
+      "jumlahDanSatuanBarang": "1,00 UN",
+      "kemasan": "1 PKG",
+      "beratBersih": "10.500",
+      "beratKotor": "19.00",
+      "amount": "1.850,00"
+    }
+  ]
+}

@@ -1,0 +1,148 @@
+{
+  "safeCheck": {
+    "isRelated": true,
+    "confidenceScore": 100,
+    "summary": "Dokumen terdiri dari DG Local Export Order dari CEVA Logistics, Tax Invoice/Delivery Order dari Keyence Singapore Pte Ltd dengan nomor invoice 1000308192 dan tag number L4619, serta Panasonic Energy SDS sebagai referensi penanganan baterai lithium. Seluruh dokumen saling berkaitan untuk satu shipment pengiriman barang Keyence ke PT TDK Electronics Indonesia.",
+    "matchedIdentifiers": [
+      "Nomor Invoice 1000308192 cocok antara Export Order dan Tax Invoice",
+      "Tag Number L4619 tercantum konsisten pada Export Order dan dokumen terkait",
+      "Shipper Keyence Singapore Pte Ltd dan Consignee PT TDK Electronics Indonesia konsisten"
+    ],
+    "discrepanciesOrWarnings": [],
+    "documentList": [
+      {
+        "fileName": "14 OCT - LOCAL DG - 2ND VESSEL - KEYENCE SINGAPORE PTE LTD.pdf",
+        "documentType": "OTHER",
+        "belongsToShipment": true,
+        "notes": "DG Local Export Order, Tax Invoice, Delivery Order, dan Panasonic Energy PSDS"
+      }
+    ]
+  },
+  "blNumber": null,
+  "blDate": null,
+  "invoiceNumber": "1000308192",
+  "invoiceDate": "8 Oct 26",
+  "invoices": [
+    {
+      "invoiceNumber": "1000308192",
+      "invoiceDate": "8 Oct 26",
+      "amount": "22,594.00",
+      "currency": "SGD",
+      "containerNumber": null,
+      "type": "COMMERCIAL"
+    }
+  ],
+  "packingListNumber": "1000308192",
+  "packingListDate": "8 Oct 26",
+  "containerNumber": null,
+  "shipperName": "KEYENCE SINGAPORE PTE LTD",
+  "shipperAddress": "10 KALLANG AVENUE, #07-14/18, APERIA TOWER 2, Singapore 339510",
+  "consigneeName": "PT TDK ELECTRONICS INDONESIA",
+  "consigneeAddress": "JALAN EPCOS JAYA BLOK B1-10 KAWASAN INDUSTRI PANBIL MUKA KUNING PULAU BATAM - INDONESIA 29433",
+  "loadingPort": null,
+  "dischargePort": "PULAU BATAM",
+  "totalKemasan": "3 PKG",
+  "totalGrossWeightKGM": "41.00",
+  "totalNetWeightKGM": null,
+  "items": [
+    {
+      "hsCode": "85365090",
+      "uraianJenisBarang": "SAFETY LIGHT CURTAIN (SENSOR)",
+      "jumlahDanSatuanBarang": "1 PCS",
+      "kemasan": "3 PKG",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "402.00"
+    },
+    {
+      "hsCode": "85389010",
+      "uraianJenisBarang": "SAFETY LIGHT CURTAIN (PROTECTION COVER)",
+      "jumlahDanSatuanBarang": "2 PCS",
+      "kemasan": "3 PKG",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "102.00"
+    },
+    {
+      "hsCode": "85444290",
+      "uraianJenisBarang": "INTERCONNECTION CABLE",
+      "jumlahDanSatuanBarang": "1 PCS",
+      "kemasan": "3 PKG",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "90.00"
+    },
+    {
+      "hsCode": "85371000",
+      "uraianJenisBarang": "3-AXIS LASER MARKER (CONTROLLER)",
+      "jumlahDanSatuanBarang": "1 PCS",
+      "kemasan": "3 PKG",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "4,526.69"
+    },
+    {
+      "hsCode": "90138090",
+      "uraianJenisBarang": "3-AXIS LASER MARKER (MARKING UNIT)",
+      "jumlahDanSatuanBarang": "1 PCS",
+      "kemasan": "3 PKG",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "15,211.80"
+    },
+    {
+      "hsCode": "85234900",
+      "uraianJenisBarang": "PC SOFTWARE",
+      "jumlahDanSatuanBarang": "1 PCS",
+      "kemasan": "3 PKG",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "1,026.40"
+    },
+    {
+      "hsCode": "85234900",
+      "uraianJenisBarang": "PC SOFTWARE",
+      "jumlahDanSatuanBarang": "1 PCS",
+      "kemasan": "3 PKG",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "1,184.31"
+    },
+    {
+      "hsCode": "82055900",
+      "uraianJenisBarang": "SPECIAL PLIERS",
+      "jumlahDanSatuanBarang": "1 PCS",
+      "kemasan": "3 PKG",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "29.21"
+    },
+    {
+      "hsCode": "85444220",
+      "uraianJenisBarang": "CABLE WITH CONNECTOR",
+      "jumlahDanSatuanBarang": "1 PCS",
+      "kemasan": "3 PKG",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "0.79"
+    },
+    {
+      "hsCode": "85369021",
+      "uraianJenisBarang": "MIL SLIM CONECTOR",
+      "jumlahDanSatuanBarang": "1 PCS",
+      "kemasan": "3 PKG",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "7.90"
+    },
+    {
+      "hsCode": "85444210",
+      "uraianJenisBarang": "CABLE",
+      "jumlahDanSatuanBarang": "1 PCS",
+      "kemasan": "3 PKG",
+      "beratBersih": null,
+      "beratKotor": null,
+      "amount": "12.90"
+    }
+  ]
+}
