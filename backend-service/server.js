@@ -299,7 +299,9 @@ const {
     searchByText,
     autocomplete,
     getChapterCodes,
-    getDatabaseStats
+    getDatabaseStats,
+    getBtkiCatalog,
+    browseHsCodes
 } = require('./hscode_service');
 
 // POST /api/hscode/lookup - Lookup lengkap via AI + cache
@@ -332,7 +334,7 @@ app.get('/api/hscode/cache', (req, res) => {
 app.get('/api/hscode/search', (req, res) => {
     try {
         const q = req.query.q || '';
-        const limit = Math.min(parseInt(req.query.limit || '20'), 100);
+        const limit = Math.min(parseInt(req.query.limit || '50'), 200);
         if (!q || q.trim().length < 2) {
             return res.status(400).json({ error: 'Parameter q minimal 2 karakter.' });
         }
@@ -379,7 +381,7 @@ app.get('/api/hscode/code/:code', (req, res) => {
 app.get('/api/hscode/chapter/:chapter', (req, res) => {
     try {
         const chapter = String(req.params.chapter).padStart(2, '0');
-        const level = parseInt(req.query.level || '6');
+        const level = parseInt(req.query.level || '0');
         const results = getChapterCodes(chapter, level);
         res.json({ success: true, chapter, total: results.length, data: results });
     } catch (err) {
@@ -392,6 +394,30 @@ app.get('/api/hscode/stats', (req, res) => {
     try {
         const stats = getDatabaseStats();
         res.json({ success: true, data: stats });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// GET /api/hscode/catalog - Katalog resmi 21 Bagian dan 96 Bab BTKI 2022 dari Bea Cukai
+app.get('/api/hscode/catalog', (req, res) => {
+    try {
+        const catalog = getBtkiCatalog();
+        res.json({ success: true, data: catalog });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// GET /api/hscode/browse - Browse pos tarif BTKI (per chapter, multi-chapter, atau seluruh database)
+app.get('/api/hscode/browse', (req, res) => {
+    try {
+        const chapters = req.query.chapter || req.query.chapters || 'all';
+        const limit = Math.min(parseInt(req.query.limit || '100'), 500);
+        const offset = Math.max(parseInt(req.query.offset || '0'), 0);
+        const minLevel = parseInt(req.query.level || '2');
+        const result = browseHsCodes({ chapters, limit, offset, minLevel });
+        res.json({ success: true, ...result });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }

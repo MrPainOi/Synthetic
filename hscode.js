@@ -452,6 +452,38 @@ let currentSearchQuery = "";
 let currentCategoryFilter = "all";
 const STORAGE_KEY_RECENT_HS = "ceisa_recent_hscode_checks";
 
+// MAPPING KATEGORI KOMODITAS KE BAB BTKI 2022
+const CATEGORY_CHAPTER_MAP = {
+    'all': 'all',
+    '85': '85',
+    '84': '84',
+    '72': '72,73',
+    '39': '39,28,29',
+    '87': '87,40',
+    '10': '10,15,09',
+    '61': '61,62,63',
+    '30': '30,90'
+};
+
+const CATEGORY_LABEL_MAP = {
+    'all': 'Semua Komoditas',
+    '85': 'Elektronik & Kabel',
+    '84': 'Mesin & Mekanik',
+    '72': 'Besi & Baja',
+    '39': 'Plastik & Kimia',
+    '87': 'Otomotif & Kendaraan',
+    '10': 'Pangan & Sawit',
+    '61': 'Tekstil & Pakaian',
+    '30': 'Medis & Farmasi'
+};
+
+// BROWSE STATE DARI BASIS DATA SQLITE (8.275 POS TARIF)
+let currentBrowseItems = [];
+let currentBrowseOffset = 0;
+const BROWSE_LIMIT = 100;
+let currentBrowseTotal = 0;
+let isBrowseLoading = false;
+
 // DOM INITIALIZATION
 document.addEventListener("DOMContentLoaded", () => {
     initHsCodeChecker();
@@ -462,8 +494,17 @@ function initHsCodeChecker() {
     renderRecentBadges();
     setupSearchEvents();
     setupCategoryChips();
+    setupChapterSelect();
     setupCalculatorEvents();
     setupActionButtons();
+
+    const btnLoadMore = document.getElementById("btnHsLoadMore");
+    if (btnLoadMore) {
+        btnLoadMore.addEventListener("click", () => {
+            currentBrowseOffset += BROWSE_LIMIT;
+            loadBackendBrowse(true);
+        });
+    }
 
     // Check URL query parameters (e.g. ?code=8544.49.95 or ?q=kabel)
     const urlParams = new URLSearchParams(window.location.search);
@@ -590,7 +631,7 @@ async function searchFromBackend(query) {
         }
         _backendSearchAbort = new AbortController();
 
-        const url = `${getBackendUrl('/api/hscode/search')}?q=${encodeURIComponent(query)}&limit=50`;
+        const url = `${getBackendUrl('/api/hscode/search')}?q=${encodeURIComponent(query)}&limit=100`;
         const res = await fetch(url, {
             signal: _backendSearchAbort.signal,
             headers: { 'Cache-Control': 'max-age=300' }
@@ -605,6 +646,10 @@ async function searchFromBackend(query) {
             formattedCode: row.code_formatted || row.code,
             bab: String(row.chapter || row.code.substring(0, 2)).padStart(2, '0'),
             babTitle: row.chapter_title_id || '',
+            babTitleEn: row.chapter_title_en || '',
+            section: row.section || '',
+            pdfUrl: row.pdf_url || '',
+            sourceUrl: row.source_url || 'https://www.beacukai.go.id/btki-dan-tarif#',
             uraianId: row.description_id || row.description_en || '',
             uraianEn: row.description_en || '',
             satuan: 'KGM',
@@ -755,86 +800,267 @@ function renderEmptyStateWithInsw(query, errorMsg = null) {
     }
 }
 
-// 3. CATEGORY CHIP EVENTS
+// 3. CATEGORY CHIP & CHAPTER SELECT EVENTS
 function setupCategoryChips() {
     const chips = document.querySelectorAll(".hscode-chip");
+    const chapterSelect = document.getElementById("hsChapterSelect");
     chips.forEach(chip => {
         chip.addEventListener("click", () => {
             chips.forEach(c => c.classList.remove("active"));
             chip.classList.add("active");
             currentCategoryFilter = chip.getAttribute("data-category") || "all";
+            if (chapterSelect) {
+                chapterSelect.value = (currentCategoryFilter in CATEGORY_CHAPTER_MAP && currentCategoryFilter !== "all") ? currentCategoryFilter : "all";
+            }
+            currentBrowseOffset = 0;
             performSearch();
         });
     });
 }
 
-// 4. PERFORM SEARCH & RENDER RESULTS
-function performSearch(recordRecent = false) {
-    if (isLookingUpOnline) return;
+async function setupChapterSelect() {
+    const select = document.getElementById("hsChapterSelect");
+    if (!select) return;
 
-    const query = currentSearchQuery.toLowerCase();
-    const cleanDigits = query.replace(/[^0-9]/g, '');
+    try {
+        const res = await fetch(getBackendUrl("/api/hscode/catalog"));
+        if (!res.ok) return;
+        const json = await res.json();
+        if (!json.success || !json.data || !Array.isArray(json.data.sections)) return;
 
+        select.innerHTML = '<option value="all">Semua Bab BTKI 2022 (8.275 Pos Tarif)</option>';
+
+        json.data.sections.forEach(sec => {
+            const group = document.createElement("optgroup");
+            group.label = `BAGIAN ${sec.roman}: ${sec.nameId}`;
+
+            sec.chapters.forEach(chNum => {
+                const opt = document.createElement("option");
+                opt.value = chNum;
+                const chData = json.data.chapters ? json.data.chapters[chNum] : null;
+                const chTitle = chData ? chData.titleId : `Bab ${chNum}`;
+                opt.textContent = `Bab ${chNum} - ${chTitle}`;
+                group.appendChild(opt);
+            });
+
+            select.appendChild(group);
+        });
+    } catch (e) {
+        console.warn("[HSCODE] Gagal memuat katalog bab:", e.message);
+    }
+
+    select.addEventListener("change", (e) => {
+        const val = e.target.value;
+        const chips = document.querySelectorAll(".hscode-chip");
+        chips.forEach(c => {
+            const cat = c.getAttribute("data-category");
+            if (cat === val) {
+                c.classList.add("active");
+            } else if (val !== "all" && cat === "all") {
+                c.classList.remove("active");
+            } else if (val === "all" && cat === "all") {
+                c.classList.add("active");
+            } else {
+                c.classList.remove("active");
+            }
+        });
+        currentCategoryFilter = val;
+        currentBrowseOffset = 0;
+        performSearch();
+    });
+}
+
+// 4. LOAD BROWSE DARI SQLITE BACKEND (8.275 POS TARIF)
+async function loadBackendBrowse(isAppend = false) {
+    if (isBrowseLoading) return;
+    isBrowseLoading = true;
+
+    const listEl = document.getElementById("hsResultsList");
+    const countEl = document.getElementById("hsResultsCount");
+    const loadMoreContainer = document.getElementById("hsLoadMoreContainer");
+    const btnLoadMore = document.getElementById("btnHsLoadMore");
+
+    if (!isAppend && (!currentBrowseItems || currentBrowseItems.length === 0)) {
+        if (countEl) countEl.textContent = "Memuat Basis Data BTKI...";
+        if (listEl) {
+            listEl.innerHTML = `
+                <div style="padding: 32px 16px; text-align: center; color: #64748b; font-size: 13px;">
+                    <div class="ceisa-spinner" style="margin: 0 auto 12px auto;"></div>
+                    Memuat Pos Tarif BTKI 2022 dari Database Resmi Bea Cukai...
+                </div>
+            `;
+        }
+    }
+
+    if (btnLoadMore) {
+        btnLoadMore.disabled = true;
+        btnLoadMore.textContent = "Memuat...";
+    }
+
+    try {
+        const targetChapter = CATEGORY_CHAPTER_MAP[currentCategoryFilter] || currentCategoryFilter;
+        const url = `${getBackendUrl('/api/hscode/browse')}?chapter=${encodeURIComponent(targetChapter)}&limit=${BROWSE_LIMIT}&offset=${currentBrowseOffset}`;
+
+        const res = await fetch(url);
+        if (!res.ok) throw new Error("Gagal mengambil data dari server");
+        const json = await res.json();
+        if (!json.success || !Array.isArray(json.items)) throw new Error("Format respons tidak valid");
+
+        currentBrowseTotal = json.total || 0;
+        const fetchedItems = json.items.map(row => ({
+            hsCode: row.formattedCode || row.hsCode,
+            formattedCode: row.formattedCode || row.hsCode,
+            bab: row.bab,
+            babTitle: row.babTitle,
+            babTitleEn: row.babTitleEn,
+            section: row.section,
+            pdfUrl: row.pdfUrl,
+            sourceUrl: row.sourceUrl,
+            uraianId: row.uraianId,
+            uraianEn: row.uraianEn,
+            satuan: row.satuan || 'KGM',
+            bmMfn: row.bmMfn,
+            bmPreferensi: row.bmPreferensi || { atiga: `${row.bmMfn || 0}%`, acfta: `${row.bmMfn || 0}%`, rcep: `${row.bmMfn || 0}%` },
+            ppn: row.ppn,
+            pphApi: row.pphApi,
+            pphNonApi: row.pphNonApi,
+            beaKeluar: row.beaKeluar || '0%',
+            lartasImpor: row.lartasImpor,
+            lartasKategori: row.lartasKategori,
+            lartasInstansi: row.lartasInstansi || '-',
+            lartasDasarHukum: row.lartasDasarHukum || '-',
+            lartasDokumen: row.lartasDokumen || [],
+            lartasEkspor: false,
+            keywords: [],
+            _source: 'sqlite'
+        }));
+
+        if (isAppend) {
+            currentBrowseItems = [...currentBrowseItems, ...fetchedItems];
+        } else {
+            // Gabungkan master demo items untuk kategori ini jika ada di BTKI_DATABASE
+            const localMaster = getCombinedBtkiDatabase().filter(item => {
+                if (currentCategoryFilter === 'all') return true;
+                const chs = (CATEGORY_CHAPTER_MAP[currentCategoryFilter] || currentCategoryFilter).split(',');
+                return chs.includes(item.bab);
+            });
+
+            const fetchedCodes = new Set(fetchedItems.map(f => f.hsCode.replace(/\D/g, '')));
+            const uniqueMaster = localMaster.filter(m => !fetchedCodes.has(m.hsCode.replace(/\D/g, '')));
+            currentBrowseItems = [...uniqueMaster, ...fetchedItems];
+        }
+
+        renderResultsList(currentBrowseItems);
+
+        // Update counter label
+        if (countEl) {
+            const catLabel = CATEGORY_LABEL_MAP[currentCategoryFilter] || (`Bab ${currentCategoryFilter}`);
+            if (currentCategoryFilter === 'all') {
+                countEl.textContent = `${currentBrowseItems.length} dari ${currentBrowseTotal.toLocaleString('id-ID')} Pos Tarif BTKI 2022`;
+            } else {
+                countEl.textContent = `${currentBrowseItems.length} dari ${currentBrowseTotal.toLocaleString('id-ID')} Pos Tarif (${catLabel})`;
+            }
+        }
+
+        // Handle load more visibility
+        if (loadMoreContainer) {
+            const sqliteLoaded = currentBrowseItems.filter(i => i._source === 'sqlite').length;
+            loadMoreContainer.style.display = (sqliteLoaded < currentBrowseTotal) ? "block" : "none";
+        }
+
+        if (!isAppend && currentBrowseItems.length > 0) {
+            const stillSelected = currentBrowseItems.find(f => f.hsCode === (activeSelectedHsCode ? activeSelectedHsCode.hsCode : null));
+            selectHsCodeItem(stillSelected || currentBrowseItems[0]);
+        }
+    } catch (err) {
+        console.warn("[HSCODE] Backend browse offline, fallback ke database lokal:", err.message);
+        fallbackLocalBrowse();
+    } finally {
+        isBrowseLoading = false;
+        if (btnLoadMore) {
+            btnLoadMore.disabled = false;
+            btnLoadMore.textContent = "Muat Pos Tarif Berikutnya";
+        }
+    }
+}
+
+// Fallback jika backend offline
+function fallbackLocalBrowse() {
     const database = getCombinedBtkiDatabase();
     const filtered = database.filter(item => {
         if (currentCategoryFilter !== 'all') {
-            if (currentCategoryFilter === '85' && item.bab !== '85') return false;
-            if (currentCategoryFilter === '84' && item.bab !== '84') return false;
-            if (currentCategoryFilter === '72' && item.bab !== '72' && item.bab !== '73') return false;
-            if (currentCategoryFilter === '39' && item.bab !== '39' && item.bab !== '28' && item.bab !== '29') return false;
-            if (currentCategoryFilter === '87' && item.bab !== '87' && item.bab !== '40') return false;
-            if (currentCategoryFilter === '10' && item.bab !== '10' && item.bab !== '15' && item.bab !== '09') return false;
-            if (currentCategoryFilter === '61' && item.bab !== '61' && item.bab !== '62') return false;
-            if (currentCategoryFilter === '30' && item.bab !== '30' && item.bab !== '90') return false;
+            const chs = (CATEGORY_CHAPTER_MAP[currentCategoryFilter] || currentCategoryFilter).split(',');
+            return chs.includes(item.bab);
         }
-        if (!query) return true;
-        const itemDigits = item.hsCode.replace(/[^0-9]/g, '');
-        if (cleanDigits.length >= 2 && itemDigits.includes(cleanDigits)) return true;
-        if (item.uraianId && item.uraianId.toLowerCase().includes(query)) return true;
-        if (item.uraianEn && item.uraianEn.toLowerCase().includes(query)) return true;
-        if (item.babTitle && item.babTitle.toLowerCase().includes(query)) return true;
-        if (item.keywords && item.keywords.some(k => k.toLowerCase().includes(query) || query.includes(k.toLowerCase()))) return true;
-        return false;
+        return true;
     });
 
     renderResultsList(filtered);
+    const countEl = document.getElementById("hsResultsCount");
+    if (countEl) countEl.textContent = `${filtered.length} Pos Tarif (Offline Master)`;
+
+    const loadMoreContainer = document.getElementById("hsLoadMoreContainer");
+    if (loadMoreContainer) loadMoreContainer.style.display = "none";
 
     if (filtered.length > 0) {
         const stillSelected = filtered.find(f => f.hsCode === (activeSelectedHsCode ? activeSelectedHsCode.hsCode : null));
         selectHsCodeItem(stillSelected || filtered[0]);
-    } else if (!query) {
+    } else {
         renderEmptyDetail();
     }
+}
 
+// 5. PERFORM SEARCH & RENDER RESULTS
+function performSearch(recordRecent = false) {
+    if (isLookingUpOnline) return;
+
+    const query = currentSearchQuery.trim();
+    const loadMoreContainer = document.getElementById("hsLoadMoreContainer");
+
+    // Jika tanpa query teks -> Jalankan mode browse dari basis data SQLite resmi
+    if (!query) {
+        currentBrowseOffset = 0;
+        loadBackendBrowse(false);
+        return;
+    }
+
+    if (loadMoreContainer) loadMoreContainer.style.display = "none";
     if (recordRecent && query) saveRecentSearch(query);
 
-    // Async: cari juga dari SQLite backend (8260+ pos tarif)
-    if (query && query.length >= 2) {
-        clearTimeout(_backendSearchTimeout);
-        _backendSearchTimeout = setTimeout(async () => {
-            const backendResults = await searchFromBackend(query);
-            if (!backendResults || backendResults.length === 0) {
-                if (filtered.length === 0) renderEmptyStateWithInsw(currentSearchQuery);
-                return;
+    const countEl = document.getElementById("hsResultsCount");
+    if (countEl) countEl.textContent = "Mencari di 8.275 Pos Tarif...";
+
+    // Async pencarian SQLite backend + filter master
+    clearTimeout(_backendSearchTimeout);
+    _backendSearchTimeout = setTimeout(async () => {
+        const backendResults = await searchFromBackend(query);
+
+        const cleanDigits = query.replace(/[^0-9]/g, '');
+        const localMaster = getCombinedBtkiDatabase().filter(item => {
+            const itemDigits = item.hsCode.replace(/[^0-9]/g, '');
+            if (cleanDigits.length >= 2 && itemDigits.includes(cleanDigits)) return true;
+            if (item.uraianId && item.uraianId.toLowerCase().includes(query.toLowerCase())) return true;
+            if (item.uraianEn && item.uraianEn.toLowerCase().includes(query.toLowerCase())) return true;
+            if (item.babTitle && item.babTitle.toLowerCase().includes(query.toLowerCase())) return true;
+            if (item.keywords && item.keywords.some(k => k.toLowerCase().includes(query.toLowerCase()))) return true;
+            return false;
+        });
+
+        const existingCodes = new Set(localMaster.map(f => f.hsCode.replace(/\D/g, '')));
+        const newBackend = backendResults.filter(b => !existingCodes.has(b.hsCode.replace(/\D/g, '')));
+        const combined = [...localMaster, ...newBackend];
+
+        if (combined.length === 0) {
+            renderEmptyStateWithInsw(query);
+        } else {
+            renderResultsList(combined);
+            if (countEl) {
+                countEl.textContent = `${combined.length} Pos Tarif Ditemukan untuk "${query}"`;
             }
-            const existingCodes = new Set(filtered.map(f => f.hsCode.replace(/\D/g, '')));
-            const newItems = backendResults
-                .filter(b => !existingCodes.has(b.hsCode.replace(/\D/g, '')))
-                .filter(item => currentCategoryFilter === 'all' || item.bab === currentCategoryFilter);
-            const combined = [...filtered, ...newItems];
-            if (combined.length !== filtered.length) {
-                renderResultsList(combined);
-                if (filtered.length === 0 && combined.length > 0) {
-                    const sel = combined.find(f => f.hsCode === (activeSelectedHsCode ? activeSelectedHsCode.hsCode : null));
-                    selectHsCodeItem(sel || combined[0]);
-                }
-            } else {
-                const countEl = document.getElementById('hsResultsCount');
-                if (countEl && combined.length > 0) countEl.textContent = combined.length + ' Pos Tarif Ditemukan';
-                if (combined.length === 0) renderEmptyStateWithInsw(currentSearchQuery);
-            }
-        }, 350);
-    }
+            const sel = combined.find(f => f.hsCode === (activeSelectedHsCode ? activeSelectedHsCode.hsCode : null));
+            selectHsCodeItem(sel || combined[0]);
+        }
+    }, 250);
 }
 // 5. RENDER RESULTS LIST (LEFT COLUMN)
 function renderResultsList(items) {
@@ -845,7 +1071,7 @@ function renderResultsList(items) {
     const localCount = items.length - sqliteCount;
     if (countEl) {
         if (sqliteCount > 0 && localCount > 0) {
-            countEl.textContent = `${items.length} Pos Tarif (${localCount} BTKI + ${sqliteCount} WCO)`;
+            countEl.textContent = `${items.length} Pos Tarif (${localCount} Master + ${sqliteCount} BTKI 2022)`;
         } else {
             countEl.textContent = `${items.length} Pos Tarif Ditemukan`;
         }
@@ -871,7 +1097,7 @@ function renderResultsList(items) {
 
         const bmText = typeof item.bmMfn === "number" ? `BM ${item.bmMfn}%` : item.bmMfn;
         const sourceBadge = item._source === 'sqlite'
-            ? `<span style="font-size:9px;background:#e0f2fe;color:#0284c7;border-radius:3px;padding:1px 4px;margin-left:4px;">WCO</span>`
+            ? `<span style="font-size:9px;background:#e0f2fe;color:#0284c7;border-radius:3px;padding:1px 4px;margin-left:4px;" title="Terverifikasi BTKI 2022 DJBC">BTKI 2022</span>`
             : '';
 
         card.innerHTML = `
@@ -918,6 +1144,28 @@ function selectHsCodeItem(item) {
     if (descId) descId.textContent = item.uraianId;
     if (descEn) descEn.textContent = item.uraianEn ? `EN: ${item.uraianEn}` : "";
     if (babTag) babTag.textContent = `BAB ${item.bab} - ${item.babTitle}`;
+
+    const sectionTag = document.getElementById("detailSectionTag");
+    const pdfBtn = document.getElementById("detailPdfBtn");
+
+    if (sectionTag) {
+        if (item.section) {
+            sectionTag.textContent = item.section;
+            sectionTag.style.display = "inline-block";
+        } else {
+            sectionTag.style.display = "none";
+        }
+    }
+
+    if (pdfBtn) {
+        if (item.pdfUrl) {
+            pdfBtn.href = item.pdfUrl;
+            pdfBtn.title = `Unduh Dokumen PDF Resmi Bab ${item.bab} dari Repository DJBC`;
+            pdfBtn.style.display = "inline-flex";
+        } else {
+            pdfBtn.style.display = "none";
+        }
+    }
 
     // Populate Duty & Tax Rates
     const bmVal = document.getElementById("valDutyBm");

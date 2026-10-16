@@ -226,19 +226,30 @@
                                 autocomplete="off" spellcheck="false">
                             <button type="button" id="btnHsSearchClear" class="hscode-search-clear" title="Hapus pencarian">&times;</button>
                         </div>
+                        <div class="hscode-chapter-select-box">
+                            <label for="hsChapterSelect" class="hscode-chapter-label">Bab BTKI:</label>
+                            <select id="hsChapterSelect" class="form-control-ceisa hscode-chapter-select">
+                                <option value="all">Semua Bab BTKI 2022 (8.275 Pos Tarif)</option>
+                            </select>
+                        </div>
                     </div>
 
-                    <!-- Category Filter Chips (Anti-Slop / No Emojis) -->
-                    <div class="hscode-filter-chips">
-                        <button type="button" class="hscode-chip active" data-category="all">Semua Komoditas</button>
-                        <button type="button" class="hscode-chip" data-category="85"><span class="chip-code">85</span> Elektronik & Kabel</button>
-                        <button type="button" class="hscode-chip" data-category="84"><span class="chip-code">84</span> Mesin & Mekanik</button>
-                        <button type="button" class="hscode-chip" data-category="72"><span class="chip-code">72</span> Besi & Baja</button>
-                        <button type="button" class="hscode-chip" data-category="39"><span class="chip-code">39</span> Plastik & Kimia</button>
-                        <button type="button" class="hscode-chip" data-category="87"><span class="chip-code">87</span> Otomotif & Kendaraan</button>
-                        <button type="button" class="hscode-chip" data-category="10"><span class="chip-code">10</span> Pangan & Sawit</button>
-                        <button type="button" class="hscode-chip" data-category="61"><span class="chip-code">61</span> Tekstil & Pakaian</button>
-                        <button type="button" class="hscode-chip" data-category="30"><span class="chip-code">30</span> Medis & Farmasi</button>
+                    <!-- Category Filter Chips & Database Badge Row -->
+                    <div class="hscode-chips-row">
+                        <div class="hscode-filter-chips">
+                            <button type="button" class="hscode-chip active" data-category="all">Semua Komoditas</button>
+                            <button type="button" class="hscode-chip" data-category="85"><span class="chip-code">85</span> Elektronik & Kabel</button>
+                            <button type="button" class="hscode-chip" data-category="84"><span class="chip-code">84</span> Mesin & Mekanik</button>
+                            <button type="button" class="hscode-chip" data-category="72"><span class="chip-code">72</span> Besi & Baja</button>
+                            <button type="button" class="hscode-chip" data-category="39"><span class="chip-code">39</span> Plastik & Kimia</button>
+                            <button type="button" class="hscode-chip" data-category="87"><span class="chip-code">87</span> Otomotif & Kendaraan</button>
+                            <button type="button" class="hscode-chip" data-category="10"><span class="chip-code">10</span> Pangan & Sawit</button>
+                            <button type="button" class="hscode-chip" data-category="61"><span class="chip-code">61</span> Tekstil & Pakaian</button>
+                            <button type="button" class="hscode-chip" data-category="30"><span class="chip-code">30</span> Medis & Farmasi</button>
+                        </div>
+                        <div id="hsTotalDatabaseBadge" class="hscode-total-badge">
+                            Basis Data Resmi: 8.275 Pos Tarif DJBC
+                        </div>
                     </div>
 
                     <!-- Recent Searches Row -->
@@ -259,14 +270,26 @@
                         <div class="hscode-card-list" id="hsResultsList">
                             <!-- Populated via hscode.js -->
                         </div>
+                        <div id="hsLoadMoreContainer" style="display: none; padding: 10px; text-align: center; border-top: 1px solid var(--border-color); background: #f8fafc;">
+                            <button type="button" id="btnHsLoadMore" class="btn btn-secondary-ceisa" style="width: 100%; justify-content: center; font-size: 12px; padding: 7px;">
+                                Muat Pos Tarif Berikutnya
+                            </button>
+                        </div>
                     </div>
 
                     <!-- Right: Detail Panel -->
                     <div class="hscode-detail-col">
                         <div class="hscode-detail-header">
                             <div>
-                                <span class="hscode-detail-code-badge" id="detailHsCode">8544.49.95.00</span>
-                                <div style="display: inline-block; margin-left: 10px; background: rgba(255,255,255,0.15); padding: 2px 8px; border-radius: 4px; font-size: 11px; color: #cbd5e1;" id="detailBabTag">BAB 85</div>
+                                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px;">
+                                    <span class="hscode-detail-code-badge" id="detailHsCode">8544.49.95.00</span>
+                                    <div style="display: inline-block; background: rgba(255,255,255,0.15); padding: 2px 8px; border-radius: 4px; font-size: 11px; color: #cbd5e1;" id="detailBabTag">BAB 85</div>
+                                    <div style="display: inline-block; background: rgba(2, 132, 199, 0.25); border: 1px solid rgba(2, 132, 199, 0.4); padding: 2px 8px; border-radius: 4px; font-size: 11px; color: #7dd3fc;" id="detailSectionTag">BAGIAN XVI</div>
+                                    <a id="detailPdfBtn" href="#" target="_blank" style="display: none; margin-left: auto; background: #0284c7; color: #ffffff; text-decoration: none; padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: 600; align-items: center; gap: 6px;">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="12" y2="18"></line><line x1="15" y1="15" x2="12" y2="18"></line></svg>
+                                        Unduh PDF Bab DJBC
+                                    </a>
+                                </div>
                                 <div class="hscode-detail-desc" id="detailUraianId">Konduktor listrik lainnya untuk tegangan tidak melebihi 1.000 V: Berisolasi dengan plastik, lainnya</div>
                                 <div style="font-size: 11px; color: #94a3b8; margin-top: 4px; font-style: italic;" id="detailUraianEn">Other electric conductors, for a voltage not exceeding 1,000 V: Insulated with plastics, other</div>
                             </div>

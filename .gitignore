@@ -12,6 +12,8 @@ node_modules/
 !config.example.js
 
 # Temporary & Download directories
+drafts/
+scratch/
 temp/
 tmp/
 */temp/

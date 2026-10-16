@@ -71,52 +71,194 @@ function searchByCode(code) {
     return db.prepare('SELECT * FROM hscode WHERE code = ?').get(cleanCode);
 }
 
+const ID_TO_EN_SYNONYMS = {
+    'kabel': ['cable', 'conductor', 'wire'],
+    'kawat': ['wire'],
+    'tembaga': ['copper'],
+    'besi': ['iron', 'steel'],
+    'baja': ['steel'],
+    'minyak': ['oil'],
+    'kelapa sawit': ['palm oil'],
+    'sawit': ['palm'],
+    'beras': ['rice'],
+    'padi': ['rice', 'paddy'],
+    'gandum': ['wheat'],
+    'tepung': ['flour'],
+    'karet': ['rubber'],
+    'ban': ['tyre', 'tire'],
+    'kayu': ['wood'],
+    'kertas': ['paper'],
+    'plastik': ['plastic'],
+    'sepatu': ['footwear', 'shoe'],
+    'pakaian': ['garment', 'clothing', 'apparel'],
+    'baju': ['shirt', 't-shirt', 'clothing'],
+    'celana': ['trousers', 'pants'],
+    'kaos': ['t-shirt'],
+    'kain': ['fabric', 'cloth'],
+    'benang': ['yarn', 'thread'],
+    'kapas': ['cotton'],
+    'susu': ['milk'],
+    'keju': ['cheese'],
+    'daging': ['meat'],
+    'ikan': ['fish'],
+    'udang': ['shrimp', 'prawn'],
+    'kopi': ['coffee'],
+    'teh': ['tea'],
+    'gula': ['sugar'],
+    'garam': ['salt'],
+    'semen': ['cement'],
+    'kaca': ['glass'],
+    'keramik': ['ceramic'],
+    'emas': ['gold'],
+    'perak': ['silver'],
+    'aluminium': ['aluminium', 'aluminum'],
+    'timah': ['tin'],
+    'seng': ['zinc'],
+    'nikel': ['nickel'],
+    'mesin': ['machinery', 'engine', 'machine'],
+    'pompa': ['pump'],
+    'kompresor': ['compressor'],
+    'motor': ['motor', 'motorcycle'],
+    'mobil': ['motor car', 'vehicle', 'automobile'],
+    'truk': ['truck', 'lorry'],
+    'sepeda': ['bicycle'],
+    'kapal': ['ship', 'vessel', 'boat'],
+    'pesawat': ['aircraft', 'aeroplane'],
+    'obat': ['medicament', 'medicine', 'pharmaceutical'],
+    'farmasi': ['pharmaceutical'],
+    'pupuk': ['fertiliser', 'fertilizer'],
+    'cat': ['paint', 'varnish'],
+    'sabun': ['soap'],
+    'kosmetik': ['cosmetic']
+};
+
 /**
- * Cari HS Code berdasarkan teks (Full-Text Search)
- * Kembalikan top 10 hasil
+ * Cari HS Code berdasarkan teks (Full-Text Search atau Kode)
+ * Kembalikan hasil pencarian (default limit 50, maks 200)
  */
-function searchByText(query, limit = 20) {
+function searchByText(query, limit = 50) {
     const db = getDb();
     if (!db) return [];
     
+    const cleanDigits = String(query).replace(/\D/g, '');
+    const maxLimit = Math.min(Math.max(limit, 1), 200);
+
+    // Jika query murni angka atau ada awalan angka (misal: '8544' atau '0101')
+    if (cleanDigits.length >= 2 && /^\d/.test(query.trim())) {
+        const prefixResults = db.prepare(`
+            SELECT * FROM hscode
+            WHERE code LIKE ?
+            ORDER BY code_level ASC, code ASC
+            LIMIT ?
+        `).all(`${cleanDigits}%`, maxLimit);
+
+        if (prefixResults.length > 0) return prefixResults;
+    }
+
     try {
         // Coba FTS terlebih dahulu
+        const ftsQuery = `"${query.replace(/"/g, '')}"*`;
         const ftsResults = db.prepare(`
             SELECT h.* FROM hscode h
             JOIN hscode_fts f ON h.id = f.rowid
             WHERE hscode_fts MATCH ?
             ORDER BY rank
             LIMIT ?
-        `).all(`"${query.replace(/"/g, '')}"*`, limit);
+        `).all(ftsQuery, maxLimit);
         
         if (ftsResults.length > 0) return ftsResults;
     } catch (e) {
         // Fallback ke LIKE jika FTS gagal
     }
     
-    // Fallback: LIKE search pada description_en dan description_id
-    const likeQuery = `%${query}%`;
+    // Cek sinonim Bahasa Indonesia -> Bahasa Inggris
+    const lowerQ = query.trim().toLowerCase();
+    const synonymTerms = ID_TO_EN_SYNONYMS[lowerQ] || [];
+    
+    // Fallback: LIKE search pada description_en, description_id, dan code
+    let whereClauses = ['(description_en LIKE ? OR description_id LIKE ? OR code LIKE ?)'];
+    let params = [`%${query}%`, `%${query}%`, `%${query}%`];
+
+    if (synonymTerms.length > 0) {
+        const synClauses = synonymTerms.map(() => 'description_en LIKE ?');
+        whereClauses.push(`(${synClauses.join(' OR ')})`);
+        synonymTerms.forEach(t => params.push(`%${t}%`));
+    }
+
+    const whereSql = whereClauses.join(' OR ');
+
     return db.prepare(`
         SELECT * FROM hscode
-        WHERE (description_en LIKE ? OR description_id LIKE ? OR code LIKE ?)
-        AND code_level >= 6
+        WHERE ${whereSql}
         ORDER BY code_level ASC, code ASC
         LIMIT ?
-    `).all(likeQuery, likeQuery, likeQuery, limit);
+    `).all(...params, maxLimit);
 }
 
 /**
  * Cari semua HS Code dalam satu chapter
  */
-function getChapterCodes(chapterNum, level = 6) {
+function getChapterCodes(chapterNum, level = 0) {
     const db = getDb();
     if (!db) return [];
     const ch = String(chapterNum).padStart(2, '0');
+    if (level && level > 0) {
+        return db.prepare(`
+            SELECT * FROM hscode
+            WHERE chapter = ? AND code_level = ?
+            ORDER BY code ASC
+        `).all(ch, level);
+    }
     return db.prepare(`
         SELECT * FROM hscode
-        WHERE chapter = ? AND code_level = ?
+        WHERE chapter = ?
         ORDER BY code ASC
-    `).all(ch, level);
+    `).all(ch);
+}
+
+/**
+ * Jelajah / Browse pos tarif dari database SQLite lokal
+ * Mendukung filter chapter tunggal atau jamak (cth: '85' atau '72,73'), pagination, dan level
+ */
+function browseHsCodes({ chapters = 'all', limit = 100, offset = 0, minLevel = 2 } = {}) {
+    const db = getDb();
+    if (!db) return { total: 0, limit, offset, items: [] };
+
+    let whereClauses = [];
+    let params = [];
+
+    if (minLevel && minLevel > 0) {
+        whereClauses.push('code_level >= ?');
+        params.push(minLevel);
+    }
+
+    if (chapters && chapters !== 'all') {
+        const chList = String(chapters).split(',').map(c => c.trim().padStart(2, '0')).filter(Boolean);
+        if (chList.length > 0) {
+            const placeholders = chList.map(() => '?').join(',');
+            whereClauses.push(`chapter IN (${placeholders})`);
+            params.push(...chList);
+        }
+    }
+
+    const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+
+    const countRow = db.prepare(`SELECT count(id) as total FROM hscode ${whereSql}`).get(...params);
+    const total = countRow ? countRow.total : 0;
+
+    const rows = db.prepare(`
+        SELECT * FROM hscode
+        ${whereSql}
+        ORDER BY code ASC
+        LIMIT ? OFFSET ?
+    `).all(...params, limit, offset);
+
+    return {
+        total,
+        limit,
+        offset,
+        items: rows.map(formatDbResult)
+    };
 }
 
 /**
@@ -222,7 +364,7 @@ async function lookupHsCode(query, customApiKey = null) {
     // 2. Cek database lokal untuk kode eksak
     if (/^\d/.test(cleanQuery)) {
         const dbResult = searchByCode(cleanQuery.replace(/\D/g, ''));
-        if (dbResult && dbResult.code_level >= 6) {
+        if (dbResult) {
             console.log(`[BTKI-LOOKUP] Hit database SQLite untuk kode: "${cleanQuery}"`);
             return formatDbResult(dbResult);
         }
@@ -242,10 +384,10 @@ async function lookupHsCode(query, customApiKey = null) {
     const ai = new GoogleGenAI({ apiKey: apiKey.trim() });
 
     const modelsToTry = [
-        'gemini-2.5-flash-lite',
-        'gemini-2.5-flash',
-        'gemini-2.0-flash',
-        'gemini-1.5-flash'
+        'gemini-3.5-flash-lite',
+        'gemini-3.5-flash',
+        'gemini-3.8-flash',
+        'gemini-2.5-flash'
     ];
 
     let lastError = null;
@@ -296,6 +438,10 @@ function formatDbResult(row) {
         formattedCode: row.code_formatted || row.code,
         bab: chapterNum,
         babTitle: row.chapter_title_id || '',
+        babTitleEn: row.chapter_title_en || '',
+        section: row.section || '',
+        pdfUrl: row.pdf_url || '',
+        sourceUrl: row.source_url || 'https://www.beacukai.go.id/btki-dan-tarif#',
         uraianId: row.description_id || row.description_en || '',
         uraianEn: row.description_en || '',
         satuan: 'KGM',
@@ -320,6 +466,21 @@ function formatDbResult(row) {
     };
 }
 
+function getBtkiCatalog() {
+    try {
+        const { SECTIONS, CHAPTER_DATA } = require('./update_beacukai_btki');
+        return {
+            source: 'https://www.beacukai.go.id/btki-dan-tarif#',
+            title: 'Buku Tarif Kepabeanan Indonesia (BTKI) 2022',
+            legalBasis: 'PMK Nomor 26/PMK.010/2022',
+            sections: SECTIONS,
+            chapters: CHAPTER_DATA
+        };
+    } catch (e) {
+        return null;
+    }
+}
+
 module.exports = {
     lookupHsCode,
     loadCache,
@@ -327,5 +488,8 @@ module.exports = {
     searchByText,
     autocomplete,
     getChapterCodes,
-    getDatabaseStats
+    getDatabaseStats,
+    getBtkiCatalog,
+    browseHsCodes
 };
+

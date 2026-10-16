@@ -359,6 +359,14 @@ async function main() {
     console.log('=======================================================\n');
     
     db.close();
+
+    // 3. Terapkan metadata resmi BTKI 2022 dari beacukai.go.id/btki-dan-tarif
+    try {
+        const { updateDatabase } = require('./update_beacukai_btki');
+        updateDatabase();
+    } catch (e) {
+        console.warn('[WARN] Gagal menyelaraskan metadata Bea Cukai:', e.message);
+    }
 }
 
 main().catch(e => {
