@@ -5460,17 +5460,12 @@ body.hscode-page .ceisa-portal-content {
     flex-direction: column;
 }
 
-body.hscode-page .doc-title-strip {
-    flex-shrink: 0;
-    padding: 6px 24px;
-}
-
 body.hscode-page .hscode-container {
     flex: 1;
     display: flex;
     flex-direction: column;
     gap: 12px;
-    padding: 4px 24px 20px 24px;
+    padding: 10px 24px 20px 24px;
     box-sizing: border-box;
     width: 100%;
 }
@@ -5661,7 +5656,7 @@ body.hscode-page .hscode-container {
     grid-template-columns: minmax(470px, 490px) 1fr;
     gap: 16px;
     flex: 1;
-    min-height: calc(100vh - 175px);
+    min-height: calc(100vh - 125px);
     align-items: stretch;
 }
 
@@ -5699,8 +5694,8 @@ body.hscode-page .hscode-container {
     flex-direction: column;
     overflow: hidden;
     box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.02);
-    height: calc(100vh - 175px);
-    min-height: 560px;
+    height: calc(100vh - 125px);
+    min-height: 580px;
 }
 
 [data-theme="dark"] .hscode-results-col {
@@ -5860,8 +5855,8 @@ body.hscode-page .hscode-container {
     flex-direction: column;
     overflow-y: auto;
     box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.02);
-    height: calc(100vh - 175px);
-    min-height: 560px;
+    height: calc(100vh - 125px);
+    min-height: 580px;
 }
 
 [data-theme="dark"] .hscode-detail-col {
