@@ -328,7 +328,7 @@ async function refineSearchResultsWithBLCrossCheck(result, searchParams) {
         const targetCont = searchParams.containerNo ? searchParams.containerNo.trim().replace(/\s+/g, '') : '';
 
         // Extract invoice number and container from BL text
-        const invMatch = blText.match(/INVOICE\s*(?:NO|NUMBER)?[\s.:]*([A-Z0-9\/\s\-]+)/i);
+        const invMatch = blText.match(/(?:INVOICE\s*(?:NO|NUMBER)?|Export\s*references)[\s.:]*([A-Z0-9\/\s\-]+)/i);
         const blFoundInvoice = invMatch ? invMatch[1].trim() : '';
         const blFoundInvClean = blFoundInvoice.replace(/[^a-zA-Z0-9]/g, '');
         console.log(`[DocSearcher] Cross-check B/L digital: Invoice di B/L="${blFoundInvoice}", Target Invoice="${targetInv}", Target BL="${targetBLNumber}"`);
@@ -339,6 +339,8 @@ async function refineSearchResultsWithBLCrossCheck(result, searchParams) {
 
         if (isInvoiceMatchingBL || isContainerMatchingBL || isTargetBLMatching || blFoundInvoice) {
             const blEmailEntryId = topBL.email ? topBL.email.entryId : null;
+            const targetFirstSeg = (targetInv.split(/[\/\\]/)[0] || '').trim().replace(/[^a-zA-Z0-9]/g, '');
+            const blFirstSeg = (blFoundInvoice.split(/[\/\\]/)[0] || '').trim().replace(/[^a-zA-Z0-9]/g, '');
 
             for (const catKey of ['INVOICE', 'PACKING_LIST']) {
                 const catObj = result.summary[catKey];
@@ -346,9 +348,13 @@ async function refineSearchResultsWithBLCrossCheck(result, searchParams) {
 
                 catObj.candidates.forEach(cand => {
                     const candFileName = cand.fileName || '';
+                    const candClean = candFileName.replace(/[^a-zA-Z0-9]/g, '');
                     const isSameEmail = blEmailEntryId && cand.email && cand.email.entryId === blEmailEntryId;
 
-                    if (isSameEmail) {
+                    if ((targetFirstSeg && candClean.includes(targetFirstSeg)) || (blFirstSeg && candClean.includes(blFirstSeg))) {
+                        cand.confidence = 100;
+                        cand.matchReason = `Terverifikasi 100% dari Master B/L (No Invoice: ${blFoundInvoice || targetInv})`;
+                    } else if (isSameEmail) {
                         const suffixMatch = candFileName.match(/[-_](\d+)\.[a-zA-Z0-9]+$/);
                         const candIndex = suffixMatch ? parseInt(suffixMatch[1], 10) : null;
 
@@ -384,6 +390,25 @@ async function refineSearchResultsWithBLCrossCheck(result, searchParams) {
                 catObj.status = catObj.selected && catObj.selected.confidence >= 95 ? 'FOUND' : 'MULTIPLE_FOUND';
                 catObj.statusBadge = catObj.status === 'FOUND' ? 'Found' : 'Multiple Found';
                 catObj.statusIcon = catObj.status === 'FOUND' ? 'green' : 'yellow';
+            }
+
+            // If PACKING_LIST is still missing or has lower confidence, clone the verified INVOICE (CIPL)
+            const invSelected = result.summary.INVOICE && result.summary.INVOICE.selected;
+            const plObj = result.summary.PACKING_LIST;
+            if (invSelected && invSelected.confidence >= 95 && plObj && (!plObj.selected || plObj.selected.confidence < 95)) {
+                const plCandidate = {
+                    ...invSelected,
+                    category: 'PACKING_LIST',
+                    confidence: 99,
+                    matchReason: `CIPL / Dokumen Terpadu Invoice & Packing List (${blFoundInvoice || targetInv})`
+                };
+                if (!plObj.candidates) plObj.candidates = [];
+                plObj.candidates.unshift(plCandidate);
+                plObj.selected = plCandidate;
+                plObj.count = plObj.candidates.length;
+                plObj.status = 'FOUND';
+                plObj.statusBadge = 'Found';
+                plObj.statusIcon = 'green';
             }
         }
     } catch (refineErr) {

@@ -216,7 +216,7 @@ try {
         }
     }
 
-    # 6. Dates to Filename/Subject Tokens (e.g., 2026-10-01 -> "011026", "01102026", "20261001", "01-10-26")
+    # 6. Dates to Filename Tokens (e.g., 2026-10-01 -> "011026", "01102026", "20261001", "01-10-26", "26-10-01")
     foreach ($dtStr in @($invoiceDate, $blAwbDate)) {
         $pDt = Parse-SafeDate $dtStr
         if ($pDt) {
@@ -226,9 +226,13 @@ try {
             $d4 = $pDt.ToString("dd-MM-yy")
             $d5 = $pDt.ToString("dd.MM.yy")
             $d6 = $pDt.ToString("ddMMM").ToUpperInvariant()
-            foreach ($df in @($d1, $d2, $d3, $d4, $d5, $d6)) {
+            $d7 = $pDt.ToString("yy-MM-dd")
+            $d8 = $pDt.ToString("yyyy-MM-dd")
+            $d9 = $pDt.ToString("yy.MM.dd")
+            $d10 = $pDt.ToString("dd.MM.yyyy")
+            $d11 = $pDt.ToString("dd-MM-yyyy")
+            foreach ($df in @($d1, $d2, $d3, $d4, $d5, $d6, $d7, $d8, $d9, $d10, $d11)) {
                 if (-not $dateTokens.Contains($df)) { $dateTokens.Add($df) }
-                Add-TermDirect $df
             }
         }
     }
@@ -345,6 +349,14 @@ try {
             if ($noSpaceName -match [regex]::Escape($noSpaceInv)) { return 'INVOICE' }
             $numOnly = $invClean -replace '\D+', ''
             if ($numOnly.Length -ge 4 -and $name -match [regex]::Escape($numOnly)) { return 'INVOICE' }
+
+            # Match first segment: e.g. "BE006" from "BE006/X/26", "00386" from "00386 / X / 26"
+            $invSeg = ($invClean -split '[\/\\-]')[0].Trim()
+            if ($invSeg.Length -ge 3) {
+                if ($name -match [regex]::Escape($invSeg)) { return 'INVOICE' }
+                $segTrimmedZ = $invSeg.TrimStart('0')
+                if ($segTrimmedZ.Length -ge 3 -and $name -match [regex]::Escape($segTrimmedZ)) { return 'INVOICE' }
+            }
         }
 
         # If email subject explicitly mentions Invoice/CIPL for this shipment and attachment is PDF:
@@ -512,6 +524,8 @@ try {
                         foreach ($att in $item.Attachments) {
                             $fName = $att.FileName
                             if ($invoiceNo -and $fName -match [regex]::Escape($invoiceNo)) { $attFound = $true; break }
+                            $firstSeg = if ($invoiceNo) { ($invoiceNo -split '[\/\\-]')[0].Trim() } else { "" }
+                            if ($firstSeg.Length -ge 3 -and $fName -match [regex]::Escape($firstSeg)) { $attFound = $true; break }
                             if ($blAwbNo -and $fName -match [regex]::Escape($blAwbNo)) { $attFound = $true; break }
                             foreach ($dt in $dateTokens) {
                                 if ($fName -match [regex]::Escape($dt)) { $attFound = $true; break }
@@ -644,14 +658,21 @@ try {
                     $matchReason = "Ditemukan di email '$subject'"
 
                     # 1. Invoice Number checks
+                    $invoiceMatched = $false
+                    $matchedInvLabel = ""
+
                     if ($invoiceNo) {
                         $invClean = $invoiceNo.Trim()
                         $invTrimmedZ = $invClean.TrimStart('0')
                         $noSpaceInv = $invClean -replace '\s+', ''
                         $noSpaceName = $rawFileName -replace '\s+', ''
                         $numOnly = $invClean -replace '\D+', ''
+                        $invSeg = ($invClean -split '[\/\\-]')[0].Trim()
+                        $segTrimmedZ = if ($invSeg.Length -ge 3) { $invSeg.TrimStart('0') } else { "" }
 
                         if ($rawFileName -match [regex]::Escape($invClean) -or $noSpaceName -match [regex]::Escape($noSpaceInv)) {
+                            $invoiceMatched = $true
+                            $matchedInvLabel = $invoiceNo
                             if ($docCategory -eq 'INVOICE') { 
                                 $confidence = 100 
                                 $matchReason = "Nomor Invoice persis cocok ($invoiceNo)" 
@@ -659,15 +680,39 @@ try {
                                 $confidence = 96 
                                 $matchReason = "Packing List untuk Invoice ($invoiceNo)" 
                             }
-                        } elseif ($invTrimmedZ.Length -ge 4 -and $rawFileName -match [regex]::Escape($invTrimmedZ)) {
+                        } elseif ($invSeg.Length -ge 3 -and $rawFileName -match [regex]::Escape($invSeg)) {
+                            $invoiceMatched = $true
+                            $matchedInvLabel = $invSeg
                             if ($docCategory -eq 'INVOICE') { 
                                 $confidence = 98 
+                                $matchReason = "Nomor Invoice cocok pada nama berkas ($invSeg)" 
+                            } elseif ($docCategory -eq 'PACKING_LIST') { 
+                                $confidence = 96 
+                                $matchReason = "Packing List untuk Invoice ($invSeg)" 
+                            }
+                        } elseif ($invTrimmedZ.Length -ge 4 -and $rawFileName -match [regex]::Escape($invTrimmedZ)) {
+                            $invoiceMatched = $true
+                            $matchedInvLabel = $invTrimmedZ
+                            if ($docCategory -eq 'INVOICE') { 
+                                $confidence = 97 
                                 $matchReason = "Nomor Invoice cocok ($invTrimmedZ)" 
                             } elseif ($docCategory -eq 'PACKING_LIST') { 
                                 $confidence = 94 
                                 $matchReason = "Packing List untuk Invoice ($invTrimmedZ)" 
                             }
+                        } elseif ($segTrimmedZ.Length -ge 3 -and $rawFileName -match [regex]::Escape($segTrimmedZ)) {
+                            $invoiceMatched = $true
+                            $matchedInvLabel = $segTrimmedZ
+                            if ($docCategory -eq 'INVOICE') { 
+                                $confidence = 97 
+                                $matchReason = "Nomor Invoice cocok ($segTrimmedZ)" 
+                            } elseif ($docCategory -eq 'PACKING_LIST') { 
+                                $confidence = 94 
+                                $matchReason = "Packing List untuk Invoice ($segTrimmedZ)" 
+                            }
                         } elseif ($numOnly.Length -ge 4 -and $rawFileName -match [regex]::Escape($numOnly)) {
+                            $invoiceMatched = $true
+                            $matchedInvLabel = $numOnly
                             if ($docCategory -eq 'INVOICE') { 
                                 $confidence = 94 
                                 $matchReason = "Nomor numerik Invoice cocok ($numOnly)" 
@@ -678,7 +723,7 @@ try {
                         }
                     }
 
-                    # 2. Date token match in filename (e.g. invsg011026.pdf, pacsg011026.pdf)
+                    # 2. Date token match in filename (e.g. invsg011026.pdf, pacsg011026.pdf, BE006-26-10-17.pdf)
                     $matchedDateToken = ""
                     foreach ($dt in $dateTokens) {
                         if ($rawFileName -match [regex]::Escape($dt)) {
@@ -688,12 +733,28 @@ try {
                     }
 
                     if ($matchedDateToken) {
+                        if ($invoiceMatched) {
+                            # Both Invoice Number AND Shipment Date match! Perfect 100% confidence
+                            if ($docCategory -eq 'INVOICE') {
+                                $confidence = 100
+                                $matchReason = "Nomor Invoice ($matchedInvLabel) dan tanggal dokumen ($matchedDateToken) cocok"
+                            } elseif ($docCategory -eq 'PACKING_LIST') {
+                                $confidence = 98
+                                $matchReason = "Packing List untuk Invoice ($matchedInvLabel) dan tanggal ($matchedDateToken) cocok"
+                            }
+                        } elseif ($emailMatchesCompany) {
+                            $confidence = [Math]::Max($confidence, 95)
+                            $matchReason = "$docCategory pengapalan $companyName (Tanggal $matchedDateToken cocok)"
+                        } else {
+                            # Date matched in filename, but no invoice or company match: cap at 75 to prevent false positives from other companies
+                            $confidence = [Math]::Max($confidence, 75)
+                            $matchReason = "$docCategory tanggal pengapalan ($matchedDateToken)"
+                        }
+                    } elseif ($invoiceMatched) {
+                        # Invoice number matched, but date token not in filename (e.g. past shipment like Sept vs Oct)
                         if ($docCategory -eq 'INVOICE') {
-                            $confidence = [Math]::Max($confidence, 98)
-                            $matchReason = "Invoice tanggal dokumen cocok ($matchedDateToken)"
-                        } elseif ($docCategory -eq 'PACKING_LIST') {
-                            $confidence = [Math]::Max($confidence, 98)
-                            $matchReason = "Packing List tanggal pengapalan cocok ($matchedDateToken)"
+                            $confidence = [Math]::Min($confidence, 96)
+                            $matchReason = "Nomor Invoice cocok ($matchedInvLabel), tanggal berkas berbeda"
                         }
                     }
 
@@ -707,15 +768,29 @@ try {
                             if ($bpTrim.Length -ge 4 -and $bpTrim -ne 'BS 01') { $primaryPart = $bpTrim }
                         }
 
+                        # Check for sub-number in BL, e.g. "BS 07" -> "07", "7"
+                        $subBlNum = ""
+                        if ($blClean -match '\b(?:BS\s*|BL\s*|NO\.?\s*)0*(\d{1,3})\b') {
+                            $subBlNum = $matches[1]
+                        }
+
                         if ($rawFileName -match [regex]::Escape($blClean)) {
                             if ($docCategory -eq 'BILL_OF_LADING') { 
                                 $confidence = 100 
                                 $matchReason = "Nomor B/L persis cocok pada nama berkas ($blAwbNo)" 
                             }
                         } elseif ($primaryPart -and $rawFileName -match [regex]::Escape($primaryPart)) {
-                            if ($docCategory -eq 'BILL_OF_LADING') { 
-                                $confidence = 99 
-                                $matchReason = "Nomor B/L cocok pada nama berkas ($primaryPart)" 
+                            if ($docCategory -eq 'BILL_OF_LADING') {
+                                if ($subBlNum -and $rawFileName -match "(?:BL|BS|[-_\s])0*$subBlNum\b") {
+                                    $confidence = 100
+                                    $matchReason = "Nomor B/L ($primaryPart) dan sub-nomor ($subBlNum) persis cocok"
+                                } elseif ($subBlNum -and $rawFileName -match "(?:BL|BS|[-_\s])0*(\d{1,3})\b" -and $matches[1] -ne $subBlNum) {
+                                    $confidence = 75
+                                    $matchReason = "B/L sub-nomor berbeda ($primaryPart BL $($matches[1]))"
+                                } else {
+                                    $confidence = 99 
+                                    $matchReason = "Nomor B/L cocok pada nama berkas ($primaryPart)"
+                                }
                             }
                         } elseif ($subject -match [regex]::Escape($blClean)) {
                             if ($docCategory -eq 'BILL_OF_LADING') { 
@@ -801,15 +876,20 @@ try {
     }
 
     # Cross-Category Intelligence:
-    # 1. If PACKING_LIST is empty, but INVOICE has CIPL or high confidence, copy invoice to PACKING_LIST
-    if ($categories['PACKING_LIST'].Count -eq 0 -and $categories['INVOICE'].Count -gt 0) {
+    # 1. If INVOICE has high confidence (CIPL or >= 95%), ensure PACKING_LIST has it if PACKING_LIST is empty or has lower confidence
+    if ($categories['INVOICE'].Count -gt 0) {
         $topInv = @($categories['INVOICE'] | Sort-Object -Property { [int]$_['confidence'] }, { [int]$_['fileSize'] } -Descending)[0]
-        if ($topInv.fileName -match 'summary|cipl' -or [int]$topInv.confidence -ge 95) {
+        $topPLConf = 0
+        if ($categories['PACKING_LIST'].Count -gt 0) {
+            $topPL = @($categories['PACKING_LIST'] | Sort-Object -Property { [int]$_['confidence'] } -Descending)[0]
+            $topPLConf = [int]$topPL['confidence']
+        }
+        if ([int]$topInv['confidence'] -ge 95 -and ($categories['PACKING_LIST'].Count -eq 0 -or $topPLConf -lt 95)) {
             $plDoc = @{}
             foreach ($k in $topInv.Keys) { $plDoc[$k] = $topInv[$k] }
             $plDoc.category = 'PACKING_LIST'
-            $plDoc.confidence = [Math]::Max(94, [int]$topInv.confidence - 2)
-            $plDoc.matchReason = "CIPL / Summary gabungan Invoice & Packing List (Nomor $invoiceNo)"
+            $plDoc.confidence = [Math]::Max(98, [int]$topInv.confidence - 1)
+            $plDoc.matchReason = "CIPL / Dokumen Terpadu Invoice & Packing List (Nomor $invoiceNo)"
             $categories['PACKING_LIST'].Add($plDoc)
         }
     }
