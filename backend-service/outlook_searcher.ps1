@@ -255,7 +255,6 @@ try {
                 $validWords.Add($wClean)
                 if (-not $companyTokens.Contains($wClean)) {
                     $companyTokens.Add($wClean)
-                    Add-TermDirect $wClean
                 }
             }
         }
@@ -264,8 +263,11 @@ try {
             $phrase = "$($validWords[0]) $($validWords[1])"
             if (-not $companyTokens.Contains($phrase)) {
                 $companyTokens.Add($phrase)
-                Add-TermDirect $phrase
             }
+            # Add composite phrase to search terms to avoid scanning hundreds of emails with generic sub-words
+            Add-TermDirect $phrase
+        } elseif ($validWords.Count -eq 1) {
+            Add-TermDirect $validWords[0]
         }
     }
 
@@ -568,10 +570,19 @@ try {
         }
 
         if ($mail.Attachments -and $mail.Attachments.Count -gt 0) {
-            # Check if this email also contains the target B/L
+            # Check if this email also contains the target B/L and detect multi-shipment order
             $hasTargetBL = $false
+            $blAttList = [System.Collections.Generic.List[string]]::new()
             foreach ($chkAtt in $mail.Attachments) {
                 $chkName = $chkAtt.FileName
+                if (Is-ValidDocAttachment $chkAtt) {
+                    $chkCat = Get-DocTypeCategory $chkName "" "" $subject
+                    if ($chkCat -eq 'BILL_OF_LADING' -or $chkName -match '(?i)\bbl\b') {
+                        if (-not $blAttList.Contains($chkName)) {
+                            $blAttList.Add($chkName)
+                        }
+                    }
+                }
                 if ($blAwbNo) {
                     $blParts = $blAwbNo -split '[\/\\|]'
                     foreach ($bp in $blParts) {
@@ -581,6 +592,28 @@ try {
                         }
                     }
                     if ($chkName -match [regex]::Escape($blAwbNo.Trim())) { $hasTargetBL = $true; break }
+                }
+            }
+            $blAttList.Sort()
+
+            $targetBLIndex = 0
+            if ($blAwbNo -and $blAttList.Count -gt 0) {
+                $blClean = $blAwbNo.Trim()
+                for ($bi = 0; $bi -lt $blAttList.Count; $bi++) {
+                    $bName = $blAttList[$bi]
+                    if ($bName -match [regex]::Escape($blClean)) {
+                        $targetBLIndex = $bi + 1
+                        break
+                    }
+                    $blParts = $blClean -split '[\/\\|]'
+                    foreach ($bp in $blParts) {
+                        $bpTrim = $bp.Trim()
+                        if ($bpTrim.Length -ge 4 -and $bpTrim -ne 'BS 01' -and $bName -match [regex]::Escape($bpTrim)) {
+                            $targetBLIndex = $bi + 1
+                            break
+                        }
+                    }
+                    if ($targetBLIndex -gt 0) { break }
                 }
             }
 
@@ -674,15 +707,20 @@ try {
                             if ($bpTrim.Length -ge 4 -and $bpTrim -ne 'BS 01') { $primaryPart = $bpTrim }
                         }
 
-                        if ($rawFileName -match [regex]::Escape($blClean) -or $subject -match [regex]::Escape($blClean)) {
+                        if ($rawFileName -match [regex]::Escape($blClean)) {
                             if ($docCategory -eq 'BILL_OF_LADING') { 
-                                $confidence = 98 
-                                $matchReason = "Nomor B/L persis cocok ($blAwbNo)" 
+                                $confidence = 100 
+                                $matchReason = "Nomor B/L persis cocok pada nama berkas ($blAwbNo)" 
                             }
-                        } elseif ($primaryPart -and ($rawFileName -match [regex]::Escape($primaryPart) -or $subject -match [regex]::Escape($primaryPart))) {
+                        } elseif ($primaryPart -and $rawFileName -match [regex]::Escape($primaryPart)) {
                             if ($docCategory -eq 'BILL_OF_LADING') { 
-                                $confidence = 98 
-                                $matchReason = "Nomor B/L cocok ($primaryPart / $blClean)" 
+                                $confidence = 99 
+                                $matchReason = "Nomor B/L cocok pada nama berkas ($primaryPart)" 
+                            }
+                        } elseif ($subject -match [regex]::Escape($blClean)) {
+                            if ($docCategory -eq 'BILL_OF_LADING') { 
+                                $confidence = [Math]::Max($confidence, 88) 
+                                $matchReason = "Ditemukan di email bersubjek B/L $blAwbNo" 
                             }
                         }
                     }
@@ -707,6 +745,34 @@ try {
                     if ($hasTargetBL -and ($rawFileName -match 'summary|cipl' -or $docCategory -eq 'INVOICE')) {
                         $confidence = [Math]::Max($confidence, 98)
                         $matchReason = "CIPL/Summary Invoice terlampir bersama B/L ($blAwbNo)"
+                    }
+
+                    # 6. Multi-shipment Index Correlation (e.g. INVSG181026-1 vs INVSG181026-2)
+                    if ($targetBLIndex -gt 0 -and $blAttList.Count -gt 1) {
+                        if ($rawFileName -match '[-_](\d+)\.[a-zA-Z0-9]+$') {
+                            $fileIdx = [int]$matches[1]
+                            if ($fileIdx -eq $targetBLIndex) {
+                                if ($docCategory -eq 'INVOICE' -or $docCategory -eq 'PACKING_LIST') {
+                                    $confidence = 100
+                                    $matchReason = "Korelasi Pengapalan: Indeks berkas (#$fileIdx) persis cocok dengan urutan B/L $blAwbNo (Pengapalan #$targetBLIndex)"
+                                }
+                            } else {
+                                if ($docCategory -eq 'INVOICE' -or $docCategory -eq 'PACKING_LIST') {
+                                    $confidence = 72
+                                    $matchReason = "Pengapalan lain (#$fileIdx) dalam email multi-pengapalan"
+                                }
+                            }
+                        }
+                    }
+
+                    # 7. Container number match in filename
+                    if ($containerNo) {
+                        $contClean = $containerNo.Trim() -replace '\s+', ''
+                        $rawNoSpace = $rawFileName -replace '\s+', ''
+                        if ($contClean.Length -ge 6 -and $rawNoSpace -match [regex]::Escape($contClean)) {
+                            $confidence = 100
+                            $matchReason = "Nomor Peti Kemas persis cocok ($containerNo)"
+                        }
                     }
 
                     $docObj = @{
