@@ -327,13 +327,13 @@ async function loadDashboardData() {
         }).filter(s => s && s !== "[object Object]" && !s.includes("[object") && !s.startsWith("PEB-USER-"));
     }
 
-    const rawCompleted = Array.isArray(data[`ceisa_completed_numbers_${chosenDate}`])
+    const rawCompleted = (Array.isArray(data[`ceisa_completed_numbers_${chosenDate}`]) && data[`ceisa_completed_numbers_${chosenDate}`].length > 0)
         ? data[`ceisa_completed_numbers_${chosenDate}`]
-        : (chosenDate === todayISO() && Array.isArray(data.ceisa_completed_numbers) ? data.ceisa_completed_numbers : []);
+        : (Array.isArray(data.ceisa_completed_numbers) ? data.ceisa_completed_numbers : []);
 
-    const rawPibPeb = Array.isArray(data[`ceisa_pibpeb_numbers_${chosenDate}`])
+    const rawPibPeb = (Array.isArray(data[`ceisa_pibpeb_numbers_${chosenDate}`]) && data[`ceisa_pibpeb_numbers_${chosenDate}`].length > 0)
         ? data[`ceisa_pibpeb_numbers_${chosenDate}`]
-        : (chosenDate === todayISO() && Array.isArray(data.ceisa_pibpeb_numbers) ? data.ceisa_pibpeb_numbers : []);
+        : (Array.isArray(data.ceisa_pibpeb_numbers) ? data.ceisa_pibpeb_numbers : []);
 
     const completed = cleanNumberList(rawCompleted);
     const pibPeb = cleanNumberList(rawPibPeb);
@@ -558,8 +558,10 @@ async function savePibPebOnlyDashboard() {
     const uniquePibPeb = parseRegistrationNumbersFromText(rawPibPeb);
     if (pibPebInput) pibPebInput.value = uniquePibPeb.join("\n");
 
-    const existing = await storageGet([`ceisa_completed_numbers_${chosenDate}`, "ceisa_completed_numbers", "ceisa_scan_cache"]);
-    const currentCompleted = cleanNumberList(existing[`ceisa_completed_numbers_${chosenDate}`] || (chosenDate === todayISO() ? existing.ceisa_completed_numbers : []) || []);
+    const completedList = (Array.isArray(existing[`ceisa_completed_numbers_${chosenDate}`]) && existing[`ceisa_completed_numbers_${chosenDate}`].length > 0)
+        ? existing[`ceisa_completed_numbers_${chosenDate}`]
+        : (Array.isArray(existing.ceisa_completed_numbers) ? existing.ceisa_completed_numbers : []);
+    const currentCompleted = cleanNumberList(completedList);
     const cache = (existing.ceisa_scan_cache && typeof existing.ceisa_scan_cache === "object") ? existing.ceisa_scan_cache : {};
 
     const payload = {};

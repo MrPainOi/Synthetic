@@ -167,9 +167,9 @@ async function loadCompleted(chosenDate) {
     if (document.activeElement === completedNumbers) return;
     const date = chosenDate || (dateInput ? dateInput.value : todayISO());
     const data = await storageGet([`ceisa_completed_numbers_${date}`, "ceisa_completed_numbers"]);
-    const raw = Array.isArray(data[`ceisa_completed_numbers_${date}`])
+    const raw = (Array.isArray(data[`ceisa_completed_numbers_${date}`]) && data[`ceisa_completed_numbers_${date}`].length > 0)
         ? data[`ceisa_completed_numbers_${date}`]
-        : (date === todayISO() && Array.isArray(data.ceisa_completed_numbers) ? data.ceisa_completed_numbers : []);
+        : (Array.isArray(data.ceisa_completed_numbers) ? data.ceisa_completed_numbers : []);
     const numbers = cleanNumberList(raw);
     completedNumbers.value = numbers.join("\n");
 }
@@ -179,9 +179,9 @@ async function loadPibPeb(chosenDate) {
     if (document.activeElement === pibPebNumbers) return;
     const date = chosenDate || (dateInput ? dateInput.value : todayISO());
     const data = await storageGet([`ceisa_pibpeb_numbers_${date}`, "ceisa_pibpeb_numbers"]);
-    const raw = Array.isArray(data[`ceisa_pibpeb_numbers_${date}`])
+    const raw = (Array.isArray(data[`ceisa_pibpeb_numbers_${date}`]) && data[`ceisa_pibpeb_numbers_${date}`].length > 0)
         ? data[`ceisa_pibpeb_numbers_${date}`]
-        : (date === todayISO() && Array.isArray(data.ceisa_pibpeb_numbers) ? data.ceisa_pibpeb_numbers : []);
+        : (Array.isArray(data.ceisa_pibpeb_numbers) ? data.ceisa_pibpeb_numbers : []);
     const numbers = cleanNumberList(raw);
     pibPebNumbers.value = numbers.join("\n");
 }
@@ -290,7 +290,10 @@ async function savePibPebOnly() {
     if (pibPebNumbers) pibPebNumbers.value = cleanPibPeb.join("\n");
 
     const existing = await storageGet([`ceisa_completed_numbers_${date}`, "ceisa_completed_numbers", "ceisa_scan_cache"]);
-    const currentCompleted = cleanNumberList(existing[`ceisa_completed_numbers_${date}`] || (date === todayISO() ? existing.ceisa_completed_numbers : []) || []);
+    const completedList = (Array.isArray(existing[`ceisa_completed_numbers_${date}`]) && existing[`ceisa_completed_numbers_${date}`].length > 0)
+        ? existing[`ceisa_completed_numbers_${date}`]
+        : (Array.isArray(existing.ceisa_completed_numbers) ? existing.ceisa_completed_numbers : []);
+    const currentCompleted = cleanNumberList(completedList);
     const cache = (existing.ceisa_scan_cache && typeof existing.ceisa_scan_cache === "object") ? existing.ceisa_scan_cache : {};
 
     const payload = {};

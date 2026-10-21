@@ -48,6 +48,56 @@ function onOpen() {
 }
 
 /**
+ * Trigger otomatis saat pengguna mengedit Spreadsheet secara manual:
+ * Memperbarui hitungan jumlah dokumen dan kolom 'Terakhir Diperbarui' secara instan.
+ */
+function onEdit(e) {
+  if (!e || !e.range) return;
+  try {
+    const sheet = e.range.getSheet();
+    const sheetName = sheet.getName();
+    const row = e.range.getRow();
+    const col = e.range.getColumn();
+
+    // 1. Rekap Master
+    if (sheetName === SHEET_MASTER && row > 1) {
+      // Kolom 8: Daftar Hijau, Kolom 9: Daftar PIB/PEB
+      if (col === 8 || col === 9) {
+        const compVal = sheet.getRange(row, 8).getValue();
+        const pibVal = sheet.getRange(row, 9).getValue();
+        const compNums = parseNumbersFromSheet(compVal);
+        const pibNums = parseNumbersFromSheet(pibVal);
+
+        sheet.getRange(row, 5).setValue(compNums.length); // Jml Hijau
+        sheet.getRange(row, 6).setValue(pibNums.length);  // Jml PIB/PEB
+        sheet.getRange(row, 7).setValue(compNums.length + pibNums.length); // Total
+        sheet.getRange(row, 10).setValue(formatHumanDateTime(new Date())); // Terakhir Diperbarui
+      }
+    }
+
+    // 2. Tab Bulanan (misal: '2026-10')
+    const monthPattern = /^\d{4}-\d{2}$/;
+    if (monthPattern.test(sheetName) && row >= 4) {
+      // Kolom 7: Daftar Hijau, Kolom 8: Daftar PIB/PEB
+      if (col === 7 || col === 8) {
+        const compVal = sheet.getRange(row, 7).getValue();
+        const pibVal = sheet.getRange(row, 8).getValue();
+        const compNums = parseNumbersFromSheet(compVal);
+        const pibNums = parseNumbersFromSheet(pibVal);
+
+        sheet.getRange(row, 4).setValue(compNums.length); // Jml Hijau
+        sheet.getRange(row, 5).setValue(pibNums.length);  // Jml PIB/PEB
+        sheet.getRange(row, 6).setValue(compNums.length + pibNums.length); // Total
+        sheet.getRange(row, 9).setValue(formatHumanDateTime(new Date())); // Terakhir Diperbarui
+        reorderAndRefreshMonthlySheet(sheet, sheetName);
+      }
+    }
+  } catch (err) {
+    console.error("Error in onEdit:", err);
+  }
+}
+
+/**
  * Inisialisasi atau ambil Sheet Rekap Master
  */
 function getMasterSheet() {
@@ -282,6 +332,7 @@ function doGet(e) {
       if (colUpdated === -1) colUpdated = headers.indexOf("updated_at");
       if (colUpdated === -1) colUpdated = 9;
 
+      const dateMap = {};
       for (let i = 1; i < stateData.length; i++) {
         const row = stateData[i];
         const dateStr = row[colDate] ? formatSheetDate(row[colDate]) : "";
@@ -290,15 +341,35 @@ function doGet(e) {
         const updatedAtVal = row[colUpdated];
         const updatedAtIso = parseToIsoString(updatedAtVal);
         const rowTime = updatedAtIso ? new Date(updatedAtIso).getTime() : 0;
+        const compNums = parseNumbersFromSheet(row[colComp]);
+        const pibNums = parseNumbersFromSheet(row[colPib]);
 
-        if (!sinceTime || rowTime > sinceTime) {
-          syncStateList.push({
+        // Simpan baris paling mutakhir untuk setiap tanggal (anti-stale & anti-duplikat)
+        if (dateMap[dateStr]) {
+          const prev = dateMap[dateStr];
+          if (rowTime > prev._time || (rowTime === prev._time && compNums.length >= prev.completed_numbers.length)) {
+            dateMap[dateStr] = {
+              date: dateStr,
+              completed_numbers: compNums,
+              pibpeb_numbers: pibNums,
+              updated_at: updatedAtIso || new Date().toISOString(),
+              _time: rowTime
+            };
+          }
+        } else {
+          dateMap[dateStr] = {
             date: dateStr,
-            completed_numbers: parseNumbersFromSheet(row[colComp]),
-            pibpeb_numbers: parseNumbersFromSheet(row[colPib]),
-            updated_at: updatedAtIso || new Date().toISOString()
-          });
+            completed_numbers: compNums,
+            pibpeb_numbers: pibNums,
+            updated_at: updatedAtIso || new Date().toISOString(),
+            _time: rowTime
+          };
         }
+      }
+
+      for (const d in dateMap) {
+        delete dateMap[d]._time;
+        syncStateList.push(dateMap[d]);
       }
     }
 
@@ -484,12 +555,32 @@ function upsertMasterRow(date, completed, pibpeb, now) {
   const totalCount = compCount + pibCount;
   const humanTime = formatHumanDateTime(now);
 
-  let targetRow = -1;
-  for (let i = 1; i < data.length; i++) {
-    if (formatSheetDate(data[i][2]) === dateFormatted) {
-      targetRow = i + 1;
-      break;
+  let colDate = 2;
+  if (data.length > 0) {
+    const headers = data[0].map(h => String(h).trim().toLowerCase());
+    const idx = headers.indexOf("tanggal");
+    if (idx !== -1) colDate = idx;
+    else {
+      const idx2 = headers.indexOf("date");
+      if (idx2 !== -1) colDate = idx2;
     }
+  }
+
+  let targetRow = -1;
+  const duplicateRows = [];
+  for (let i = 1; i < data.length; i++) {
+    if (formatSheetDate(data[i][colDate]) === dateFormatted) {
+      if (targetRow === -1) {
+        targetRow = i + 1;
+      } else {
+        duplicateRows.push(i + 1);
+      }
+    }
+  }
+
+  // Hapus baris duplikat lama dari bawah ke atas agar indeks tidak bergeser
+  for (let d = duplicateRows.length - 1; d >= 0; d--) {
+    sheet.deleteRow(duplicateRows[d]);
   }
 
   const rowValues = [
@@ -536,13 +627,33 @@ function upsertMonthlyRow(date, completed, pibpeb, now) {
   const totalCount = compCount + pibCount;
   const humanTime = formatHumanDateTime(now);
 
+  let colDate = 1;
+  if (data.length > 2) {
+    const headers = data[2].map(h => String(h).trim().toLowerCase());
+    const idx = headers.indexOf("tanggal");
+    if (idx !== -1) colDate = idx;
+    else {
+      const idx2 = headers.indexOf("date");
+      if (idx2 !== -1) colDate = idx2;
+    }
+  }
+
   let targetRow = -1;
+  const duplicateRows = [];
   // Baris data bulanan dimulai dari baris 4 (baris 1: judul banner, baris 2: stats, baris 3: headers)
   for (let i = 3; i < data.length; i++) {
-    if (formatSheetDate(data[i][1]) === dateFormatted) {
-      targetRow = i + 1;
-      break;
+    if (formatSheetDate(data[i][colDate]) === dateFormatted) {
+      if (targetRow === -1) {
+        targetRow = i + 1;
+      } else {
+        duplicateRows.push(i + 1);
+      }
     }
+  }
+
+  // Hapus baris duplikat lama dari bawah ke atas
+  for (let d = duplicateRows.length - 1; d >= 0; d--) {
+    sheet.deleteRow(duplicateRows[d]);
   }
 
   const rowValues = [

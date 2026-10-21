@@ -507,12 +507,23 @@ async function syncWithSupabase(force = false) {
         // Build server state maps (respecting local saves that just happened)
         const serverCompletedByDate = {};
         const serverPibPebByDate = {};
+        const serverTimeByDate = {};
 
         if (Array.isArray(syncData)) {
             for (const row of syncData) {
                 if (!row || !row.date) continue;
                 const d = normalizeIsoDate(row.date);
                 const serverTime = row.updated_at ? new Date(row.updated_at).getTime() : 0;
+
+                // Anti-stale overwrite: if multiple rows exist for the same date (e.g. duplicate rows in Google Sheet),
+                // KEEP THE NEWER ROW and do NOT let old rows from earlier hours/dates overwrite fresh rows!
+                if (serverCompletedByDate[d] !== undefined) {
+                    const prevTime = serverTimeByDate[d] || 0;
+                    if (serverTime < prevTime) {
+                        continue;
+                    }
+                }
+
                 const localDateSaveTime = Math.max(
                     lastLocalSaveTimestamp,
                     Number(localTimeData.ceisa_last_local_save_time || 0),
@@ -526,6 +537,7 @@ async function syncWithSupabase(force = false) {
                     continue;
                 }
 
+                serverTimeByDate[d] = serverTime;
                 serverCompletedByDate[d] = cleanNumberArray(row.completed_numbers);
                 serverPibPebByDate[d] = cleanNumberArray(row.pibpeb_numbers);
             }
@@ -631,8 +643,7 @@ async function syncWithSupabase(force = false) {
             }
         }
 
-        const todayDate = new Date().toISOString().split('T')[0];
-        if (serverCompletedByDate[activeDate] !== undefined && activeDate === todayDate) {
+        if (serverCompletedByDate[activeDate] !== undefined) {
             const currentList = Array.isArray(currentStored.ceisa_completed_numbers)
                 ? currentStored.ceisa_completed_numbers
                 : [];
@@ -642,7 +653,7 @@ async function syncWithSupabase(force = false) {
             }
         }
 
-        if (serverPibPebByDate[activeDate] !== undefined && activeDate === todayDate) {
+        if (serverPibPebByDate[activeDate] !== undefined) {
             const currentList = Array.isArray(currentStored.ceisa_pibpeb_numbers)
                 ? currentStored.ceisa_pibpeb_numbers
                 : [];

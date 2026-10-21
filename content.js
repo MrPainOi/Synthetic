@@ -45,15 +45,16 @@
 
 
     async function getActiveScanDate() {
+        const detected = (typeof detectCeisaPortalDate === "function") ? detectCeisaPortalDate() : null;
+        if (detected) {
+            scanDate = detected;
+            chrome.storage.local.set({ ceisa_last_scan_date: detected, ceisa_scan_date: detected }).catch(() => {});
+            return detected;
+        }
         const data = await chrome.storage.local.get("ceisa_last_scan_date");
         if (data.ceisa_last_scan_date) {
             scanDate = data.ceisa_last_scan_date;
             return data.ceisa_last_scan_date;
-        }
-        const detected = (typeof detectCeisaPortalDate === "function") ? detectCeisaPortalDate() : null;
-        if (detected) {
-            scanDate = detected;
-            return detected;
         }
         return scanDate || todayISO();
     }
@@ -65,10 +66,9 @@
             "ceisa_completed_numbers"
         ]);
 
-        const dateList = Array.isArray(data[`ceisa_completed_numbers_${activeDate}`])
+        const list = (Array.isArray(data[`ceisa_completed_numbers_${activeDate}`]) && data[`ceisa_completed_numbers_${activeDate}`].length > 0)
             ? data[`ceisa_completed_numbers_${activeDate}`]
-            : (activeDate === todayISO() && Array.isArray(data.ceisa_completed_numbers) ? data.ceisa_completed_numbers : []);
-        const list = dateList;
+            : (Array.isArray(data.ceisa_completed_numbers) ? data.ceisa_completed_numbers : []);
 
         completedNumbers = new Set(
             list
@@ -84,10 +84,9 @@
             "ceisa_pibpeb_numbers"
         ]);
 
-        const dateList = Array.isArray(data[`ceisa_pibpeb_numbers_${activeDate}`])
+        const list = (Array.isArray(data[`ceisa_pibpeb_numbers_${activeDate}`]) && data[`ceisa_pibpeb_numbers_${activeDate}`].length > 0)
             ? data[`ceisa_pibpeb_numbers_${activeDate}`]
-            : (activeDate === todayISO() && Array.isArray(data.ceisa_pibpeb_numbers) ? data.ceisa_pibpeb_numbers : []);
-        const list = dateList;
+            : (Array.isArray(data.ceisa_pibpeb_numbers) ? data.ceisa_pibpeb_numbers : []);
 
         pibPebNumbers = new Set(
             list
@@ -1061,6 +1060,34 @@
             dateValues.sort();
             return dateValues[dateValues.length - 1];
         }
+
+        // Priority 3: Dates visible in table rows (CEISA document list table)
+        try {
+            const tableDateCells = document.querySelectorAll("table tbody tr td");
+            if (tableDateCells.length > 0) {
+                const counts = {};
+                for (let i = 0; i < Math.min(tableDateCells.length, 120); i++) {
+                    const text = (tableDateCells[i].textContent || "").trim();
+                    if (text.length >= 8 && text.length <= 25) {
+                        const parsed = parseDateString(text);
+                        if (parsed) {
+                            counts[parsed] = (counts[parsed] || 0) + 1;
+                        }
+                    }
+                }
+                let bestDate = null;
+                let maxCount = 0;
+                for (const [d, count] of Object.entries(counts)) {
+                    if (count > maxCount) {
+                        maxCount = count;
+                        bestDate = d;
+                    }
+                }
+                if (bestDate && maxCount >= 2) {
+                    return bestDate;
+                }
+            }
+        } catch (_) {}
 
         return null;
     }
