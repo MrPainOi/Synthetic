@@ -775,6 +775,30 @@ try {
                         }
                     }
 
+                    # 2.05 Date Conflict Detection in Filename (e.g. 19.01.26 vs shipment 17-10-2026)
+                    if ($refDate -and $rawFileName -match '(?:^|[^\d])(\d{1,2})[\.\-](\d{1,2})[\.\-](\d{2,4})(?:[^\d]|$)') {
+                        $fDay = [int]$matches[1]
+                        $fMonth = [int]$matches[2]
+                        $targetMonth = $refDate.Month
+                        $targetDay = $refDate.Day
+                        if ($fMonth -ne $targetMonth -or [Math]::Abs($fDay - $targetDay) -gt 7) {
+                            $confidence = [Math]::Min($confidence, 25)
+                            $matchReason = "Tanggal pada nama berkas ($($matches[1]).$($matches[2])) berbeda dengan tanggal pengapalan ($($refDate.ToString('dd.MM.yyyy')))"
+                        }
+                    }
+
+                    # 2.06 Roman Numeral Conflict Detection (e.g. 006/EXP/I/ vs 006/EXP/X/)
+                    if ($invoiceNo -match '(?:^|[\/\-_])(XII|XI|X|IX|VIII|VII|VI|V|IV|III|II|I)(?:$|[\/\-_])') {
+                        $targetRoman = $matches[1].ToUpperInvariant()
+                        if ($rawFileName -match '(?:EXP|INV)[\/\-_ ]*(XII|XI|X|IX|VIII|VII|VI|V|IV|III|II|I)') {
+                            $fileRoman = $matches[1].ToUpperInvariant()
+                            if ($fileRoman -ne $targetRoman) {
+                                $confidence = [Math]::Min($confidence, 20)
+                                $matchReason = "Bulan Romawi berkas ($fileRoman) tidak sesuai dengan Invoice ($targetRoman)"
+                            }
+                        }
+                    }
+
                     # 2.1 Arah Transaksi: Validasi Ketat EKSPOR vs IMPOR
                     if ($docType -eq 'PEB') {
                         # Pengapalan EKSPOR: Berkas bertuliskan 'Import/Impor' BUKAN dokumen pengapalan ini!

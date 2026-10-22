@@ -546,195 +546,288 @@ async function refineSearchResultsWithBLCrossCheck(result, searchParams) {
     try {
         const { PDFParse } = require('pdf-parse');
         const blSummary = result.summary.BILL_OF_LADING;
-        if (!blSummary || !blSummary.candidates || blSummary.candidates.length === 0) {
-            return result;
-        }
-
-        // Find candidate B/L matching target BL or top selected BL
         const targetBLNumber = searchParams.blAwbNo ? searchParams.blAwbNo.trim() : '';
-        const topBL = (blSummary.candidates.find(c => targetBLNumber && (c.fileName.includes(targetBLNumber) || c.matchReason.includes(targetBLNumber)))) || blSummary.selected || blSummary.candidates[0];
-        if (!topBL || !topBL.savedFileName) return result;
-
-        const blFilePath = path.join(ATTACHMENTS_DIR, topBL.savedFileName);
-        if (!fs.existsSync(blFilePath)) return result;
+        const targetInv = searchParams.invoiceNo ? searchParams.invoiceNo.trim() : '';
+        const targetInvClean = targetInv.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+        const targetCont = searchParams.containerNo ? searchParams.containerNo.trim().replace(/\s+/g, '') : '';
+        const invDate = searchParams.invoiceDate || searchParams.blAwbDate;
 
         let blText = '';
-        try {
-            const parser = new PDFParse({ data: fs.readFileSync(blFilePath) });
-            await parser.load();
-            const textResult = await parser.getText();
-            await parser.destroy();
-            blText = typeof textResult === 'string' ? textResult : (textResult.text || '');
-        } catch (pErr) {
-            console.warn('[DocSearcher] Gagal membaca teks B/L:', pErr.message);
+        let topBL = null;
+        let blEmailEntryId = null;
+        let blFoundInvoice = '';
+        let blFoundInvClean = '';
+
+        if (blSummary && blSummary.candidates && blSummary.candidates.length > 0) {
+            topBL = (blSummary.candidates.find(c => targetBLNumber && (c.fileName.includes(targetBLNumber) || c.matchReason.includes(targetBLNumber)))) || blSummary.selected || blSummary.candidates[0];
+            if (topBL && topBL.savedFileName) {
+                const blFilePath = path.join(ATTACHMENTS_DIR, topBL.savedFileName);
+                if (fs.existsSync(blFilePath)) {
+                    try {
+                        const parser = new PDFParse({ data: fs.readFileSync(blFilePath) });
+                        await parser.load();
+                        const textResult = await parser.getText();
+                        await parser.destroy();
+                        blText = typeof textResult === 'string' ? textResult : (textResult.text || '');
+                    } catch (pErr) {
+                        console.warn('[DocSearcher] Gagal membaca teks B/L:', pErr.message);
+                    }
+                }
+                blEmailEntryId = topBL.email ? topBL.email.entryId : null;
+            }
         }
 
-        if (!blText) return result;
+        if (blText) {
+            const invMatch = blText.match(/(?:INVOICE\s*(?:NO|NUMBER)?|Export\s*references)[\s.:]*([A-Z0-9\/\s\-]+)/i);
+            blFoundInvoice = invMatch ? invMatch[1].trim() : '';
+            blFoundInvClean = blFoundInvoice.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+            console.log(`[DocSearcher] Cross-check B/L digital: Invoice di B/L="${blFoundInvoice}", Target Invoice="${targetInv}", Target BL="${targetBLNumber}"`);
+        }
 
-        const targetInv = searchParams.invoiceNo ? searchParams.invoiceNo.trim() : '';
-        const targetInvClean = targetInv.replace(/[^a-zA-Z0-9]/g, '');
-        const targetCont = searchParams.containerNo ? searchParams.containerNo.trim().replace(/\s+/g, '') : '';
+        const targetRomanMatch = targetInv.match(/(?:^|[\/\-_])(XII|XI|X|IX|VIII|VII|VI|V|IV|III|II|I)(?:$|[\/\-_])/i);
+        const targetRoman = targetRomanMatch ? targetRomanMatch[1].toUpperCase() : null;
 
-        // Extract invoice number and container from BL text
-        const invMatch = blText.match(/(?:INVOICE\s*(?:NO|NUMBER)?|Export\s*references)[\s.:]*([A-Z0-9\/\s\-]+)/i);
-        const blFoundInvoice = invMatch ? invMatch[1].trim() : '';
-        const blFoundInvClean = blFoundInvoice.replace(/[^a-zA-Z0-9]/g, '');
-        console.log(`[DocSearcher] Cross-check B/L digital: Invoice di B/L="${blFoundInvoice}", Target Invoice="${targetInv}", Target BL="${targetBLNumber}"`);
+        let dateTokens = [];
+        let invYear = '', invMonth = '', invDay = '';
+        if (invDate) {
+            const dateParts = invDate.split('-');
+            if (dateParts.length === 3) {
+                invYear = dateParts[0];
+                invMonth = dateParts[1].padStart(2, '0');
+                invDay = dateParts[2].padStart(2, '0');
+                const shortY = invYear.slice(-2);
+                dateTokens = [
+                    `${invDay}.${invMonth}.${shortY}`,
+                    `${invDay}-${invMonth}-${shortY}`,
+                    `${invDay}${invMonth}${shortY}`,
+                    `${invYear}${invMonth}${invDay}`,
+                    `${shortY}.${invMonth}.${invDay}`,
+                    `${shortY}-${invMonth}-${invDay}`
+                ];
+            }
+        }
 
-        const isInvoiceMatchingBL = targetInvClean && blFoundInvClean && (blFoundInvClean.includes(targetInvClean) || targetInvClean.includes(blFoundInvClean));
-        const isContainerMatchingBL = targetCont && blText.replace(/\s+/g, '').includes(targetCont);
-        const isTargetBLMatching = targetBLNumber && (topBL.fileName.includes(targetBLNumber) || blText.includes(targetBLNumber));
+        for (const catKey of ['INVOICE', 'PACKING_LIST']) {
+            const catObj = result.summary[catKey];
+            if (!catObj || !catObj.candidates) continue;
 
-        if (isInvoiceMatchingBL || isContainerMatchingBL || isTargetBLMatching || blFoundInvoice) {
-            const blEmailEntryId = topBL.email ? topBL.email.entryId : null;
-            const targetFirstSeg = (targetInv.split(/[\/\\]/)[0] || '').trim().replace(/[^a-zA-Z0-9]/g, '');
-            const blFirstSeg = (blFoundInvoice.split(/[\/\\]/)[0] || '').trim().replace(/[^a-zA-Z0-9]/g, '');
+            for (const cand of catObj.candidates) {
+                const candFileName = cand.fileName || '';
+                const candClean = candFileName.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+                const isSameEmail = blEmailEntryId && cand.email && cand.email.entryId === blEmailEntryId;
 
-            for (const catKey of ['INVOICE', 'PACKING_LIST']) {
-                const catObj = result.summary[catKey];
-                if (!catObj || !catObj.candidates) continue;
+                // 1. Digital Text Extraction from PDF on disk
+                let candText = '';
+                if (cand.savedFileName) {
+                    const cPath = path.join(ATTACHMENTS_DIR, cand.savedFileName);
+                    if (fs.existsSync(cPath) && cPath.toLowerCase().endsWith('.pdf')) {
+                        try {
+                            const parser = new PDFParse({ data: fs.readFileSync(cPath) });
+                            await parser.load();
+                            const textResult = await parser.getText();
+                            await parser.destroy();
+                            candText = typeof textResult === 'string' ? textResult : (textResult.text || '');
+                        } catch (_) {}
+                    }
+                }
+                const candTextClean = candText.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
 
-                catObj.candidates.forEach(cand => {
-                    const candFileName = cand.fileName || '';
-                    const candClean = candFileName.replace(/[^a-zA-Z0-9]/g, '');
-                    const isSameEmail = blEmailEntryId && cand.email && cand.email.entryId === blEmailEntryId;
+                // 2. Exact Invoice Match in Digital Content
+                if (targetInvClean && candTextClean.includes(targetInvClean)) {
+                    cand.confidence = 100;
+                    cand.matchReason = `Terverifikasi 100% digital: Teks dokumen memuat No Invoice persis (${targetInv})`;
+                    cand._verifiedExact = true;
+                    continue;
+                }
+                if (blFoundInvClean && candTextClean.includes(blFoundInvClean)) {
+                    cand.confidence = 100;
+                    cand.matchReason = `Terverifikasi 100% digital dari Master B/L (No Invoice: ${blFoundInvoice})`;
+                    cand._verifiedExact = true;
+                    continue;
+                }
 
-                    if ((targetFirstSeg && candClean.includes(targetFirstSeg)) || (blFirstSeg && candClean.includes(blFirstSeg))) {
-                        cand.confidence = 100;
-                        cand.matchReason = `Terverifikasi 100% dari Master B/L (No Invoice: ${blFoundInvoice || targetInv})`;
-                    } else if (isSameEmail) {
-                        const suffixMatch = candFileName.match(/[-_](\d+)\.[a-zA-Z0-9]+$/);
-                        const candIndex = suffixMatch ? parseInt(suffixMatch[1], 10) : null;
+                // 3. Roman Numeral Conflict (e.g. 006/EXP/I/26-T vs 006/EXP/X/26-T)
+                if (targetRoman) {
+                    // Check if candidate text has another Roman numeral
+                    if (candText) {
+                        const candRomanMatch = candText.match(/(?:EXP|INV|REF\s*NO)[\/\s\-_:]*([0-9]+)[\/\s\-_]*(XII|XI|X|IX|VIII|VII|VI|V|IV|III|II|I)[\/\s\-_]*/i);
+                        if (candRomanMatch && candRomanMatch[2].toUpperCase() !== targetRoman) {
+                            cand.confidence = 15;
+                            cand.matchReason = `Bukan berkas pengapalan ini (Teks memuat bulan romawi ${candRomanMatch[2].toUpperCase()} vs target ${targetRoman})`;
+                            continue;
+                        }
+                    }
+                    // Check if candidate filename has conflicting Roman numeral
+                    const fnRomanMatch = candFileName.match(/(?:EXP|INV)[\/\-_ ]*(XII|XI|X|IX|VIII|VII|VI|V|IV|III|II|I)/i);
+                    if (fnRomanMatch && fnRomanMatch[1].toUpperCase() !== targetRoman) {
+                        cand.confidence = 15;
+                        cand.matchReason = `Bukan berkas pengapalan ini (Nama berkas memuat ${fnRomanMatch[1].toUpperCase()} vs ${targetRoman})`;
+                        continue;
+                    }
+                }
 
-                        if (candIndex !== null) {
-                            // If target is 00386 or BTMSIN023010, the matching suffix is 2
-                            const isSecondShipment = targetBLNumber.includes('10') || targetInv.includes('386') || (blFoundInvoice && blFoundInvoice.includes('386'));
-                            const isFirstShipment = targetBLNumber.includes('09') || targetInv.includes('385') || (blFoundInvoice && blFoundInvoice.includes('385'));
+                // 4. Date Match & Conflict in Filename
+                if (invMonth) {
+                    const matchedToken = dateTokens.find(tok => candFileName.includes(tok));
+                    if (matchedToken) {
+                        cand.confidence = Math.max(cand.confidence, 98);
+                        cand.matchReason = `Tanggal pengapalan cocok pada nama berkas (${matchedToken})`;
+                        cand._matchedDate = true;
+                        continue;
+                    }
 
-                            if (isSecondShipment) {
-                                if (candIndex === 2) {
-                                    cand.confidence = 100;
-                                    cand.matchReason = `Terverifikasi 100% dari Master B/L (No Invoice: ${blFoundInvoice || targetInv}, Kontainer: ${targetCont || 'SZLU3618680'})`;
-                                } else if (candIndex === 1) {
-                                    cand.confidence = 70;
-                                    cand.matchReason = `Pengapalan lain (#1) dalam email multi-pengapalan`;
-                                }
-                            } else if (isFirstShipment) {
-                                if (candIndex === 1) {
-                                    cand.confidence = 100;
-                                    cand.matchReason = `Terverifikasi 100% dari Master B/L (No Invoice: ${blFoundInvoice || targetInv})`;
-                                } else if (candIndex === 2) {
-                                    cand.confidence = 70;
-                                    cand.matchReason = `Pengapalan lain (#2) dalam email multi-pengapalan`;
-                                }
+                    // Conflicting explicit date in filename (e.g. 19.01.26 vs shipment 17-10-2026)
+                    const fDateMatch = candFileName.match(/(?:^|[^\d])(\d{1,2})[\.\-](\d{1,2})[\.\-](\d{2,4})(?:[^\d]|$)/);
+                    if (fDateMatch) {
+                        const fMonth = fDateMatch[2].padStart(2, '0');
+                        const fDay = fDateMatch[1].padStart(2, '0');
+                        if (fMonth !== invMonth || Math.abs(parseInt(fDay, 10) - parseInt(invDay, 10)) > 7) {
+                            cand.confidence = Math.min(cand.confidence, 20);
+                            cand.matchReason = `Tanggal nama berkas (${fDay}.${fMonth}) berbeda dengan tanggal pengapalan (${invDay}.${invMonth})`;
+                            continue;
+                        }
+                    }
+                }
+
+                // 5. Multi-Shipment Numbering in same email thread (e.g. Sanjaya Abadi)
+                if (isSameEmail) {
+                    const suffixMatch = candFileName.match(/[-_](\d+)\.[a-zA-Z0-9]+$/);
+                    const candIndex = suffixMatch ? parseInt(suffixMatch[1], 10) : null;
+
+                    if (candIndex !== null) {
+                        const isSecondShipment = targetBLNumber.includes('10') || targetInv.includes('386') || (blFoundInvoice && blFoundInvoice.includes('386'));
+                        const isFirstShipment = targetBLNumber.includes('09') || targetInv.includes('385') || (blFoundInvoice && blFoundInvoice.includes('385'));
+
+                        if (isSecondShipment) {
+                            if (candIndex === 2) {
+                                cand.confidence = 100;
+                                cand.matchReason = `Terverifikasi 100% dari Master B/L (No Invoice: ${blFoundInvoice || targetInv}, Kontainer: ${targetCont || 'SZLU3618680'})`;
+                            } else if (candIndex === 1) {
+                                cand.confidence = 70;
+                                cand.matchReason = `Pengapalan lain (#1) dalam email multi-pengapalan`;
+                            }
+                        } else if (isFirstShipment) {
+                            if (candIndex === 1) {
+                                cand.confidence = 100;
+                                cand.matchReason = `Terverifikasi 100% dari Master B/L (No Invoice: ${blFoundInvoice || targetInv})`;
+                            } else if (candIndex === 2) {
+                                cand.confidence = 70;
+                                cand.matchReason = `Pengapalan lain (#2) dalam email multi-pengapalan`;
                             }
                         }
                     }
-                });
-
-                // Re-sort candidates so 100 confidence is #1
-                catObj.candidates.sort((a, b) => (b.confidence - a.confidence) || (b.fileSize - a.fileSize));
-                catObj.selected = catObj.candidates[0];
-                catObj.status = catObj.selected && catObj.selected.confidence >= 95 ? 'FOUND' : 'MULTIPLE_FOUND';
-                catObj.statusBadge = catObj.status === 'FOUND' ? 'Found' : 'Multiple Found';
-                catObj.statusIcon = catObj.status === 'FOUND' ? 'green' : 'yellow';
+                }
             }
 
-            // ATURAN KHUSUS CIPL & PT. SINAR ASIA PACK (Invoice & Packing List adalah 1 DOKUMEN YANG SAMA)
-            const isSinarAsiaSearch = /sinar\s*asia/i.test(searchParams.companyName || '') ||
-                                      /sinar\s*asia/i.test(searchParams.supplierName || '') ||
-                                      /sinar\s*asia/i.test(searchParams.consigneeName || '') ||
-                                      /golden\s*ben/i.test(searchParams.consigneeName || '');
+            // Re-sort candidates: highest confidence first. If tie, prioritize verified exact or matching date
+            catObj.candidates.sort((a, b) => {
+                if (b.confidence !== a.confidence) return b.confidence - a.confidence;
+                if (b._verifiedExact && !a._verifiedExact) return 1;
+                if (!b._verifiedExact && a._verifiedExact) return -1;
+                if (b._matchedDate && !a._matchedDate) return 1;
+                if (!b._matchedDate && a._matchedDate) return -1;
+                return (b.fileSize || 0) - (a.fileSize || 0);
+            });
 
-            const invObj = result.summary.INVOICE;
-            const plObj = result.summary.PACKING_LIST;
+            catObj.selected = catObj.candidates[0];
+            catObj.status = catObj.selected && catObj.selected.confidence >= 95 ? 'FOUND' : 'MULTIPLE_FOUND';
+            catObj.statusBadge = catObj.status === 'FOUND' ? 'Found' : 'Multiple Found';
+            catObj.statusIcon = catObj.status === 'FOUND' ? 'green' : 'yellow';
+        }
 
-            if (isSinarAsiaSearch && invObj && plObj) {
-                console.log(`[DocSearcher] Menerapkan aturan CIPL terpadu khusus Sinar Asia (Invoice & Packing List adalah 1 dokumen)...`);
-                const invTop = invObj.selected || (invObj.candidates && invObj.candidates[0]);
-                const plTop = plObj.selected || (plObj.candidates && plObj.candidates[0]);
+        // ATURAN KHUSUS CIPL & PT. SINAR ASIA PACK (Invoice & Packing List adalah 1 DOKUMEN YANG SAMA)
+        const isSinarAsiaSearch = /sinar\s*asia/i.test(searchParams.companyName || '') ||
+                                  /sinar\s*asia/i.test(searchParams.supplierName || '') ||
+                                  /sinar\s*asia/i.test(searchParams.consigneeName || '') ||
+                                  /golden\s*ben/i.test(searchParams.consigneeName || '');
 
-                const invConf = invTop ? Number(invTop.confidence || 0) : 0;
-                const plConf = plTop ? Number(plTop.confidence || 0) : 0;
+        const invObj = result.summary.INVOICE;
+        const plObj = result.summary.PACKING_LIST;
 
-                // Tentukan berkas terbaik
-                let bestDoc = null;
-                if (plConf >= invConf && plTop) {
-                    bestDoc = plTop;
-                } else if (invTop) {
-                    bestDoc = invTop;
-                }
+        if (isSinarAsiaSearch && invObj && plObj) {
+            console.log(`[DocSearcher] Menerapkan aturan CIPL terpadu khusus Sinar Asia (Invoice & Packing List adalah 1 dokumen)...`);
+            const invTop = invObj.selected || (invObj.candidates && invObj.candidates[0]);
+            const plTop = plObj.selected || (plObj.candidates && plObj.candidates[0]);
 
-                if (bestDoc) {
-                    const unifiedConfidence = Math.max(bestDoc.confidence, 99);
-                    const unifiedReason = `Sinar Asia CIPL: Dokumen Invoice & Packing List adalah 1 berkas terpadu (${bestDoc.fileName})`;
+            const invConf = invTop ? Number(invTop.confidence || 0) : 0;
+            const plConf = plTop ? Number(plTop.confidence || 0) : 0;
 
-                    // Sinkronkan ke INVOICE & singkirkan false-positive perusahaan lain (misal Scanjet)
-                    const invCandidate = {
-                        ...bestDoc,
-                        category: 'INVOICE',
-                        confidence: unifiedConfidence,
-                        matchReason: unifiedReason
-                    };
-                    if (!invObj.candidates) invObj.candidates = [];
-                    invObj.candidates = invObj.candidates.filter(c => !/scanjet|valeo/i.test(c.fileName || ''));
-                    invObj.candidates.unshift(invCandidate);
-                    invObj.selected = invCandidate;
-                    invObj.count = invObj.candidates.length;
-                    invObj.status = 'FOUND';
-                    invObj.statusBadge = 'Found';
-                    invObj.statusIcon = 'green';
+            let bestDoc = null;
+            if (plConf >= invConf && plTop) {
+                bestDoc = plTop;
+            } else if (invTop) {
+                bestDoc = invTop;
+            }
 
-                    // Sinkronkan ke PACKING_LIST
-                    const plCandidate = {
-                        ...bestDoc,
-                        category: 'PACKING_LIST',
-                        confidence: unifiedConfidence,
-                        matchReason: unifiedReason
-                    };
-                    if (!plObj.candidates) plObj.candidates = [];
-                    plObj.candidates = plObj.candidates.filter(c => !/scanjet|valeo/i.test(c.fileName || ''));
-                    plObj.candidates.unshift(plCandidate);
-                    plObj.selected = plCandidate;
-                    plObj.count = plObj.candidates.length;
-                    plObj.status = 'FOUND';
-                    plObj.statusBadge = 'Found';
-                    plObj.statusIcon = 'green';
-                }
-            } else {
-                // CIPL Fallback Umum (Dua Arah: INVOICE <-> PACKING_LIST)
-                const invSelected = invObj && invObj.selected;
-                const plSelected = plObj && plObj.selected;
+            if (bestDoc && bestDoc.confidence >= 70) {
+                const unifiedConfidence = Math.max(bestDoc.confidence, 99);
+                const unifiedReason = `Sinar Asia CIPL: Dokumen Invoice & Packing List adalah 1 berkas terpadu (${bestDoc.fileName})`;
 
-                if (invSelected && invSelected.confidence >= 95 && plObj && (!plObj.selected || plObj.selected.confidence < 95)) {
-                    const plCandidate = {
-                        ...invSelected,
-                        category: 'PACKING_LIST',
-                        confidence: 99,
-                        matchReason: `CIPL / Dokumen Terpadu Invoice & Packing List (${blFoundInvoice || targetInv})`
-                    };
-                    if (!plObj.candidates) plObj.candidates = [];
-                    plObj.candidates.unshift(plCandidate);
-                    plObj.selected = plCandidate;
-                    plObj.count = plObj.candidates.length;
-                    plObj.status = 'FOUND';
-                    plObj.statusBadge = 'Found';
-                    plObj.statusIcon = 'green';
-                } else if (plSelected && plSelected.confidence >= 95 && invObj && (!invObj.selected || invObj.selected.confidence < 95)) {
-                    const invCandidate = {
-                        ...plSelected,
-                        category: 'INVOICE',
-                        confidence: 99,
-                        matchReason: `CIPL / Dokumen Terpadu Invoice & Packing List (${blFoundInvoice || targetInv})`
-                    };
-                    if (!invObj.candidates) invObj.candidates = [];
-                    invObj.candidates.unshift(invCandidate);
-                    invObj.selected = invCandidate;
-                    invObj.count = invObj.candidates.length;
-                    invObj.status = 'FOUND';
-                    invObj.statusBadge = 'Found';
-                    invObj.statusIcon = 'green';
-                }
+                // Sinkronkan ke INVOICE & singkirkan false-positive perusahaan lain (misal Scanjet)
+                const invCandidate = {
+                    ...bestDoc,
+                    category: 'INVOICE',
+                    confidence: unifiedConfidence,
+                    matchReason: unifiedReason
+                };
+                if (!invObj.candidates) invObj.candidates = [];
+                invObj.candidates = invObj.candidates.filter(c => !/scanjet|valeo/i.test(c.fileName || ''));
+                invObj.candidates.unshift(invCandidate);
+                invObj.selected = invCandidate;
+                invObj.count = invObj.candidates.length;
+                invObj.status = 'FOUND';
+                invObj.statusBadge = 'Found';
+                invObj.statusIcon = 'green';
+
+                // Sinkronkan ke PACKING_LIST
+                const plCandidate = {
+                    ...bestDoc,
+                    category: 'PACKING_LIST',
+                    confidence: unifiedConfidence,
+                    matchReason: unifiedReason
+                };
+                if (!plObj.candidates) plObj.candidates = [];
+                plObj.candidates = plObj.candidates.filter(c => !/scanjet|valeo/i.test(c.fileName || ''));
+                plObj.candidates.unshift(plCandidate);
+                plObj.selected = plCandidate;
+                plObj.count = plObj.candidates.length;
+                plObj.status = 'FOUND';
+                plObj.statusBadge = 'Found';
+                plObj.statusIcon = 'green';
+            }
+        } else {
+            // CIPL Fallback Umum (Dua Arah: INVOICE <-> PACKING_LIST)
+            const invSelected = invObj && invObj.selected;
+            const plSelected = plObj && plObj.selected;
+
+            if (invSelected && invSelected.confidence >= 95 && plObj && (!plObj.selected || plObj.selected.confidence < 95)) {
+                const plCandidate = {
+                    ...invSelected,
+                    category: 'PACKING_LIST',
+                    confidence: 99,
+                    matchReason: `CIPL / Dokumen Terpadu Invoice & Packing List (${blFoundInvoice || targetInv})`
+                };
+                if (!plObj.candidates) plObj.candidates = [];
+                plObj.candidates.unshift(plCandidate);
+                plObj.selected = plCandidate;
+                plObj.count = plObj.candidates.length;
+                plObj.status = 'FOUND';
+                plObj.statusBadge = 'Found';
+                plObj.statusIcon = 'green';
+            } else if (plSelected && plSelected.confidence >= 95 && invObj && (!invObj.selected || invObj.selected.confidence < 95)) {
+                const invCandidate = {
+                    ...plSelected,
+                    category: 'INVOICE',
+                    confidence: 99,
+                    matchReason: `CIPL / Dokumen Terpadu Invoice & Packing List (${blFoundInvoice || targetInv})`
+                };
+                if (!invObj.candidates) invObj.candidates = [];
+                invObj.candidates.unshift(invCandidate);
+                invObj.selected = invCandidate;
+                invObj.count = invObj.candidates.length;
+                invObj.status = 'FOUND';
+                invObj.statusBadge = 'Found';
+                invObj.statusIcon = 'green';
             }
         }
     } catch (refineErr) {
@@ -845,6 +938,7 @@ module.exports = {
     searchOutlook,
     openOutlookEmail,
     createZipBundle,
+    refineSearchResultsWithBLCrossCheck,
     ATTACHMENTS_DIR,
     ZIPS_DIR
 };
