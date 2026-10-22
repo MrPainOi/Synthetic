@@ -337,17 +337,24 @@ PENTING:
             if (!parsedData.packingListNumber || parsedData.packingListNumber === 'null') {
                 parsedData.packingListNumber = parsedData.invoiceNumber || '';
             }
-            const isExport = /ekspor|export|peb|bc\s*3\.0/i.test(parsedData.documentType || '') ||
-                             /golden\s*ben/i.test(parsedData.consigneeName || '') ||
-                             /sinar\s*asia/i.test(parsedData.shipperName || '');
-            if (isExport) {
-                if (!parsedData.shipperName) parsedData.shipperName = 'PT. SINAR ASIA PACK';
-                if (!parsedData.consigneeName || /tidak tertera|null/i.test(parsedData.consigneeName)) {
+            // Sinar Asia ada 2 kegiatan: IMPOR dan EKSPOR
+            // Parameter 'mode' ('ekspor' vs 'impor') menentukan modul CEISA yang sedang aktif
+            const isExportMode = (mode === 'ekspor');
+            if (isExportMode) {
+                // EKSPOR (PEB / BC 3.0):
+                // Eksportir / Pengirim di Indonesia: PT. Sinar Asia Pack
+                // Pembeli / Penerima di Singapura: Golden Ben Printer Pte Ltd
+                parsedData.shipperName = 'PT. SINAR ASIA PACK';
+                if (!parsedData.consigneeName || /tidak tertera|null|sinar\s*asia/i.test(parsedData.consigneeName)) {
                     parsedData.consigneeName = 'Golden Ben Printer Pte Ltd';
                 }
             } else {
-                if (!parsedData.consigneeName || /tidak tertera|null/i.test(parsedData.consigneeName)) {
-                    parsedData.consigneeName = 'PT. SINAR ASIA PACK';
+                // IMPOR (PIB / BC 2.0):
+                // Importir / Penerima di Indonesia: PT. Sinar Asia Pack
+                // Pemasok / Pengirim di Singapura / Luar Negeri: Golden Ben Printer Pte Ltd
+                parsedData.consigneeName = 'PT. SINAR ASIA PACK';
+                if (!parsedData.shipperName || /tidak tertera|null|sinar\s*asia/i.test(parsedData.shipperName)) {
+                    parsedData.shipperName = 'Golden Ben Printer Pte Ltd';
                 }
             }
         }

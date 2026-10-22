@@ -677,8 +677,11 @@ function loadDraftData(data, shouldSave = true) {
     );
 
     if (isSinarAsia) {
-        // ATURAN EKSPOR SINAR ASIA: Consignee adalah "Golden Ben Printer Pte Ltd"
-        if (!data.consigneeName || /tidak tertera|null/i.test(data.consigneeName)) {
+        // ATURAN EKSPOR SINAR ASIA (PEB):
+        // Eksportir / Pengirim di Indonesia: PT. Sinar Asia Pack
+        // Pembeli / Consignee Luar Negeri di Singapura: Golden Ben Printer Pte Ltd
+        setVal('eksportirNama', 'PT. SINAR ASIA PACK');
+        if (!data.consigneeName || /tidak tertera|null|sinar\s*asia/i.test(data.consigneeName)) {
             data.consigneeName = 'Golden Ben Printer Pte Ltd';
             setVal('consigneeName', 'Golden Ben Printer Pte Ltd');
         }
@@ -2723,7 +2726,7 @@ function initDocumentParserModal() {
                 throw err;
             }
 
-            const activeModule = sessionStorage.getItem('ceisa_active_portal_module') || 'peb';
+            const activeModule = (document.getElementById('module-pib') || window.location.pathname.toLowerCase().includes('pib')) ? 'pib' : ((document.getElementById('module-peb') || window.location.pathname.toLowerCase().includes('peb')) ? 'peb' : (sessionStorage.getItem('ceisa_active_portal_module') || 'peb'));
             const customsMode = (activeModule === 'pib') ? 'impor' : 'ekspor';
 
             const formData = new FormData();
@@ -3007,7 +3010,7 @@ function initDocumentParserModal() {
             hideFloatingWidget();
             closeModal();
 
-            const activeModule = sessionStorage.getItem('ceisa_active_portal_module') || 'peb';
+            const activeModule = (document.getElementById('module-pib') || window.location.pathname.toLowerCase().includes('pib')) ? 'pib' : ((document.getElementById('module-peb') || window.location.pathname.toLowerCase().includes('peb')) ? 'peb' : (sessionStorage.getItem('ceisa_active_portal_module') || 'peb'));
             if (activeModule === 'pib') {
                 switchPortalModule('pib');
                 if (typeof switchPibTab === 'function') switchPibTab('pib-tab-dokumen');

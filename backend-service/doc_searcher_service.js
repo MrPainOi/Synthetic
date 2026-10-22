@@ -1,13 +1,9 @@
-// ====================================================================
-// CEISA 4.0 - Dokumen Searcher Backend Service
-// doc_searcher_service.js
-// Handles PIB/PEB analysis, Outlook MAPI searching, and attachment management
-// ====================================================================
-
+require('dotenv').config({ path: require('path').join(__dirname, '.env') });
 const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
 const { GoogleGenAI } = require('@google/genai');
+const { PDFParse } = require('pdf-parse');
 
 const TEMP_DIR = path.join(__dirname, 'temp');
 const ATTACHMENTS_DIR = path.join(TEMP_DIR, 'outlook_attachments');
@@ -26,15 +22,191 @@ function getAiClient(customKey) {
 }
 
 /**
+ * Ekstraksi Lokal Cepat & Deterministik dari Dokumen Pabean (PDF CEISA / PPFTZ)
+ * Tanpa ketergantungan internet/AI quota untuk akurasi identitas dokumen 100%.
+ */
+async function extractPibPebFromPdfLocal(pdfPath, originalName = '') {
+    try {
+        if (!fs.existsSync(pdfPath)) return null;
+        const parser = new PDFParse({ data: fs.readFileSync(pdfPath) });
+        await parser.load();
+        const textResult = await parser.getText();
+        await parser.destroy();
+        const text = typeof textResult === 'string' ? textResult : (textResult.text || '');
+
+        if (!text || text.trim().length === 0) return null;
+
+        // 1. Klasifikasi Arah Transaksi: EKSPOR (PEB / BC 3.0 / Pengeluaran) vs IMPOR (PIB / BC 2.0 / Pemasukan)
+        const isPengeluaran = /PENGELUARAN KE LDP|PENGELUARAN DARI FREE TRADE ZONE|PEMBERITAHUAN EKSPOR|PPFTZ.*PENGELUARAN|BC\s*3\.0/i.test(text);
+        const isPemasukan = /PEMASUKAN DARI LDP|PEMASUKAN KE FREE TRADE ZONE|PEMBERITAHUAN IMPOR|PPFTZ.*PEMASUKAN|BC\s*2\.0/i.test(text);
+        let docType = isPengeluaran ? 'PEB' : (isPemasukan ? 'PIB' : (originalName.toLowerCase().includes('peb') ? 'PEB' : 'PIB'));
+
+        // 2. Nomor Pendaftaran & Nomor Pengajuan
+        const regMatch = text.match(/Nomor\s*Pendaftaran\s*:?\s*(\d{5,})/i);
+        const ajuMatch = text.match(/Nomor\s*Pengajuan\s*:?\s*([0-9A-Z]+)/i);
+        const pibPebNo = regMatch ? regMatch[1].trim() : (ajuMatch ? ajuMatch[1].trim() : '');
+
+        const pibDateMatch = text.match(/(\d{2}-\d{2}-\d{4})\s*(?:\t|\s+)\s*Tanggal\s*(?:Pendaftaran|Pengajuan)/i) ||
+                             text.match(/Tanggal\s*(?:Pendaftaran|Pengajuan)\s*:?\s*(\d{2}-\d{2}-\d{4})/i);
+        const pibPebDate = pibDateMatch ? pibDateMatch[1].split('-').reverse().join('-') : new Date().toISOString().split('T')[0];
+
+        // 3. Ekstraksi Tabel Dokumen Pelengkap Pabean
+        function cleanCustomsDocNum(raw) {
+            return raw.replace(/^\d+\s+\d{3}\s+(?:INVOICE|PACKING\s*LIST|B\/L|BL|AWB|AIR\s*WAYBILL|FAKTUR|KONTRAK)\s*/i, '').trim();
+        }
+
+        let invoiceNo = '';
+        let invoiceDate = '';
+        let packingListNo = '';
+        let blAwbNo = '';
+        let blAwbDate = '';
+
+        const invSecIdx = text.indexOf('20. Invoice');
+        if (invSecIdx !== -1) {
+            const docSection = text.slice(invSecIdx);
+            const lines = docSection.split('\n').map(l => l.trim()).filter(Boolean);
+            const lastNoIdx = lines.findLastIndex(l => l.includes('No.'));
+            if (lastNoIdx !== -1) {
+                const docLines = lines.slice(lastNoIdx + 1);
+
+                function parseCustomsLine(line) {
+                    if (!line || line.includes('Tgl. -') || line === '-') return { num: '', date: '' };
+                    const dMatch = line.match(/(\d{2}-\d{2}-\d{4})/);
+                    const dt = dMatch ? dMatch[1].split('-').reverse().join('-') : '';
+                    let rawNum = line.replace(/(\d{2}-\d{2}-\d{4})/, '').replace(/Tgl\.?/gi, '').replace(/\t/g, ' ').trim();
+                    rawNum = cleanCustomsDocNum(rawNum);
+                    return { num: rawNum, date: dt };
+                }
+
+                if (docLines[0]) {
+                    const parsed = parseCustomsLine(docLines[0]);
+                    invoiceNo = parsed.num;
+                    invoiceDate = parsed.date;
+                }
+                if (docLines[1]) {
+                    const parsed = parseCustomsLine(docLines[1]);
+                    packingListNo = parsed.num;
+                }
+                if (docLines[2]) {
+                    const parsed = parseCustomsLine(docLines[2]);
+                    blAwbNo = parsed.num;
+                    blAwbDate = parsed.date;
+                }
+            }
+        }
+
+        // Secondary fallback jika tabel tidak terformat standar
+        if (!invoiceNo) {
+            const m = text.match(/Invoice[\s\S]*?No\.?\s*([A-Z0-9\/\-]+(?:\s*-\s*[A-Z0-9]+)?)/i);
+            if (m) invoiceNo = m[1].trim();
+        }
+        if (!blAwbNo) {
+            const m = text.match(/BL\/AWB[\s\S]*?No\.?\s*([A-Z0-9\/\s\-]+)/i);
+            if (m) blAwbNo = m[1].trim();
+        }
+
+        // Indikator kuat /EXP/ atau /IMP/ pada nomor invoice
+        if (invoiceNo.includes('/EXP/')) docType = 'PEB';
+        if (invoiceNo.includes('/IMP/')) docType = 'PIB';
+
+        // 4. Profil Entitas & Aturan Khusus PT. Sinar Asia Pack
+        const isSinarAsia = /sinar\s*asia/i.test(text) || /sinar\s*asia/i.test(originalName);
+        let importerExporter = '';
+        let supplierSeller = '';
+        let consigneeBuyer = '';
+
+        if (isSinarAsia) {
+            if (docType === 'PEB') {
+                // EKSPOR (PEB): Eksportir = PT. Sinar Asia Pack, Pembeli Luar Negeri = Golden Ben Printer Pte Ltd
+                importerExporter = 'PT. SINAR ASIA PACK';
+                supplierSeller = 'PT. SINAR ASIA PACK';
+                consigneeBuyer = 'GOLDEN BEN PRINTER PTE LTD';
+            } else {
+                // IMPOR (PIB): Importir / Penerima = PT. Sinar Asia Pack, Pemasok = Golden Ben Printer Pte Ltd
+                importerExporter = 'PT. SINAR ASIA PACK';
+                consigneeBuyer = 'PT. SINAR ASIA PACK';
+                supplierSeller = 'GOLDEN BEN PRINTER PTE LTD';
+            }
+            // Sinar Asia: Packing List dan Invoice adalah 1 dokumen yang sama (CIPL)
+            if (!packingListNo) packingListNo = invoiceNo;
+            if (!invoiceNo && packingListNo) invoiceNo = packingListNo;
+        }
+
+        // 5. Sarana Pengangkut (Vessel / Voyage)
+        let vesselVoyage = '';
+        const vMatch = text.match(/([A-Z0-9\s.]+?),\s*\[[A-Z]{2}\][^\n]*\n\s*([A-Z0-9\-]+)\s*\n\s*10\.\s*Nama/i);
+        if (vMatch) {
+            const cleanVessel = vMatch[1].replace(/.*Pengangkutan\s+[A-Za-z]+\s*/i, '').trim();
+            vesselVoyage = cleanVessel + (vMatch[2] ? ' / ' + vMatch[2].trim() : '');
+        }
+
+        // 6. Nomor Peti Kemas
+        let containerNo = '';
+        const contMatch = text.match(/40\.\s*Nomor.*?Peti\s*Kemas[\s\S]*?([A-Z]{4}\d{7})/i) ||
+                          text.match(/\b([A-Z]{4}\s*\d{7})\b/);
+        if (contMatch) {
+            containerNo = contMatch[1].replace(/\s+/g, '');
+        }
+
+        return {
+            docType,
+            pibPebNo,
+            pibPebDate,
+            importerExporter,
+            supplierSeller,
+            consigneeBuyer,
+            invoiceNo,
+            invoiceDate,
+            blAwbNo,
+            blAwbDate,
+            packingListNo,
+            goodsDescription: isSinarAsia ? 'Printed Packaging Materials / Boxes' : '',
+            vesselVoyage,
+            containerNo,
+            targetDocuments: [
+                { type: 'INVOICE', label: 'Commercial Invoice', targetNumber: invoiceNo, required: true },
+                { type: 'PACKING_LIST', label: isSinarAsia ? 'Packing List (1 Dokumen CIPL bersama Invoice)' : 'Packing List', targetNumber: packingListNo || invoiceNo, required: true },
+                { type: 'BILL_OF_LADING', label: 'Bill of Lading / AWB', targetNumber: blAwbNo, required: true },
+                { type: 'COO', label: 'Certificate of Origin (COO)', targetNumber: '', required: false },
+                { type: 'OTHER', label: 'Dokumen Pendukung Lainnya', targetNumber: '', required: false }
+            ]
+        };
+    } catch (e) {
+        console.warn('[DocSearcher] extractPibPebFromPdfLocal error:', e.message);
+        return null;
+    }
+}
+
+/**
  * 1. Analyze PIB / PEB PDF Document
  */
 async function analyzePibPebDocument(pdfPath, originalName, customApiKey = null) {
     console.log(`[DocSearcher] Menganalisis dokumen PIB/PEB: ${originalName} (${pdfPath})`);
 
+    // Ekstraksi lokal deterministik terlebih dahulu
+    const localData = await extractPibPebFromPdfLocal(pdfPath, originalName);
+    if (localData) {
+        console.log(`[DocSearcher] Ekstraksi lokal PDF berhasil:`, {
+            docType: localData.docType,
+            pibPebNo: localData.pibPebNo,
+            invoiceNo: localData.invoiceNo,
+            blAwbNo: localData.blAwbNo,
+            importerExporter: localData.importerExporter,
+            consigneeBuyer: localData.consigneeBuyer
+        });
+    }
+
     const ai = getAiClient(customApiKey);
     if (!ai) {
         // Fallback jika API key belum diset
-        console.warn(`[DocSearcher] GEMINI_API_KEY belum diset. Mengembalikan template data.`);
+        console.warn(`[DocSearcher] GEMINI_API_KEY belum diset. Menggunakan hasil parser lokal.`);
+        if (localData) {
+            return {
+                success: true,
+                isAIFallback: false,
+                data: localData
+            };
+        }
         return {
             success: true,
             isAIFallback: true,
@@ -161,6 +333,17 @@ ATURAN KHUSUS ENTITAS KEPABEANAN:
             throw new Error(`Respon AI bukan JSON valid: ${e.message}`);
         }
 
+        // Sinkronisasi data deterministik lokal dengan hasil AI
+        if (localData) {
+            if (localData.docType) parsedData.docType = localData.docType;
+            if (!parsedData.pibPebNo && localData.pibPebNo) parsedData.pibPebNo = localData.pibPebNo;
+            if (!parsedData.invoiceNo && localData.invoiceNo) parsedData.invoiceNo = localData.invoiceNo;
+            if (!parsedData.invoiceDate && localData.invoiceDate) parsedData.invoiceDate = localData.invoiceDate;
+            if (!parsedData.blAwbNo && localData.blAwbNo) parsedData.blAwbNo = localData.blAwbNo;
+            if (!parsedData.blAwbDate && localData.blAwbDate) parsedData.blAwbDate = localData.blAwbDate;
+            if (!parsedData.vesselVoyage && localData.vesselVoyage) parsedData.vesselVoyage = localData.vesselVoyage;
+        }
+
         // ATURAN KHUSUS PT. SINAR ASIA PACK
         const isSinarAsiaDoc = /sinar\s*asia/i.test(parsedData.importerExporter || '') ||
                                /sinar\s*asia/i.test(parsedData.supplierSeller || '') ||
@@ -171,7 +354,7 @@ ATURAN KHUSUS ENTITAS KEPABEANAN:
             console.log(`[DocSearcher] Dokumen teridentifikasi sebagai PT. SINAR ASIA PACK. Menerapkan profil khusus...`);
             // 1. Dokumen Packing List dan Invoice adalah 1 dokumen yang sama (CIPL)
             if (!parsedData.packingListNo || parsedData.packingListNo === 'null') {
-                parsedData.packingListNo = parsedData.invoiceNo || '';
+                parsedData.packingListNo = parsedData.invoiceNo || (localData ? localData.invoiceNo : '');
             }
             if (!parsedData.invoiceNo && parsedData.packingListNo) {
                 parsedData.invoiceNo = parsedData.packingListNo;
@@ -188,27 +371,28 @@ ATURAN KHUSUS ENTITAS KEPABEANAN:
             }
 
             // 2. Transaksi Impor vs Ekspor
-            const isPeb = String(parsedData.docType || '').toUpperCase() === 'PEB' || originalName.toLowerCase().includes('peb');
+            const isPeb = String(parsedData.docType || '').toUpperCase() === 'PEB' || (localData && localData.docType === 'PEB');
             if (isPeb) {
-                // EKSPOR: Shipper PT. Sinar Asia Pack, Consignee "Golden Ben Printer Pte Ltd"
-                if (!parsedData.importerExporter) parsedData.importerExporter = 'PT. Sinar Asia Pack';
-                if (!parsedData.consigneeBuyer || /tidak tertera|null/i.test(parsedData.consigneeBuyer)) {
-                    parsedData.consigneeBuyer = 'Golden Ben Printer Pte Ltd';
-                }
+                // EKSPOR (PEB): Shipper / Eksportir = PT. Sinar Asia Pack, Pembeli / Consignee Luar Negeri = Golden Ben Printer Pte Ltd
+                parsedData.importerExporter = 'PT. SINAR ASIA PACK';
+                parsedData.supplierSeller = 'PT. SINAR ASIA PACK';
+                parsedData.consigneeBuyer = 'GOLDEN BEN PRINTER PTE LTD';
             } else {
-                // IMPOR: Consignee "PT. Sinar Asia Pack"
-                if (!parsedData.consigneeBuyer || /tidak tertera|null/i.test(parsedData.consigneeBuyer)) {
-                    parsedData.consigneeBuyer = 'PT. Sinar Asia Pack';
+                // IMPOR (PIB): Importir / Penerima = PT. Sinar Asia Pack, Pemasok Luar Negeri = Golden Ben Printer Pte Ltd
+                parsedData.importerExporter = 'PT. SINAR ASIA PACK';
+                parsedData.consigneeBuyer = 'PT. SINAR ASIA PACK';
+                if (!parsedData.supplierSeller || /tidak tertera|null|sinar\s*asia/i.test(parsedData.supplierSeller)) {
+                    parsedData.supplierSeller = 'GOLDEN BEN PRINTER PTE LTD';
                 }
-                if (!parsedData.importerExporter) parsedData.importerExporter = 'PT. Sinar Asia Pack';
             }
         }
 
-        console.log(`[DocSearcher] Ekstraksi AI berhasil:`, {
+        console.log(`[DocSearcher] Ekstraksi pabean selesai:`, {
             docType: parsedData.docType,
             invoiceNo: parsedData.invoiceNo,
             blAwbNo: parsedData.blAwbNo,
             importerExporter: parsedData.importerExporter,
+            supplierSeller: parsedData.supplierSeller,
             consigneeBuyer: parsedData.consigneeBuyer
         });
 
@@ -220,7 +404,15 @@ ATURAN KHUSUS ENTITAS KEPABEANAN:
 
     } catch (err) {
         console.error(`[DocSearcher] Error saat analisis AI dokumen:`, err.message || err);
-        // Heuristic fallback from filename
+        if (localData) {
+            console.log(`[DocSearcher] Menggunakan data ekstraksi lokal deterministik.`);
+            return {
+                success: true,
+                isAIFallback: false,
+                data: localData
+            };
+        }
+
         const isPeb = originalName.toLowerCase().includes('peb');
         const numMatch = originalName.match(/(\d{6,})/);
         const isSinarAsiaFallback = /sinar\s*asia/i.test(originalName);
@@ -235,9 +427,9 @@ ATURAN KHUSUS ENTITAS KEPABEANAN:
                 docType: isPeb ? 'PEB' : 'PIB',
                 pibPebNo: numMatch ? numMatch[1] : '',
                 pibPebDate: new Date().toISOString().split('T')[0],
-                importerExporter: isSinarAsiaFallback ? 'PT. Sinar Asia Pack' : '',
-                supplierSeller: '',
-                consigneeBuyer: isSinarAsiaFallback ? (isPeb ? 'Golden Ben Printer Pte Ltd' : 'PT. Sinar Asia Pack') : '',
+                importerExporter: isSinarAsiaFallback ? 'PT. SINAR ASIA PACK' : '',
+                supplierSeller: isSinarAsiaFallback ? (isPeb ? 'PT. SINAR ASIA PACK' : 'GOLDEN BEN PRINTER PTE LTD') : '',
+                consigneeBuyer: isSinarAsiaFallback ? (isPeb ? 'GOLDEN BEN PRINTER PTE LTD' : 'PT. SINAR ASIA PACK') : '',
                 invoiceNo: '',
                 invoiceDate: '',
                 blAwbNo: '',

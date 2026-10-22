@@ -56,6 +56,11 @@ try {
     $vesselVoyage = if ($params.vesselVoyage) { [string]$params.vesselVoyage.Trim() } else { "" }
     $containerNo  = if ($params.containerNo) { [string]$params.containerNo.Trim() } else { "" }
     $customQuery  = if ($params.customQuery) { [string]$params.customQuery.Trim() } else { "" }
+    $docType      = if ($params.docType) { [string]$params.docType.Trim().ToUpperInvariant() } else { "" }
+    if (-not $docType) {
+        if ($invoiceNo -match '/EXP/' -or ($pibPebNo -and $pibPebNo -match 'PEB')) { $docType = 'PEB' }
+        elseif ($invoiceNo -match '/IMP/' -or ($pibPebNo -and $pibPebNo -match 'PIB')) { $docType = 'PIB' }
+    }
 
     # Setup Attachment Export Directory
     $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
@@ -770,6 +775,25 @@ try {
                         }
                     }
 
+                    # 2.1 Arah Transaksi: Validasi Ketat EKSPOR vs IMPOR
+                    if ($docType -eq 'PEB') {
+                        # Pengapalan EKSPOR: Berkas bertuliskan 'Import/Impor' BUKAN dokumen pengapalan ini!
+                        if ($rawFileName -match '(?i)\b(import|impor)\b') {
+                            $confidence = [Math]::Min($confidence, 25)
+                            $matchReason = "Berkas IMPOR (tidak sesuai dengan pengapalan EKSPOR/PEB)"
+                        } elseif ($rawFileName -match '(?i)\b(export|ekspor|exp)\b') {
+                            $confidence = [Math]::Min(100, $confidence + 4)
+                        }
+                    } elseif ($docType -eq 'PIB') {
+                        # Pengapalan IMPOR: Berkas bertuliskan 'Export/Ekspor' BUKAN dokumen pengapalan ini!
+                        if ($rawFileName -match '(?i)\b(export|ekspor)\b') {
+                            $confidence = [Math]::Min($confidence, 25)
+                            $matchReason = "Berkas EKSPOR (tidak sesuai dengan pengapalan IMPOR/PIB)"
+                        } elseif ($rawFileName -match '(?i)\b(import|impor|imp)\b') {
+                            $confidence = [Math]::Min(100, $confidence + 4)
+                        }
+                    }
+
                     # 3. B/L checks
                     if ($blAwbNo) {
                         $blClean = $blAwbNo.Trim()
@@ -899,12 +923,27 @@ try {
 
     if ($isSinarAsia) {
         # KHUSUS SINAR ASIA: 1 DOKUMEN YANG SAMA UNTUK INVOICE DAN PACKING LIST
-        # Singkirkan berkas dari perusahaan lain (misal Scanjet) jika ada berkas Sinar Asia
-        $sinarDoc = $null
-        if ($topPLConf -ge $topInvConf -and $topPL) {
-            $sinarDoc = $topPL
+        # Singkirkan berkas dari perusahaan lain (misal Scanjet) dan berkas berlawanan arah transaksi
+        $allSinarCandidates = @()
+        if ($hasPL) { $allSinarCandidates += $categories['PACKING_LIST'] }
+        if ($hasInv) { $allSinarCandidates += $categories['INVOICE'] }
+
+        # Filter: utamakan berkas yang searah (bukan impor jika PEB, bukan ekspor jika PIB)
+        $validDirectionCandidates = @($allSinarCandidates | Where-Object {
+            $fName = [string]$_['fileName']
+            if ($docType -eq 'PEB' -and $fName -match '(?i)\b(import|impor)\b') { return $false }
+            if ($docType -eq 'PIB' -and $fName -match '(?i)\b(export|ekspor)\b') { return $false }
+            return $true
+        } | Sort-Object -Property { [int]$_['confidence'] }, { [int]$_['fileSize'] } -Descending)
+
+        $sinarDoc = if ($validDirectionCandidates.Count -gt 0) {
+            $validDirectionCandidates[0]
+        } elseif ($topPLConf -ge $topInvConf -and $topPL) {
+            $topPL
         } elseif ($topInv) {
-            $sinarDoc = $topInv
+            $topInv
+        } else {
+            $null
         }
 
         if ($sinarDoc -and [int]$sinarDoc['confidence'] -ge 70) {

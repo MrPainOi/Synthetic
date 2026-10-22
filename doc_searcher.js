@@ -201,9 +201,17 @@
         if (!data) return;
 
         if (data.docType) {
-            dsDocTypeBadge.textContent = data.docType.toUpperCase() === 'PEB' ? 'MODUL EKSPOR (PEB)' : 'MODUL IMPOR (PIB)';
-            dsDocTypeBadge.style.color = '#2563eb';
-            dsDocTypeBadge.style.background = 'rgba(37,99,235,0.1)';
+            const isPebType = data.docType.toUpperCase() === 'PEB';
+            dsDocTypeBadge.textContent = isPebType ? 'MODUL EKSPOR (PEB)' : 'MODUL IMPOR (PIB)';
+            if (isPebType) {
+                dsDocTypeBadge.style.color = '#059669';
+                dsDocTypeBadge.style.background = 'rgba(16, 185, 129, 0.12)';
+                dsDocTypeBadge.style.border = '1px solid rgba(16, 185, 129, 0.3)';
+            } else {
+                dsDocTypeBadge.style.color = '#2563eb';
+                dsDocTypeBadge.style.background = 'rgba(37, 99, 235, 0.12)';
+                dsDocTypeBadge.style.border = '1px solid rgba(37, 99, 235, 0.3)';
+            }
         }
 
         if (paramPibNo) paramPibNo.value = data.pibPebNo || '';
@@ -225,11 +233,21 @@
         if (isSinarAsia) {
             const isPeb = (data.docType || '').toUpperCase() === 'PEB';
             if (isPeb) {
-                if (paramCompany && !paramCompany.value) paramCompany.value = 'PT. Sinar Asia Pack';
-                if (paramConsignee && !paramConsignee.value) paramConsignee.value = 'Golden Ben Printer Pte Ltd';
+                // EKSPOR (PEB):
+                // Eksportir / Perusahaan = PT. Sinar Asia Pack
+                // Pemasok / Pengirim = PT. Sinar Asia Pack
+                // Pembeli / Consignee Luar Negeri = Golden Ben Printer Pte Ltd
+                if (paramCompany) paramCompany.value = 'PT. Sinar Asia Pack';
+                if (paramSupplier) paramSupplier.value = 'PT. Sinar Asia Pack';
+                if (paramConsignee) paramConsignee.value = 'Golden Ben Printer Pte Ltd';
             } else {
-                if (paramConsignee && !paramConsignee.value) paramConsignee.value = 'PT. Sinar Asia Pack';
-                if (paramCompany && !paramCompany.value) paramCompany.value = 'PT. Sinar Asia Pack';
+                // IMPOR (PIB):
+                // Importir / Perusahaan = PT. Sinar Asia Pack
+                // Penerima / Consignee = PT. Sinar Asia Pack
+                // Pemasok / Pengirim Luar Negeri = Golden Ben Printer Pte Ltd
+                if (paramCompany) paramCompany.value = 'PT. Sinar Asia Pack';
+                if (paramConsignee) paramConsignee.value = 'PT. Sinar Asia Pack';
+                if (paramSupplier && !paramSupplier.value) paramSupplier.value = 'Golden Ben Printer Pte Ltd';
             }
             if (targetValPacking) targetValPacking.textContent = data.invoiceNo ? `Sesuai Invoice (${data.invoiceNo}) - 1 Dokumen CIPL` : '1 Dokumen CIPL';
         } else {
@@ -295,7 +313,12 @@
         renderSearchingTableState();
 
         try {
+            const docType = (extractedDocData && extractedDocData.docType)
+                ? extractedDocData.docType
+                : (dsDocTypeBadge?.textContent?.includes('EKSPOR') ? 'PEB' : (dsDocTypeBadge?.textContent?.includes('IMPOR') ? 'PIB' : ''));
+
             const payload = {
+                docType,
                 invoiceNo,
                 invoiceDate,
                 blAwbNo,

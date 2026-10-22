@@ -506,10 +506,27 @@ function loadPibDraftData(data, shouldSave = true) {
     // Mapping: If data comes from AI Document Parser:
     // - Consignee is Importir (Indonesian buyer)
     // - Shipper is Supplier (Overseas seller)
-    const importirName = data.importirName || data.consigneeName || '';
-    const importirAddress = data.importirAddress || data.consigneeAddress || '';
-    const supplierName = data.supplierName || data.shipperName || '';
-    const supplierAddress = data.supplierAddress || data.shipperAddress || '';
+    let importirName = data.importirName || data.consigneeName || '';
+    let importirAddress = data.importirAddress || data.consigneeAddress || '';
+    let supplierName = data.supplierName || data.shipperName || '';
+    let supplierAddress = data.supplierAddress || data.shipperAddress || '';
+    let supplierCountry = data.supplierCountry || '';
+
+    // Aturan Khusus PT. Sinar Asia Pack pada Modul Impor (PIB):
+    // Importir / Penerima di Indonesia: PT. Sinar Asia Pack
+    // Supplier / Pengirim Luar Negeri: Golden Ben Printer Pte Ltd (atau pemasok LN tertera)
+    const isSinarAsiaImpor = /sinar\s*asia/i.test(importirName) ||
+                             /sinar\s*asia/i.test(supplierName) ||
+                             /golden\s*ben/i.test(importirName) ||
+                             /golden\s*ben/i.test(supplierName);
+
+    if (isSinarAsiaImpor) {
+        importirName = 'PT. SINAR ASIA PACK';
+        if (!supplierName || /sinar\s*asia/i.test(supplierName)) {
+            supplierName = 'GOLDEN BEN PRINTER PTE LTD';
+            supplierCountry = 'SG - SINGAPORE';
+        }
+    }
 
     // No Aju
     const noAju = data.nomorAju || `010700-${Math.floor(100000 + Math.random() * 900000)}-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${Math.floor(100000 + Math.random() * 900000)}`;
@@ -543,11 +560,11 @@ function loadPibDraftData(data, shouldSave = true) {
 
     if (supplierName) setVal('pibSupplierName', supplierName);
     if (supplierAddress) setVal('pibSupplierAddress', supplierAddress);
-    if (data.supplierCountry) setVal('pibSupplierCountry', data.supplierCountry);
+    if (supplierCountry) setVal('pibSupplierCountry', supplierCountry);
 
     if (data.sellerName || supplierName) setVal('pibSellerName', data.sellerName || supplierName);
     if (data.sellerAddress || supplierAddress) setVal('pibSellerAddress', data.sellerAddress || supplierAddress);
-    if (data.sellerCountry || data.supplierCountry) setVal('pibSellerCountry', data.sellerCountry || data.supplierCountry);
+    if (data.sellerCountry || supplierCountry) setVal('pibSellerCountry', data.sellerCountry || supplierCountry);
 
     // Dokumen
     if (data.blNumber) setVal('pibBlNumber', data.blNumber);
