@@ -99,7 +99,15 @@ Keluarkan HANYA format JSON valid tanpa tanda markdown (tanpa \`\`\`json) dengan
     { "type": "COO", "label": "Certificate of Origin (COO)", "targetNumber": "nomor Form / COO jika ada", "required": false },
     { "type": "OTHER", "label": "Dokumen Pendukung Lainnya", "targetNumber": "", "required": false }
   ]
-}`;
+}
+
+ATURAN KHUSUS ENTITAS KEPABEANAN:
+1. PT. SINAR ASIA PACK (SINAR ASIA):
+   - Dokumen Packing List dan Invoice adalah 1 DOKUMEN YANG SAMA (CIPL / Commercial Invoice & Packing List).
+   - Nomor Packing List selalu SAMA DENGAN Nomor Invoice.
+   - Sinar Asia ada 2 kegiatan: IMPOR (PIB / BC 2.0) dan EKSPOR (PEB / BC 3.0):
+     * Jika IMPOR: Consignee (Importir / Penerima) adalah "PT. Sinar Asia Pack".
+     * Jika EKSPOR: Eksportir / Shipper adalah "PT. Sinar Asia Pack", dan Consignee (Pembeli / Penerima luar negeri) adalah "Golden Ben Printer Pte Ltd".`;
 
         const modelsToTry = [
             'gemini-3.5-flash-lite',
@@ -153,11 +161,55 @@ Keluarkan HANYA format JSON valid tanpa tanda markdown (tanpa \`\`\`json) dengan
             throw new Error(`Respon AI bukan JSON valid: ${e.message}`);
         }
 
+        // ATURAN KHUSUS PT. SINAR ASIA PACK
+        const isSinarAsiaDoc = /sinar\s*asia/i.test(parsedData.importerExporter || '') ||
+                               /sinar\s*asia/i.test(parsedData.supplierSeller || '') ||
+                               /sinar\s*asia/i.test(parsedData.consigneeBuyer || '') ||
+                               /sinar\s*asia/i.test(originalName || '');
+
+        if (isSinarAsiaDoc) {
+            console.log(`[DocSearcher] Dokumen teridentifikasi sebagai PT. SINAR ASIA PACK. Menerapkan profil khusus...`);
+            // 1. Dokumen Packing List dan Invoice adalah 1 dokumen yang sama (CIPL)
+            if (!parsedData.packingListNo || parsedData.packingListNo === 'null') {
+                parsedData.packingListNo = parsedData.invoiceNo || '';
+            }
+            if (!parsedData.invoiceNo && parsedData.packingListNo) {
+                parsedData.invoiceNo = parsedData.packingListNo;
+            }
+
+            // Update targetDocuments agar Packing List merujuk ke Invoice yang sama
+            if (Array.isArray(parsedData.targetDocuments)) {
+                parsedData.targetDocuments.forEach(td => {
+                    if (td.type === 'PACKING_LIST') {
+                        td.targetNumber = parsedData.invoiceNo || parsedData.packingListNo || '';
+                        td.label = 'Packing List (1 Dokumen CIPL bersama Invoice)';
+                    }
+                });
+            }
+
+            // 2. Transaksi Impor vs Ekspor
+            const isPeb = String(parsedData.docType || '').toUpperCase() === 'PEB' || originalName.toLowerCase().includes('peb');
+            if (isPeb) {
+                // EKSPOR: Shipper PT. Sinar Asia Pack, Consignee "Golden Ben Printer Pte Ltd"
+                if (!parsedData.importerExporter) parsedData.importerExporter = 'PT. Sinar Asia Pack';
+                if (!parsedData.consigneeBuyer || /tidak tertera|null/i.test(parsedData.consigneeBuyer)) {
+                    parsedData.consigneeBuyer = 'Golden Ben Printer Pte Ltd';
+                }
+            } else {
+                // IMPOR: Consignee "PT. Sinar Asia Pack"
+                if (!parsedData.consigneeBuyer || /tidak tertera|null/i.test(parsedData.consigneeBuyer)) {
+                    parsedData.consigneeBuyer = 'PT. Sinar Asia Pack';
+                }
+                if (!parsedData.importerExporter) parsedData.importerExporter = 'PT. Sinar Asia Pack';
+            }
+        }
+
         console.log(`[DocSearcher] Ekstraksi AI berhasil:`, {
             docType: parsedData.docType,
             invoiceNo: parsedData.invoiceNo,
             blAwbNo: parsedData.blAwbNo,
-            importerExporter: parsedData.importerExporter
+            importerExporter: parsedData.importerExporter,
+            consigneeBuyer: parsedData.consigneeBuyer
         });
 
         return {
@@ -171,17 +223,21 @@ Keluarkan HANYA format JSON valid tanpa tanda markdown (tanpa \`\`\`json) dengan
         // Heuristic fallback from filename
         const isPeb = originalName.toLowerCase().includes('peb');
         const numMatch = originalName.match(/(\d{6,})/);
+        const isSinarAsiaFallback = /sinar\s*asia/i.test(originalName);
+
         return {
             success: true,
             isAIFallback: true,
-            warning: `AI offline/kuota habis: ${err.message}. Menggunakan parameter default.`,
+            warning: isSinarAsiaFallback
+                ? `AI offline. Menerapkan profil khusus PT. Sinar Asia Pack.`
+                : `AI offline/kuota habis: ${err.message}. Menggunakan parameter default.`,
             data: {
                 docType: isPeb ? 'PEB' : 'PIB',
                 pibPebNo: numMatch ? numMatch[1] : '',
                 pibPebDate: new Date().toISOString().split('T')[0],
-                importerExporter: '',
+                importerExporter: isSinarAsiaFallback ? 'PT. Sinar Asia Pack' : '',
                 supplierSeller: '',
-                consigneeBuyer: '',
+                consigneeBuyer: isSinarAsiaFallback ? (isPeb ? 'Golden Ben Printer Pte Ltd' : 'PT. Sinar Asia Pack') : '',
                 invoiceNo: '',
                 invoiceDate: '',
                 blAwbNo: '',
@@ -192,7 +248,7 @@ Keluarkan HANYA format JSON valid tanpa tanda markdown (tanpa \`\`\`json) dengan
                 containerNo: '',
                 targetDocuments: [
                     { type: 'INVOICE', label: 'Commercial Invoice', targetNumber: '', required: true },
-                    { type: 'PACKING_LIST', label: 'Packing List', targetNumber: '', required: true },
+                    { type: 'PACKING_LIST', label: isSinarAsiaFallback ? 'Packing List (1 Dokumen CIPL bersama Invoice)' : 'Packing List', targetNumber: '', required: true },
                     { type: 'BILL_OF_LADING', label: 'Bill of Lading / AWB', targetNumber: '', required: true },
                     { type: 'COO', label: 'Certificate of Origin (COO)', targetNumber: '', required: false },
                     { type: 'OTHER', label: 'Dokumen Pendukung Lainnya', targetNumber: '', required: false }
@@ -392,23 +448,101 @@ async function refineSearchResultsWithBLCrossCheck(result, searchParams) {
                 catObj.statusIcon = catObj.status === 'FOUND' ? 'green' : 'yellow';
             }
 
-            // If PACKING_LIST is still missing or has lower confidence, clone the verified INVOICE (CIPL)
-            const invSelected = result.summary.INVOICE && result.summary.INVOICE.selected;
+            // ATURAN KHUSUS CIPL & PT. SINAR ASIA PACK (Invoice & Packing List adalah 1 DOKUMEN YANG SAMA)
+            const isSinarAsiaSearch = /sinar\s*asia/i.test(searchParams.companyName || '') ||
+                                      /sinar\s*asia/i.test(searchParams.supplierName || '') ||
+                                      /sinar\s*asia/i.test(searchParams.consigneeName || '') ||
+                                      /golden\s*ben/i.test(searchParams.consigneeName || '');
+
+            const invObj = result.summary.INVOICE;
             const plObj = result.summary.PACKING_LIST;
-            if (invSelected && invSelected.confidence >= 95 && plObj && (!plObj.selected || plObj.selected.confidence < 95)) {
-                const plCandidate = {
-                    ...invSelected,
-                    category: 'PACKING_LIST',
-                    confidence: 99,
-                    matchReason: `CIPL / Dokumen Terpadu Invoice & Packing List (${blFoundInvoice || targetInv})`
-                };
-                if (!plObj.candidates) plObj.candidates = [];
-                plObj.candidates.unshift(plCandidate);
-                plObj.selected = plCandidate;
-                plObj.count = plObj.candidates.length;
-                plObj.status = 'FOUND';
-                plObj.statusBadge = 'Found';
-                plObj.statusIcon = 'green';
+
+            if (isSinarAsiaSearch && invObj && plObj) {
+                console.log(`[DocSearcher] Menerapkan aturan CIPL terpadu khusus Sinar Asia (Invoice & Packing List adalah 1 dokumen)...`);
+                const invTop = invObj.selected || (invObj.candidates && invObj.candidates[0]);
+                const plTop = plObj.selected || (plObj.candidates && plObj.candidates[0]);
+
+                const invConf = invTop ? Number(invTop.confidence || 0) : 0;
+                const plConf = plTop ? Number(plTop.confidence || 0) : 0;
+
+                // Tentukan berkas terbaik
+                let bestDoc = null;
+                if (plConf >= invConf && plTop) {
+                    bestDoc = plTop;
+                } else if (invTop) {
+                    bestDoc = invTop;
+                }
+
+                if (bestDoc) {
+                    const unifiedConfidence = Math.max(bestDoc.confidence, 99);
+                    const unifiedReason = `Sinar Asia CIPL: Dokumen Invoice & Packing List adalah 1 berkas terpadu (${bestDoc.fileName})`;
+
+                    // Sinkronkan ke INVOICE & singkirkan false-positive perusahaan lain (misal Scanjet)
+                    const invCandidate = {
+                        ...bestDoc,
+                        category: 'INVOICE',
+                        confidence: unifiedConfidence,
+                        matchReason: unifiedReason
+                    };
+                    if (!invObj.candidates) invObj.candidates = [];
+                    invObj.candidates = invObj.candidates.filter(c => !/scanjet|valeo/i.test(c.fileName || ''));
+                    invObj.candidates.unshift(invCandidate);
+                    invObj.selected = invCandidate;
+                    invObj.count = invObj.candidates.length;
+                    invObj.status = 'FOUND';
+                    invObj.statusBadge = 'Found';
+                    invObj.statusIcon = 'green';
+
+                    // Sinkronkan ke PACKING_LIST
+                    const plCandidate = {
+                        ...bestDoc,
+                        category: 'PACKING_LIST',
+                        confidence: unifiedConfidence,
+                        matchReason: unifiedReason
+                    };
+                    if (!plObj.candidates) plObj.candidates = [];
+                    plObj.candidates = plObj.candidates.filter(c => !/scanjet|valeo/i.test(c.fileName || ''));
+                    plObj.candidates.unshift(plCandidate);
+                    plObj.selected = plCandidate;
+                    plObj.count = plObj.candidates.length;
+                    plObj.status = 'FOUND';
+                    plObj.statusBadge = 'Found';
+                    plObj.statusIcon = 'green';
+                }
+            } else {
+                // CIPL Fallback Umum (Dua Arah: INVOICE <-> PACKING_LIST)
+                const invSelected = invObj && invObj.selected;
+                const plSelected = plObj && plObj.selected;
+
+                if (invSelected && invSelected.confidence >= 95 && plObj && (!plObj.selected || plObj.selected.confidence < 95)) {
+                    const plCandidate = {
+                        ...invSelected,
+                        category: 'PACKING_LIST',
+                        confidence: 99,
+                        matchReason: `CIPL / Dokumen Terpadu Invoice & Packing List (${blFoundInvoice || targetInv})`
+                    };
+                    if (!plObj.candidates) plObj.candidates = [];
+                    plObj.candidates.unshift(plCandidate);
+                    plObj.selected = plCandidate;
+                    plObj.count = plObj.candidates.length;
+                    plObj.status = 'FOUND';
+                    plObj.statusBadge = 'Found';
+                    plObj.statusIcon = 'green';
+                } else if (plSelected && plSelected.confidence >= 95 && invObj && (!invObj.selected || invObj.selected.confidence < 95)) {
+                    const invCandidate = {
+                        ...plSelected,
+                        category: 'INVOICE',
+                        confidence: 99,
+                        matchReason: `CIPL / Dokumen Terpadu Invoice & Packing List (${blFoundInvoice || targetInv})`
+                    };
+                    if (!invObj.candidates) invObj.candidates = [];
+                    invObj.candidates.unshift(invCandidate);
+                    invObj.selected = invCandidate;
+                    invObj.count = invObj.candidates.length;
+                    invObj.status = 'FOUND';
+                    invObj.statusBadge = 'Found';
+                    invObj.statusIcon = 'green';
+                }
             }
         }
     } catch (refineErr) {

@@ -675,6 +675,24 @@ function loadDraftData(data, shouldSave = true) {
         (data.safeCheck?.matchedIdentifiers && data.safeCheck.matchedIdentifiers.some(m => /sinar\s*asia/i.test(m))) ||
         (data.safeCheck?.summary && /sinar\s*asia/i.test(data.safeCheck.summary))
     );
+
+    if (isSinarAsia) {
+        // ATURAN EKSPOR SINAR ASIA: Consignee adalah "Golden Ben Printer Pte Ltd"
+        if (!data.consigneeName || /tidak tertera|null/i.test(data.consigneeName)) {
+            data.consigneeName = 'Golden Ben Printer Pte Ltd';
+            setVal('consigneeName', 'Golden Ben Printer Pte Ltd');
+        }
+        if (!data.consigneeCountry || data.consigneeCountry === '--' || data.consigneeCountry === 'ID') {
+            setVal('consigneeCountry', 'SG');
+            data.consigneeCountry = 'SG';
+        }
+        // ATURAN DOKUMEN: Packing List & Invoice adalah 1 dokumen yang sama (CIPL)
+        if (!data.packingListNumber || data.packingListNumber === 'null' || data.packingListNumber === '') {
+            data.packingListNumber = data.invoiceNumber || '';
+            setVal('packingListNumber', data.invoiceNumber || '');
+        }
+    }
+
     if (isSinarAsia && Array.isArray(data.items) && data.items.length > 0) {
         const hasMissing = data.items.some(i => !i.beratBersih || !i.beratKotor || i.beratBersih === 'null' || i.beratKotor === 'null');
         if (hasMissing) {

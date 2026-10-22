@@ -55,6 +55,7 @@
     const paramBlDate          = document.getElementById('paramBlDate');
     const paramCompany         = document.getElementById('paramCompany');
     const paramSupplier        = document.getElementById('paramSupplier');
+    const paramConsignee       = document.getElementById('paramConsignee');
     const paramVessel          = document.getElementById('paramVessel');
     const paramContainer       = document.getElementById('paramContainer');
     const paramCustomQuery     = document.getElementById('paramCustomQuery');
@@ -213,14 +214,45 @@
         if (paramBlDate && data.blAwbDate) paramBlDate.value = data.blAwbDate;
         if (paramCompany) paramCompany.value = data.importerExporter || '';
         if (paramSupplier) paramSupplier.value = data.supplierSeller || '';
+        if (paramConsignee) paramConsignee.value = data.consigneeBuyer || '';
         if (paramVessel) paramVessel.value = data.vesselVoyage || '';
         if (paramContainer) paramContainer.value = data.containerNo || '';
 
+        // Deteksi & Autofill Khusus PT. Sinar Asia Pack
+        const isSinarAsia = /sinar\s*asia/i.test(data.importerExporter || '') ||
+                            /sinar\s*asia/i.test(data.supplierSeller || '') ||
+                            /sinar\s*asia/i.test(data.consigneeBuyer || '');
+        if (isSinarAsia) {
+            const isPeb = (data.docType || '').toUpperCase() === 'PEB';
+            if (isPeb) {
+                if (paramCompany && !paramCompany.value) paramCompany.value = 'PT. Sinar Asia Pack';
+                if (paramConsignee && !paramConsignee.value) paramConsignee.value = 'Golden Ben Printer Pte Ltd';
+            } else {
+                if (paramConsignee && !paramConsignee.value) paramConsignee.value = 'PT. Sinar Asia Pack';
+                if (paramCompany && !paramCompany.value) paramCompany.value = 'PT. Sinar Asia Pack';
+            }
+            if (targetValPacking) targetValPacking.textContent = data.invoiceNo ? `Sesuai Invoice (${data.invoiceNo}) - 1 Dokumen CIPL` : '1 Dokumen CIPL';
+        } else {
+            if (targetValPacking) targetValPacking.textContent = data.packingListNo ? `No: ${data.packingListNo}` : (data.invoiceNo ? `Sesuai Invoice (${data.invoiceNo})` : 'Tidak tertera');
+        }
+
         // Update target checklist values
         if (targetValInvoice) targetValInvoice.textContent = data.invoiceNo ? `No: ${data.invoiceNo}` : 'Tidak tertera';
-        if (targetValPacking) targetValPacking.textContent = data.packingListNo ? `No: ${data.packingListNo}` : (data.invoiceNo ? `Sesuai Invoice (${data.invoiceNo})` : 'Tidak tertera');
         if (targetValBl) targetValBl.textContent = data.blAwbNo ? `No: ${data.blAwbNo}` : 'Tidak tertera';
         if (targetValCoo) targetValCoo.textContent = 'Berdasarkan asal pengiriman';
+    }
+
+    if (paramInvoiceNo) {
+        paramInvoiceNo.addEventListener('input', () => {
+            const isSinarAsia = /sinar\s*asia/i.test(paramCompany?.value || '') ||
+                                /sinar\s*asia/i.test(paramConsignee?.value || '') ||
+                                /golden\s*ben/i.test(paramConsignee?.value || '');
+            if (isSinarAsia && targetValPacking) {
+                targetValPacking.textContent = paramInvoiceNo.value.trim()
+                    ? `Sesuai Invoice (${paramInvoiceNo.value.trim()}) - 1 Dokumen CIPL`
+                    : '1 Dokumen CIPL';
+            }
+        });
     }
 
     // --- Search in Outlook Engine ---
@@ -245,7 +277,7 @@
         const pibPebNo     = paramPibNo ? paramPibNo.value.trim() : '';
         const companyName  = paramCompany ? paramCompany.value.trim() : '';
         const supplierName = paramSupplier ? paramSupplier.value.trim() : '';
-        const consigneeName= (extractedDocData && extractedDocData.consigneeBuyer) ? extractedDocData.consigneeBuyer.trim() : '';
+        const consigneeName= paramConsignee ? paramConsignee.value.trim() : ((extractedDocData && extractedDocData.consigneeBuyer) ? extractedDocData.consigneeBuyer.trim() : '');
         const vesselVoyage = paramVessel ? paramVessel.value.trim() : '';
         const containerNo  = paramContainer ? paramContainer.value.trim() : '';
         const customQuery  = paramCustomQuery ? paramCustomQuery.value.trim() : '';

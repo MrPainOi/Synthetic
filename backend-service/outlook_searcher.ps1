@@ -243,7 +243,7 @@ try {
         'PT', 'CV', 'LTD', 'PTE', 'CORP', 'CO', 'INC', 'TBK', 'THE', 'AND', 'DAN',
         'INDONESIA', 'SINGAPORE', 'BATAM', 'JAKARTA', 'SURABAYA', 'KEPULAUAN', 'RIAU',
         'SHIPPING', 'LOGISTICS', 'FREIGHT', 'FORWARDING', 'EXPRESS', 'TECHNOLOGIES',
-        'INTERNATIONAL', 'GLOBAL', 'ASIA', 'LOT', 'KAWASAN', 'INDUSTRI', 'PARK',
+        'INTERNATIONAL', 'GLOBAL', 'LOT', 'KAWASAN', 'INDUSTRI', 'PARK',
         'SEKUPANG', 'BATU', 'AMPAR', 'FIRST', 'CITY', 'KOMPLEK', 'BLOK', 'TELUK', 'TERING',
         'KOTA', 'INDUSTRIAL', 'CREATIVE', 'FOOD', 'INDUSTRIES', 'HOLDINGS'
     )
@@ -278,6 +278,18 @@ try {
     Extract-CompanyTokens $companyName
     Extract-CompanyTokens $supplierName
     Extract-CompanyTokens $consigneeName
+
+    # Profil Khusus: PT. Sinar Asia Pack & Golden Ben Printer Pte Ltd
+    $isSinarAsia = ($companyName -match 'Sinar\s*Asia' -or $supplierName -match 'Sinar\s*Asia' -or $consigneeName -match 'Sinar\s*Asia' -or $consigneeName -match 'Golden\s*Ben')
+    if ($isSinarAsia) {
+        Add-TermDirect "Sinar Asia"
+        Add-TermDirect "Sinar Asia Pack"
+        Add-TermDirect "Golden Ben"
+        Add-TermDirect "Golden Ben Printer"
+        if ($consigneeName -notmatch 'Golden\s*Ben' -and $companyName -match 'Sinar\s*Asia') {
+            Add-TermDirect "Golden Ben"
+        }
+    }
 
     # If no specific term provided, return error
     if ($searchTerms.Count -eq 0) {
@@ -876,21 +888,75 @@ try {
     }
 
     # Cross-Category Intelligence:
-    # 1. If INVOICE has high confidence (CIPL or >= 95%), ensure PACKING_LIST has it if PACKING_LIST is empty or has lower confidence
-    if ($categories['INVOICE'].Count -gt 0) {
-        $topInv = @($categories['INVOICE'] | Sort-Object -Property { [int]$_['confidence'] }, { [int]$_['fileSize'] } -Descending)[0]
-        $topPLConf = 0
-        if ($categories['PACKING_LIST'].Count -gt 0) {
-            $topPL = @($categories['PACKING_LIST'] | Sort-Object -Property { [int]$_['confidence'] } -Descending)[0]
-            $topPLConf = [int]$topPL['confidence']
+    # 1. CIPL Bidirectional Synchronization (Khususnya PT. Sinar Asia Pack: Invoice & Packing List adalah 1 DOKUMEN YANG SAMA)
+    $hasInv = $categories['INVOICE'].Count -gt 0
+    $hasPL = $categories['PACKING_LIST'].Count -gt 0
+    $topInv = if ($hasInv) { @($categories['INVOICE'] | Sort-Object -Property { [int]$_['confidence'] }, { [int]$_['fileSize'] } -Descending)[0] } else { $null }
+    $topPL = if ($hasPL) { @($categories['PACKING_LIST'] | Sort-Object -Property { [int]$_['confidence'] }, { [int]$_['fileSize'] } -Descending)[0] } else { $null }
+
+    $topInvConf = if ($topInv) { [int]$topInv['confidence'] } else { 0 }
+    $topPLConf = if ($topPL) { [int]$topPL['confidence'] } else { 0 }
+
+    if ($isSinarAsia) {
+        # KHUSUS SINAR ASIA: 1 DOKUMEN YANG SAMA UNTUK INVOICE DAN PACKING LIST
+        # Singkirkan berkas dari perusahaan lain (misal Scanjet) jika ada berkas Sinar Asia
+        $sinarDoc = $null
+        if ($topPLConf -ge $topInvConf -and $topPL) {
+            $sinarDoc = $topPL
+        } elseif ($topInv) {
+            $sinarDoc = $topInv
         }
-        if ([int]$topInv['confidence'] -ge 95 -and ($categories['PACKING_LIST'].Count -eq 0 -or $topPLConf -lt 95)) {
+
+        if ($sinarDoc -and [int]$sinarDoc['confidence'] -ge 70) {
+            $sharedConf = [Math]::Max([int]$sinarDoc['confidence'], 98)
+            $sharedReason = "Sinar Asia CIPL: Dokumen Invoice & Packing List adalah 1 berkas terpadu"
+
+            # Salin berkas terpadu ke INVOICE & bersihkan kandidat dari perusahaan lain
+            $filteredInvList = [System.Collections.Generic.List[hashtable]]::new()
+            $invDoc = @{}
+            foreach ($k in $sinarDoc.Keys) { $invDoc[$k] = $sinarDoc[$k] }
+            $invDoc.category = 'INVOICE'
+            $invDoc.confidence = $sharedConf
+            $invDoc.matchReason = $sharedReason
+            $filteredInvList.Add($invDoc)
+            foreach ($cand in $categories['INVOICE']) {
+                if ($cand.fileName -notmatch 'scanjet|valeo' -and $cand.fileName -ne $sinarDoc.fileName) {
+                    $filteredInvList.Add($cand)
+                }
+            }
+            $categories['INVOICE'] = $filteredInvList
+
+            # Salin berkas terpadu ke PACKING_LIST
+            $filteredPLList = [System.Collections.Generic.List[hashtable]]::new()
+            $plDoc = @{}
+            foreach ($k in $sinarDoc.Keys) { $plDoc[$k] = $sinarDoc[$k] }
+            $plDoc.category = 'PACKING_LIST'
+            $plDoc.confidence = $sharedConf
+            $plDoc.matchReason = $sharedReason
+            $filteredPLList.Add($plDoc)
+            foreach ($cand in $categories['PACKING_LIST']) {
+                if ($cand.fileName -notmatch 'scanjet|valeo' -and $cand.fileName -ne $sinarDoc.fileName) {
+                    $filteredPLList.Add($cand)
+                }
+            }
+            $categories['PACKING_LIST'] = $filteredPLList
+        }
+    } else {
+        # Aturan CIPL Umum (Dua Arah)
+        if ($topInvConf -ge 95 -and ($categories['PACKING_LIST'].Count -eq 0 -or $topPLConf -lt 95)) {
             $plDoc = @{}
             foreach ($k in $topInv.Keys) { $plDoc[$k] = $topInv[$k] }
             $plDoc.category = 'PACKING_LIST'
-            $plDoc.confidence = [Math]::Max(98, [int]$topInv.confidence - 1)
+            $plDoc.confidence = [Math]::Max(98, $topInvConf - 1)
             $plDoc.matchReason = "CIPL / Dokumen Terpadu Invoice & Packing List (Nomor $invoiceNo)"
             $categories['PACKING_LIST'].Add($plDoc)
+        } elseif ($topPLConf -ge 95 -and ($categories['INVOICE'].Count -eq 0 -or $topInvConf -lt 95)) {
+            $invDoc = @{}
+            foreach ($k in $topPL.Keys) { $invDoc[$k] = $topPL[$k] }
+            $invDoc.category = 'INVOICE'
+            $invDoc.confidence = [Math]::Max(98, $topPLConf - 1)
+            $invDoc.matchReason = "CIPL / Dokumen Terpadu Invoice & Packing List (Nomor $invoiceNo)"
+            $categories['INVOICE'].Add($invDoc)
         }
     }
 

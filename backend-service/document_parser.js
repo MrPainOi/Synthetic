@@ -167,6 +167,12 @@ PENTING:
   "beratKotor": "500.00 KGS" (1000 / 2 = 500).
   Dan jika 'totalNetWeightKGM' tidak tercantum di dokumen Sinar Asia, isi nilainya sama dengan 'totalGrossWeightKGM'.
   Untuk dokumen eksportir lain (selain Sinar Asia), WAJIB ekstrak berat kotor dan bersih persis dari dokumen aslinya tanpa dibagi.
+- ATURAN DOKUMEN & ENTITAS KHUSUS PT. SINAR ASIA PACK:
+  * Dokumen Packing List dan Invoice adalah 1 DOKUMEN YANG SAMA (CIPL / Commercial Invoice & Packing List).
+  * Nomor Packing List selalu SAMA DENGAN Nomor Invoice.
+  * Sinar Asia ada 2 kegiatan: IMPOR dan EKSPOR:
+    - Jika IMPOR (Pemberitahuan Impor Barang): Consignee (Importir / Penerima) adalah "PT. Sinar Asia Pack".
+    - Jika EKSPOR (Pemberitahuan Ekspor Barang): Shipper / Eksportir adalah "PT. Sinar Asia Pack", dan Consignee (Pembeli / Penerima luar negeri) adalah "Golden Ben Printer Pte Ltd".
 - JANGAN membulatkan angka. Jika ada dokumen yang sama sekali tidak berhubungan, tetap isi data shipment utama yang sah dan laporkan secara tegas di safeCheck.`;
 
         let result;
@@ -325,6 +331,24 @@ PENTING:
                     it.kemasan = palletStr;
                 });
                 parsedData.totalKemasan = `${totalPallets} PALLETS`;
+            }
+
+            // Aturan 1 Dokumen CIPL & Consignee Sinar Asia:
+            if (!parsedData.packingListNumber || parsedData.packingListNumber === 'null') {
+                parsedData.packingListNumber = parsedData.invoiceNumber || '';
+            }
+            const isExport = /ekspor|export|peb|bc\s*3\.0/i.test(parsedData.documentType || '') ||
+                             /golden\s*ben/i.test(parsedData.consigneeName || '') ||
+                             /sinar\s*asia/i.test(parsedData.shipperName || '');
+            if (isExport) {
+                if (!parsedData.shipperName) parsedData.shipperName = 'PT. SINAR ASIA PACK';
+                if (!parsedData.consigneeName || /tidak tertera|null/i.test(parsedData.consigneeName)) {
+                    parsedData.consigneeName = 'Golden Ben Printer Pte Ltd';
+                }
+            } else {
+                if (!parsedData.consigneeName || /tidak tertera|null/i.test(parsedData.consigneeName)) {
+                    parsedData.consigneeName = 'PT. SINAR ASIA PACK';
+                }
             }
         }
 
