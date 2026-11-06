@@ -1,0 +1,1257 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <title>CEISA 4.0 - Print Hub (Pusat Cetak Mandiri & Mobile)</title>
+
+    <script src="theme-init.js"></script>
+
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="icons/icon-16.png">
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="shortcut icon" href="favicon.png">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="dashboard.css">
+
+    <style>
+        /* Scoped Print Hub Styles */
+        .ph-container {
+            padding: 16px 20px 48px;
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .ph-grid-layout {
+            display: grid;
+            grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+            gap: 20px;
+            align-items: start;
+        }
+
+        @media (max-width: 1024px) {
+            .ph-grid-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .ph-card {
+            background: var(--surface-card, #ffffff);
+            border: 1px solid var(--border-color, #e2e8f0);
+            border-radius: var(--radius-lg, 14px);
+            padding: 20px;
+            box-shadow: var(--shadow-card, 0 4px 12px -2px rgba(15, 23, 42, 0.05));
+            margin-bottom: 20px;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .ph-card:hover {
+            border-color: var(--border-strong, #cbd5e1);
+        }
+
+        .ph-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border-subtle, #f1f5f9);
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .ph-card-title {
+            font-size: 14.5px;
+            font-weight: 700;
+            color: var(--text-primary, #0f172a);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            letter-spacing: -0.01em;
+        }
+
+        .ph-card-title svg {
+            color: var(--ceisa-blue, #0284c7);
+        }
+
+        .ph-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11.5px;
+            font-weight: 600;
+            padding: 3px 9px;
+            border-radius: 999px;
+            background: rgba(2, 132, 199, 0.08);
+            color: var(--ceisa-blue, #0284c7);
+            border: 1px solid rgba(2, 132, 199, 0.2);
+            font-family: var(--font-mono);
+        }
+
+        .ph-chip-green {
+            background: rgba(16, 185, 129, 0.1);
+            color: #059669;
+            border-color: rgba(16, 185, 129, 0.3);
+        }
+
+        .ph-chip-orange {
+            background: rgba(245, 158, 11, 0.1);
+            color: #d97706;
+            border-color: rgba(245, 158, 11, 0.3);
+        }
+
+        .ph-chip-purple {
+            background: rgba(147, 51, 234, 0.1);
+            color: #9333ea;
+            border-color: rgba(147, 51, 234, 0.3);
+        }
+
+        /* Pulse dot animation */
+        .ph-pulse-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #10b981;
+            box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+            animation: phPulse 2s infinite;
+        }
+
+        @keyframes phPulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        /* Printer Selection Box */
+        .ph-printer-box {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .ph-select {
+            width: 100%;
+            padding: 10px 14px;
+            font-size: 13.5px;
+            font-weight: 600;
+            color: var(--text-primary, #0f172a);
+            background: var(--bg-primary, #ffffff);
+            border: 1.5px solid var(--border-color, #cbd5e1);
+            border-radius: var(--radius-md, 10px);
+            outline: none;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 14px center;
+            background-size: 14px;
+        }
+
+        .ph-select:focus {
+            border-color: var(--ceisa-blue, #0284c7);
+            box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+        }
+
+        .ph-printer-meta-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            font-size: 12px;
+            color: var(--text-muted, #64748b);
+        }
+
+        .ph-dot-matrix-banner {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 10px 14px;
+            border-radius: var(--radius-md, 10px);
+            background: rgba(245, 158, 11, 0.08);
+            border: 1px solid rgba(245, 158, 11, 0.25);
+            color: var(--text-primary, #0f172a);
+            font-size: 12.5px;
+            line-height: 1.45;
+            margin-top: 8px;
+        }
+
+        /* Tabs Nav */
+        .ph-tabs-nav {
+            display: flex;
+            background: var(--bg-secondary, #f1f5f9);
+            padding: 4px;
+            border-radius: var(--radius-md, 10px);
+            gap: 4px;
+            margin-bottom: 18px;
+            border: 1px solid var(--border-subtle, #e2e8f0);
+            overflow-x: auto;
+        }
+
+        .ph-tab-btn {
+            flex: 1;
+            padding: 8px 14px;
+            font-size: 12.5px;
+            font-weight: 600;
+            color: var(--text-muted, #64748b);
+            background: transparent;
+            border: none;
+            border-radius: var(--radius-sm, 6px);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: all 0.15s ease;
+            white-space: nowrap;
+        }
+
+        .ph-tab-btn:hover {
+            color: var(--text-primary, #0f172a);
+            background: rgba(255, 255, 255, 0.5);
+        }
+
+        .ph-tab-btn.active {
+            background: var(--surface-card, #ffffff);
+            color: var(--ceisa-blue, #0284c7);
+            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+        }
+
+        /* Dropzone */
+        .ph-dropzone {
+            border: 2px dashed var(--border-color, #cbd5e1);
+            border-radius: var(--radius-lg, 14px);
+            padding: 28px 16px;
+            text-align: center;
+            background: var(--bg-secondary, #f8fafc);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .ph-dropzone:hover, .ph-dropzone.dragover {
+            border-color: var(--ceisa-blue, #0284c7);
+            background: rgba(2, 132, 199, 0.04);
+            transform: scale(0.995);
+        }
+
+        .ph-dropzone-icon {
+            font-size: 32px;
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        .ph-dropzone-title {
+            font-size: 13.5px;
+            font-weight: 700;
+            color: var(--text-primary, #0f172a);
+            margin-bottom: 4px;
+        }
+
+        .ph-dropzone-sub {
+            font-size: 12px;
+            color: var(--text-muted, #64748b);
+        }
+
+        /* File preview */
+        .ph-file-preview {
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--bg-secondary, #f8fafc);
+            border: 1px solid var(--border-color, #cbd5e1);
+            border-radius: var(--radius-md, 10px);
+            padding: 12px 14px;
+            margin-top: 12px;
+        }
+
+        .ph-file-preview.active {
+            display: flex;
+        }
+
+        .ph-file-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 0;
+        }
+
+        .ph-file-name {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-primary, #0f172a);
+            word-break: break-all;
+        }
+
+        .ph-file-size {
+            font-size: 11px;
+            color: var(--text-muted, #64748b);
+            font-family: var(--font-mono);
+        }
+
+        .ph-btn-remove {
+            background: transparent;
+            border: none;
+            color: var(--text-muted, #94a3b8);
+            font-size: 16px;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: all 0.15s ease;
+        }
+
+        .ph-btn-remove:hover {
+            color: #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        /* Options Grid */
+        .ph-options-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+            margin-top: 14px;
+        }
+
+        @media (max-width: 600px) {
+            .ph-options-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .ph-form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .ph-label {
+            font-size: 11.5px;
+            font-weight: 600;
+            color: var(--text-muted, #64748b);
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .ph-input {
+            padding: 8px 12px;
+            font-size: 12.5px;
+            font-weight: 600;
+            color: var(--text-primary, #0f172a);
+            background: var(--bg-primary, #ffffff);
+            border: 1px solid var(--border-color, #cbd5e1);
+            border-radius: var(--radius-sm, 6px);
+            outline: none;
+            transition: border-color 0.15s ease;
+        }
+
+        .ph-input:focus {
+            border-color: var(--ceisa-blue, #0284c7);
+            box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.12);
+        }
+
+        /* Submit Button */
+        .ph-btn-primary {
+            width: 100%;
+            padding: 12px 18px;
+            background: linear-gradient(135deg, #0284c7, #0369a1);
+            color: #ffffff;
+            border: none;
+            border-radius: var(--radius-md, 10px);
+            font-size: 13.5px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 16px;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25);
+        }
+
+        .ph-btn-primary:hover:not(:disabled) {
+            background: linear-gradient(135deg, #0369a1, #075985);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(2, 132, 199, 0.35);
+        }
+
+        .ph-btn-primary:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* Textarea & Templates */
+        .ph-textarea {
+            width: 100%;
+            height: 180px;
+            padding: 12px;
+            font-family: var(--font-mono);
+            font-size: 12px;
+            line-height: 1.45;
+            color: var(--text-primary, #0f172a);
+            background: var(--bg-primary, #ffffff);
+            border: 1px solid var(--border-color, #cbd5e1);
+            border-radius: var(--radius-md, 10px);
+            outline: none;
+            resize: vertical;
+            white-space: pre;
+            tab-size: 4;
+            box-sizing: border-box;
+        }
+
+        .ph-textarea:focus {
+            border-color: var(--ceisa-blue, #0284c7);
+            box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.12);
+        }
+
+        .ph-templates-bar {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin: 10px 0;
+        }
+
+        .ph-template-chip {
+            padding: 4px 10px;
+            font-size: 11.5px;
+            font-weight: 600;
+            background: var(--bg-secondary, #f1f5f9);
+            border: 1px solid var(--border-color, #cbd5e1);
+            border-radius: 999px;
+            color: var(--text-primary, #0f172a);
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .ph-template-chip:hover {
+            border-color: var(--ceisa-blue, #0284c7);
+            color: var(--ceisa-blue, #0284c7);
+            background: rgba(2, 132, 199, 0.06);
+        }
+
+        /* Toggle Switches */
+        .ph-toggle-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 14px;
+            background: var(--bg-secondary, #f8fafc);
+            border: 1px solid var(--border-subtle, #e2e8f0);
+            border-radius: var(--radius-md, 10px);
+            margin-top: 8px;
+            gap: 12px;
+        }
+
+        .ph-toggle-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .ph-toggle-title {
+            font-size: 12.5px;
+            font-weight: 700;
+            color: var(--text-primary, #0f172a);
+        }
+
+        .ph-toggle-desc {
+            font-size: 11.5px;
+            color: var(--text-muted, #64748b);
+        }
+
+        /* Switch UI */
+        .ph-switch {
+            position: relative;
+            display: inline-block;
+            width: 42px;
+            height: 24px;
+            flex-shrink: 0;
+        }
+
+        .ph-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .ph-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #cbd5e1;
+            transition: .2s;
+            border-radius: 24px;
+        }
+
+        .ph-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .2s;
+            border-radius: 50%;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+
+        input:checked + .ph-slider {
+            background-color: var(--ceisa-blue, #0284c7);
+        }
+
+        input:checked + .ph-slider:before {
+            transform: translateX(18px);
+        }
+
+        /* Job & Queue Cards */
+        .ph-job-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 480px;
+            overflow-y: auto;
+        }
+
+        .ph-job-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 14px;
+            background: var(--bg-secondary, #f8fafc);
+            border: 1px solid var(--border-subtle, #e2e8f0);
+            border-radius: var(--radius-md, 10px);
+            font-size: 12px;
+            gap: 10px;
+        }
+
+        .ph-job-title {
+            font-weight: 700;
+            color: var(--text-primary, #0f172a);
+            display: block;
+            margin-bottom: 2px;
+            word-break: break-all;
+        }
+
+        .ph-job-sub {
+            font-family: var(--font-mono);
+            font-size: 11px;
+            color: var(--text-muted, #64748b);
+        }
+
+        .ph-badge-status {
+            font-size: 11px;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 6px;
+            white-space: nowrap;
+        }
+
+        .ph-badge-pending {
+            background: rgba(245, 158, 11, 0.15);
+            color: #d97706;
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+
+        .ph-badge-success {
+            background: rgba(16, 185, 129, 0.15);
+            color: #059669;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .ph-badge-error {
+            background: rgba(239, 68, 68, 0.15);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        /* Mobile QR Banner */
+        .ph-qr-card {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            background: linear-gradient(135deg, rgba(2, 132, 199, 0.08), rgba(245, 158, 11, 0.08));
+            border: 1px solid rgba(2, 132, 199, 0.2);
+            border-radius: var(--radius-lg, 14px);
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+
+        .ph-qr-thumb {
+            width: 88px;
+            height: 88px;
+            background: #ffffff;
+            padding: 4px;
+            border-radius: var(--radius-md, 10px);
+            border: 1px solid var(--border-color, #cbd5e1);
+            cursor: pointer;
+            transition: transform 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .ph-qr-thumb:hover {
+            transform: scale(1.04);
+        }
+
+        .ph-qr-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .ph-qr-title {
+            font-size: 13.5px;
+            font-weight: 700;
+            color: var(--text-primary, #0f172a);
+            margin-bottom: 4px;
+        }
+
+        .ph-qr-sub {
+            font-size: 12px;
+            color: var(--text-muted, #64748b);
+            line-height: 1.4;
+            margin-bottom: 8px;
+        }
+
+        .ph-qr-link-box {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-family: var(--font-mono);
+            font-size: 11.5px;
+            padding: 4px 10px;
+            border-radius: 6px;
+            background: var(--bg-primary, #ffffff);
+            border: 1px solid var(--border-color, #cbd5e1);
+            color: var(--ceisa-blue, #0284c7);
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        /* Modal QR */
+        .ph-modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(15, 23, 42, 0.65);
+            backdrop-filter: blur(4px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            padding: 20px;
+        }
+
+        .ph-modal-overlay.active {
+            display: flex;
+        }
+
+        .ph-modal-card {
+            background: var(--surface-card, #ffffff);
+            border: 1px solid var(--border-color, #cbd5e1);
+            border-radius: var(--radius-xl, 18px);
+            padding: 24px;
+            width: 100%;
+            max-width: 380px;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            animation: phPop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes phPop {
+            from { transform: scale(0.92); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .ph-qr-large {
+            width: 240px;
+            height: 240px;
+            margin: 16px auto;
+            border-radius: var(--radius-md, 10px);
+            background: #ffffff;
+            padding: 8px;
+            border: 1px solid var(--border-color, #e2e8f0);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+        }
+
+        /* Toast notifications */
+        .ph-toast-container {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 10001;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-width: 360px;
+            pointer-events: none;
+        }
+
+        .ph-toast {
+            pointer-events: auto;
+            background: var(--surface-card, #ffffff);
+            border: 1px solid var(--border-color, #cbd5e1);
+            box-shadow: var(--shadow-floating, 0 10px 25px -5px rgba(0,0,0,0.2));
+            padding: 12px 16px;
+            border-radius: var(--radius-md, 10px);
+            font-size: 12.5px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: phSlideUp 0.25s ease;
+        }
+
+        @keyframes phSlideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        /* Dark Mode Fine Tuning */
+        [data-theme="dark"] .ph-card {
+            background: #0f172a;
+            border-color: #1e293b;
+        }
+
+        [data-theme="dark"] .ph-card:hover {
+            border-color: #334155;
+        }
+
+        [data-theme="dark"] .ph-dropzone {
+            background: #090e17;
+            border-color: #334155;
+        }
+
+        [data-theme="dark"] .ph-dropzone:hover {
+            border-color: #38bdf8;
+            background: rgba(56, 189, 248, 0.05);
+        }
+
+        [data-theme="dark"] .ph-tabs-nav {
+            background: #090e17;
+            border-color: #1e293b;
+        }
+
+        [data-theme="dark"] .ph-tab-btn.active {
+            background: #1e293b;
+            color: #38bdf8;
+        }
+
+        [data-theme="dark"] .ph-input,
+        [data-theme="dark"] .ph-select,
+        [data-theme="dark"] .ph-textarea {
+            background: #090e17;
+            border-color: #1e293b;
+            color: #f1f5f9;
+        }
+
+        [data-theme="dark"] .ph-file-preview,
+        [data-theme="dark"] .ph-toggle-card,
+        [data-theme="dark"] .ph-job-item {
+            background: #090e17;
+            border-color: #1e293b;
+        }
+
+        [data-theme="dark"] .ph-modal-card {
+            background: #0f172a;
+            border-color: #1e293b;
+        }
+
+        [data-theme="dark"] .ph-qr-card {
+            background: linear-gradient(135deg, rgba(2, 132, 199, 0.15), rgba(245, 158, 11, 0.1));
+            border-color: rgba(2, 132, 199, 0.3);
+        }
+
+        [data-theme="dark"] .ph-qr-link-box {
+            background: #090e17;
+            border-color: #1e293b;
+            color: #38bdf8;
+        }
+
+        [data-theme="dark"] .ph-toast {
+            background: #0f172a;
+            border-color: #334155;
+            color: #f1f5f9;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- TOP PORTAL HEADER -->
+    <header class="portal-header">
+        <div class="portal-header-inner">
+            <div class="portal-brand">
+                <div class="portal-logo-emblem">
+                    <svg class="portal-logo-svg" width="32" height="32" viewBox="0 0 48 48" fill="none"
+                        xmlns="http://www.w3.org/2000/svg" aria-label="Logo Bea Cukai">
+                        <path d="M24 4L7 9V22C7 33.5 14.3 41.8 24 44C33.7 41.8 41 33.5 41 22V9L24 4Z" fill="#0A2540"
+                            stroke="#F59E0B" stroke-width="2.5" stroke-linejoin="round" />
+                        <path d="M24 7L10 11.2V21.5C10 31.2 16.2 38.3 24 40.5C31.8 38.3 38 31.2 38 21.5V11.2L24 7Z"
+                            fill="#0F3460" stroke="#FCD34D" stroke-width="1.2" />
+                        <path
+                            d="M24 10.5L25.6 14.5L29.8 14.7L26.5 17.3L27.7 21.3L24 18.8L20.3 21.3L21.5 17.3L18.2 14.7L22.4 14.5L24 10.5Z"
+                            fill="#FBBF24" stroke="#F59E0B" stroke-width="0.5" />
+                        <path
+                            d="M22 22C18 20 12 21 11 25C13 25.5 16 25 18 26C14 27 12 29 13 32C15.5 31 18 30 20 30.5C18 32 16 34 17 36C20 34.5 22 31.5 22.5 29V22H22Z"
+                            fill="#FBBF24" opacity="0.95" />
+                        <path
+                            d="M26 22C30 20 36 21 37 25C35 25.5 32 25 30 26C34 27 36 29 35 32C32.5 31 30 30 28 30.5C30 32 32 34 31 36C28 34.5 26 31.5 25.5 29V22H26Z"
+                            fill="#FBBF24" opacity="0.95" />
+                        <path d="M24 19V38M21 34C21 36.5 22.3 38 24 38C25.7 38 27 36.5 27 34" stroke="#FFFFFF"
+                            stroke-width="1.8" stroke-linecap="round" />
+                        <circle cx="24" cy="20" r="1.8" fill="#FCD34D" stroke="#FFFFFF" stroke-width="0.8" />
+                        <path d="M22 25C22.5 24 25.5 24 26 25C26.5 26.5 21.5 27.5 22 29C22.5 30.5 25.5 30.5 26 32"
+                            stroke="#FFFFFF" stroke-width="1.2" stroke-linecap="round" />
+                    </svg>
+                </div>
+                <div class="portal-brand-text">
+                    <span class="portal-system-title">CEISA 4.0 &bull; PRINT HUB</span>
+                    <span class="portal-system-sub">Pusat Cetak Mandiri & Mobile WebShare</span>
+                </div>
+            </div>
+
+            <!-- Contextual Header Actions -->
+            <div class="portal-header-actions" style="display: flex;">
+                <div class="ph-chip ph-chip-green" id="serverStatusChip" title="Status Print Server">
+                    <span class="ph-pulse-dot"></span>
+                    <span id="serverStatusText">Server Aktif</span>
+                </div>
+                <button type="button" class="btn btn-header-subtle" id="btnOpenQrHeader" title="Buka QR Code untuk HP">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="7" height="7"></rect>
+                        <rect x="14" y="3" width="7" height="7"></rect>
+                        <rect x="14" y="14" width="7" height="7"></rect>
+                        <rect x="3" y="14" width="7" height="7"></rect>
+                    </svg>
+                    Scan HP
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- MASTER PORTAL WRAPPER -->
+    <div class="ceisa-portal-layout">
+        <!-- CEISA 4.0 Vertical Sidebar -->
+        <aside class="ceisa-sidebar" id="ceisaSidebar" aria-label="Navigasi Menu CEISA 4.0">
+            <div class="ceisa-sidebar-header">
+                <div class="ceisa-sidebar-brand-box">
+                    <span class="sidebar-brand-badge">PORTAL</span>
+                    <span class="sidebar-brand-title">MENU CEISA</span>
+                </div>
+                <button type="button" class="ceisa-sidebar-toggle" id="ceisaSidebarToggle"
+                    title="Perluas / Ciutkan Menu Samping" aria-label="Toggle Menu Samping" aria-expanded="false">
+                    <svg class="icon-toggle-expand" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="13 17 18 12 13 7"></polyline>
+                        <polyline points="6 17 11 12 6 7"></polyline>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="ceisa-sidebar-nav" role="tablist" aria-label="Menu Utama Portal CEISA">
+                <!-- 1. Modul Draft PEB -->
+                <a href="peb.html" class="ceisa-sidebar-item" id="btnNavPeb" role="tab"
+                    aria-selected="false" title="Modul Draft PEB (Ekspor)" data-tooltip="Modul Draft PEB (Ekspor)">
+                    <div class="sidebar-icon-box">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="16" y1="13" x2="8" y2="13"></line>
+                            <line x1="16" y1="17" x2="8" y2="17"></line>
+                        </svg>
+                    </div>
+                    <span class="sidebar-label">Modul Draft PEB</span>
+                </a>
+
+                <!-- 2. Modul Draft PIB -->
+                <a href="pib.html" class="ceisa-sidebar-item" id="btnNavPib" role="tab"
+                    aria-selected="false" title="Modul Draft PIB (Impor)" data-tooltip="Modul Draft PIB (Impor)">
+                    <div class="sidebar-icon-box">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                            <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                            <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                        </svg>
+                    </div>
+                    <span class="sidebar-label">Modul Draft PIB</span>
+                </a>
+
+                <!-- 3. HS Code Checker -->
+                <a href="hscode.html" class="ceisa-sidebar-item" id="btnNavHsCode" role="tab"
+                    aria-selected="false" title="HS Code Checker & BTKI" data-tooltip="HS Code Checker & BTKI">
+                    <div class="sidebar-icon-box">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                            <line x1="11" y1="8" x2="11" y2="14"></line>
+                            <line x1="8" y1="11" x2="14" y2="11"></line>
+                        </svg>
+                    </div>
+                    <span class="sidebar-label">HS Code Checker</span>
+                </a>
+
+                <!-- 4. Dokumen Searcher -->
+                <a href="doc_searcher.html" class="ceisa-sidebar-item" id="btnNavDocSearcher" role="tab"
+                    aria-selected="false" title="Dokumen Searcher (Pencari Dokumen Pabean)" data-tooltip="Dokumen Searcher">
+                    <div class="sidebar-icon-box">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <circle cx="11" cy="14" r="3"></circle>
+                            <line x1="13.5" y1="16.5" x2="16" y2="19"></line>
+                        </svg>
+                    </div>
+                    <span class="sidebar-label">Dokumen Searcher</span>
+                </a>
+
+                <!-- Dots Divider -->
+                <div class="ceisa-sidebar-dots" aria-hidden="true"><span></span><span></span><span></span></div>
+
+                <!-- 5. CEISA Inspector -->
+                <a href="dashboard.html" class="ceisa-sidebar-item" id="btnNavInspector" role="tab"
+                    aria-selected="false" title="CEISA Inspector (Monitoring & SPPB)" data-tooltip="CEISA Inspector">
+                    <div class="sidebar-icon-box">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                            <line x1="8" y1="21" x2="16" y2="21"></line>
+                            <line x1="12" y1="17" x2="12" y2="21"></line>
+                        </svg>
+                    </div>
+                    <span class="sidebar-label">CEISA Inspector</span>
+                </a>
+
+                <!-- 6. Print Hub (ACTIVE) -->
+                <a href="print_hub.html" class="ceisa-sidebar-item active" id="btnNavPrintHub" role="tab"
+                    aria-selected="true" title="Print Hub (Pusat Cetak Mandiri & Mobile)" data-tooltip="Print Hub">
+                    <div class="sidebar-icon-box">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                            <rect x="6" y="14" width="12" height="8"></rect>
+                        </svg>
+                    </div>
+                    <span class="sidebar-label">Print Hub</span>
+                </a>
+            </div>
+
+            <!-- Sidebar Bottom Theme Mode Toggle -->
+            <div class="ceisa-sidebar-footer">
+                <button type="button" class="ceisa-theme-toggle" id="themeToggleBtn"
+                    title="Beralih Mode Gelap / Terang" aria-label="Toggle Dark/Light Mode" data-tooltip="Mode Gelap / Terang">
+                    <div class="sidebar-icon-box">
+                        <svg class="icon-theme-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="5"></circle>
+                            <line x1="12" y1="1" x2="12" y2="3"></line>
+                            <line x1="12" y1="21" x2="12" y2="23"></line>
+                            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                            <line x1="1" y1="12" x2="3" y2="12"></line>
+                            <line x1="21" y1="12" x2="23" y2="12"></line>
+                            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                        </svg>
+                        <svg class="icon-theme-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                        </svg>
+                    </div>
+                    <span class="sidebar-label theme-label">Mode Gelap</span>
+                </button>
+                <!-- Tombol Pengaturan & Update Sistem (Paling Bawah Kiri) -->
+                <button type="button" class="ceisa-settings-toggle" id="openUpdateModalBtn"
+                    title="Pengaturan & Update Sistem" aria-label="Pengaturan & Update Sistem" data-tooltip="Pengaturan & Update">
+                    <div class="sidebar-icon-box">
+                        <svg class="icon-settings" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="3"></circle>
+                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                        </svg>
+                        <span class="update-pulse-dot" id="updatePulseDot"></span>
+                    </div>
+                    <span class="sidebar-label settings-label">Update & Sistem</span>
+                    <span class="sidebar-version-badge" id="updateBtnLabel">v2.1.2</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT AREA -->
+        <main class="ceisa-portal-content" role="main">
+            <div class="ph-container">
+
+                <!-- Mobile Scan Banner -->
+                <div class="ph-qr-card">
+                    <div class="ph-qr-thumb-box" id="qrThumbBox" style="position: relative; width: 88px; height: 88px; flex-shrink: 0; cursor: pointer;">
+                        <div id="qrLoadingSkeleton" style="width: 88px; height: 88px; border-radius: var(--radius-md, 10px); background: rgba(2, 132, 199, 0.08); border: 1.5px dashed var(--border-color, #cbd5e1); display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 20px; color: var(--text-muted); gap: 4px;">
+                            <span>📱</span>
+                            <span style="font-size: 9px; font-weight: 700;">QR HP</span>
+                        </div>
+                        <img id="qrThumbImage" class="ph-qr-thumb" src="" alt="Scan QR HP" title="Klik untuk memperbesar QR code" style="display: none; position: absolute; top: 0; left: 0; width: 88px; height: 88px; margin: 0;">
+                    </div>
+                    <div class="ph-qr-info">
+                        <div class="ph-qr-title">📱 Cetak Langsung dari HP (Android / iOS)</div>
+                        <div class="ph-qr-sub">Scan QR Code dengan kamera HP untuk mencetak berkas PDF, foto dokumen, atau faktur tanpa perlu instal aplikasi printer.</div>
+                        <div class="ph-qr-link-box" id="btnCopyLanUrl" title="Klik untuk menyalin alamat IP LAN">
+                            <span>🔗</span>
+                            <span id="lanUrlDisplay">http://...</span>
+                            <span style="font-size: 10px; color: var(--text-muted);">(Salin)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Two-Column Grid -->
+                <div class="ph-grid-layout">
+
+                    <!-- LEFT COLUMN: PRINT ACTIONS -->
+                    <div class="ph-col-left">
+
+                        <!-- Printer Selection Card -->
+                        <div class="ph-card">
+                            <div class="ph-card-header">
+                                <span class="ph-card-title">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                                        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                                        <rect x="6" y="14" width="12" height="8"></rect>
+                                    </svg>
+                                    Pilih Printer Tujuan
+                                </span>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <button type="button" class="btn btn-header-subtle" id="btnReloadPrinters" title="Muat Ulang Printer" style="height: 26px; padding: 0 8px; font-size: 11px;">
+                                        🔄 Refresh
+                                    </button>
+                                    <span class="ph-chip" id="printerCountChip">Mendeteksi printer...</span>
+                                </div>
+                            </div>
+
+                            <div class="ph-printer-box">
+                                <select id="printerSelect" class="ph-select" aria-label="Pilih Printer">
+                                    <option value="">Memuat daftar printer lokal...</option>
+                                </select>
+
+                                <div class="ph-printer-meta-bar" id="printerMetaBar">
+                                    <!-- Dynamic meta pills inserted by JS -->
+                                </div>
+
+                                <div class="ph-dot-matrix-banner" id="dotMatrixBanner" style="display: none;">
+                                    <span style="font-size: 16px;">⚡</span>
+                                    <div>
+                                        <strong>Printer Dot-Matrix Terdeteksi:</strong>
+                                        Mendukung cetak teks RAW ESC/P super cepat, tembus kertas rangkap/continuous form tanpa jeda.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Printing Actions Card with Tabs -->
+                        <div class="ph-card">
+                            <nav class="ph-tabs-nav" role="tablist">
+                                <button type="button" class="ph-tab-btn active" data-tab="tab-file" role="tab" aria-selected="true">
+                                    <span>📄</span> Cetak Berkas
+                                </button>
+                                <button type="button" class="ph-tab-btn" data-tab="tab-text" role="tab" aria-selected="false">
+                                    <span>✍️</span> Teks / Faktur / RAW
+                                </button>
+                            </nav>
+
+                            <!-- TAB 1: FILE PRINT -->
+                            <div class="ph-tab-pane active" id="tab-file">
+                                <form id="filePrintForm">
+                                    <div class="ph-dropzone" id="dropzone">
+                                        <input type="file" id="fileInput" style="display: none;" accept=".pdf,.png,.jpg,.jpeg,.bmp,.txt">
+                                        <span class="ph-dropzone-icon">📥</span>
+                                        <div class="ph-dropzone-title">Pilih atau Seret Berkas ke Sini</div>
+                                        <div class="ph-dropzone-sub">Mendukung Dokumen Pabean PDF, Lampiran Foto (JPG/PNG), & Dokumen Teks (.txt)</div>
+                                    </div>
+
+                                    <div class="ph-file-preview" id="filePreview">
+                                        <div class="ph-file-info">
+                                            <span style="font-size: 22px;">📄</span>
+                                            <div>
+                                                <div class="ph-file-name" id="fileNamePreview">dokumen.pdf</div>
+                                                <div class="ph-file-size" id="fileSizePreview">0 KB</div>
+                                            </div>
+                                        </div>
+                                        <button type="button" class="ph-btn-remove" id="btnRemoveFile" title="Hapus berkas terpilih">✕</button>
+                                    </div>
+
+                                    <div class="ph-options-grid">
+                                        <div class="ph-form-group">
+                                            <label class="ph-label" for="fileCopies">Jumlah Salinan</label>
+                                            <input type="number" id="fileCopies" class="ph-input" value="1" min="1" max="99">
+                                        </div>
+                                        <div class="ph-form-group">
+                                            <label class="ph-label" for="paperSizeSelect">Ukuran Kertas</label>
+                                            <select id="paperSizeSelect" class="ph-select" style="padding: 8px 12px; font-size: 12.5px;">
+                                                <option value="auto">Otomatis (Default Printer)</option>
+                                                <option value="A4">A4</option>
+                                                <option value="Letter">Letter</option>
+                                                <option value="Legal">Legal</option>
+                                                <option value="Fanfold">Continuous Fanfold (Dot Matrix)</option>
+                                            </select>
+                                        </div>
+                                        <div class="ph-form-group">
+                                            <label class="ph-label" for="pageRangeInput">Rentang Halaman (PDF)</label>
+                                            <input type="text" id="pageRangeInput" class="ph-input" placeholder="Contoh: 1-3 atau kosongkan">
+                                        </div>
+                                        <div class="ph-form-group">
+                                            <label class="ph-label" for="fileModeSelect">Metode Eksekusi</label>
+                                            <select id="fileModeSelect" class="ph-select" style="padding: 8px 12px; font-size: 12.5px;">
+                                                <option value="false">Grafis Standar (PDF / Foto)</option>
+                                                <option value="true">RAW Langsung (Khusus Dokumen .txt)</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <button type="submit" class="ph-btn-primary" id="btnSubmitFile" disabled>
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                                            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                                            <rect x="6" y="14" width="12" height="8"></rect>
+                                        </svg>
+                                        <span id="btnSubmitFileLabel">KIRIM DOKUMEN KE PRINTER</span>
+                                    </button>
+                                </form>
+                            </div>
+
+                            <!-- TAB 2: DIRECT TEXT / RAW -->
+                            <div class="ph-tab-pane" id="tab-text" style="display: none;">
+                                <form id="textPrintForm">
+                                    <div class="ph-card-header" style="padding-bottom: 8px; margin-bottom: 8px;">
+                                        <label class="ph-label" for="rawTextArea">Teks Faktur / Surat Jalan / Struk</label>
+                                        <span class="ph-chip ph-chip-orange">8-Bit ASCII Windows-1252</span>
+                                    </div>
+
+                                    <textarea id="rawTextArea" class="ph-textarea" placeholder="Ketik teks faktur, surat jalan, atau perintah cetak di sini..."></textarea>
+
+                                    <div class="ph-templates-bar">
+                                        <span style="font-size: 11.5px; color: var(--text-muted);">Template Cepat:</span>
+                                        <button type="button" class="ph-template-chip" id="tplSuratJalan">📋 Surat Jalan</button>
+                                        <button type="button" class="ph-template-chip" id="tplInvoice">🧾 Faktur Ekspor/Impor</button>
+                                        <button type="button" class="ph-template-chip" id="tplSppb">📦 Lembar SPPB</button>
+                                        <button type="button" class="ph-template-chip" id="tplLqTest">⚡ Tes LQ-310 (1 Baris)</button>
+                                        <button type="button" class="ph-template-chip" id="btnClearText" style="color: #ef4444;">Bersihkan</button>
+                                    </div>
+
+                                    <div class="ph-toggle-card">
+                                        <div class="ph-toggle-info">
+                                            <div class="ph-toggle-title">Mode RAW ESC/P Dot-Matrix</div>
+                                            <div class="ph-toggle-desc">Mengirim byte langsung ke jarum printer (sangat cepat & tidak buram).</div>
+                                        </div>
+                                        <label class="ph-switch">
+                                            <input type="checkbox" id="rawModeToggle" checked>
+                                            <span class="ph-slider"></span>
+                                        </label>
+                                    </div>
+
+                                    <div class="ph-toggle-card">
+                                        <div class="ph-toggle-info">
+                                            <div class="ph-toggle-title">Eject Lembar Penuh (Form Feed \x0C)</div>
+                                            <div class="ph-toggle-desc">Nonaktifkan untuk continuous form agar kertas tidak tergulung keluar berlebihan.</div>
+                                        </div>
+                                        <label class="ph-switch">
+                                            <input type="checkbox" id="ejectPageToggle">
+                                            <span class="ph-slider"></span>
+                                        </label>
+                                    </div>
+
+                                    <button type="submit" class="ph-btn-primary" id="btnSubmitText">
+                                        <span style="font-size: 16px;">⚡</span>
+                                        <span id="btnSubmitTextLabel">CETAK TEKS KE PRINTER</span>
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- RIGHT COLUMN: SPOOLER QUEUE & HISTORY -->
+                    <div class="ph-col-right">
+
+                        <!-- Active Spooler Queue -->
+                        <div class="ph-card">
+                            <div class="ph-card-header">
+                                <span class="ph-card-title">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                                    </svg>
+                                    Spooler Windows Aktif
+                                </span>
+                                <button type="button" class="btn btn-header-subtle" id="btnRefreshQueue" title="Segarkan Antrean" style="height: 28px; padding: 0 10px; font-size: 11.5px;">
+                                    🔄 Segarkan
+                                </button>
+                            </div>
+
+                            <div class="ph-job-list" id="spoolerList">
+                                <div style="text-align: center; padding: 24px 0; color: var(--text-muted); font-size: 12.5px;">
+                                    Tidak ada dokumen dalam antrean spooler Windows.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Print History -->
+                        <div class="ph-card">
+                            <div class="ph-card-header">
+                                <span class="ph-card-title">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <circle cx="12" cy="12" r="10"></circle>
+                                        <polyline points="12 6 12 12 16 14"></polyline>
+                                    </svg>
+                                    Riwayat Cetak Sesi Ini
+                                </span>
+                                <button type="button" class="btn btn-header-danger" id="btnClearHistory" title="Bersihkan Riwayat" style="height: 28px; padding: 0 10px; font-size: 11px;">
+                                    Bersihkan
+                                </button>
+                            </div>
+
+                            <div class="ph-job-list" id="historyList">
+                                <div style="text-align: center; padding: 24px 0; color: var(--text-muted); font-size: 12.5px;">
+                                    Belum ada berkas yang dicetak pada sesi ini.
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- QR Code Modal (Large View) -->
+    <div class="ph-modal-overlay" id="qrModal">
+        <div class="ph-modal-card">
+            <h3 style="font-size: 16px; font-weight: 700; color: var(--text-primary); margin-bottom: 4px;">
+                Scan QR Code dari Smartphone
+            </h3>
+            <p style="font-size: 12px; color: var(--text-muted); line-height: 1.45;">
+                Pastikan smartphone Anda terhubung ke Wi-Fi yang sama, lalu buka kamera dan arahkan ke kode berikut:
+            </p>
+            <img id="qrLargeImage" class="ph-qr-large" src="" alt="QR Code Fullsize">
+            <div class="ph-qr-link-box" id="modalUrlDisplay" style="width: 100%; justify-content: center; margin-bottom: 14px;">
+                http://...
+            </div>
+            <button type="button" class="btn btn-header-subtle" id="btnCloseQrModal" style="width: 100%; height: 38px; font-weight: 600;">
+                Tutup Jendela
+            </button>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="ph-toast-container" id="toastContainer"></div>
+
+    <script src="config.js"></script>
+    <script src="sync.js"></script>
+    <script src="wifi-share.js"></script>
+    <script src="update-center.js"></script>
+    <script src="print_hub.js"></script>
+</body>
+</html>
+

@@ -147,7 +147,8 @@ PENTING:
   * JANGAN PERNAH menyaring atau mengabaikan invoice sample/store-in atau invoice dengan nominal kecil!
   * Pada 'invoiceNumber': Tuliskan SEMUA nomor invoice yang ditemukan, dipisahkan koma dan spasi (contoh: '335223, 335226, SMV.B2609043, 335227, SMV.B2609044').
   * Pada 'items': WAJIB ekstrak seluruh baris barang dari SEMUA invoice yang ada tanpa terlewat, termasuk barang dari invoice sample/store-in!
-  * Untuk field 'packingListNumber': jika Packing List memakai nomor pengiriman/shipment no atau nomor invoice (seperti Shipment No. 335223, SMV.B2609043, dst.), WAJIB cantumkan semua nomor tersebut dipisahkan koma. JANGAN isi null jika ada lembar Packing List di dalam berkas!
+  * Untuk field 'packingListNumber': HANYA cantumkan nomor Packing List jika BENAR-BENAR TERDAPAT lembar Packing List (Daftar Kemasan / Delivery Note) atau dokumen gabungan CIPL di dalam berkas. Jika seluruh lembar dokumen HANYA memuat lembar Invoice (Rechnung / Commercial Invoice) tanpa ada lembar Packing List terpisah, WAJIB isi 'packingListNumber': null!
+  * Untuk field 'blNumber', 'cooNumber', dan 'lartasNumber': JIKA TIDAK DITEMUKAN di berkas yang diunggah, WAJIB isi null! JANGAN PERNAH mengarang atau mengasumsikan nomor jika tidak tertera di dokumen asli!
 - Pada 'uraianJenisBarang': HANYA tuliskan nama atau uraian komoditas barangnya saja. JANGAN sertakan nomor part (part no) maupun customer part no (misal jangan sertakan angka dalam kurung seperti (575000 / W000103691)).
 - ATURAN KEMASAN BARANG KHUSUS PT. VALEO AC INDONESIA:
   Nilai kemasan untuk SETIAP baris barang di dalam list ('items') nilainya SAMA SEMUA per Packing List, BUKAN per baris atau dibagi-bagi!
@@ -252,10 +253,6 @@ PENTING:
             }
         }
 
-        // Jika packingListNumber kosong/null padahal ada invoiceNumber
-        if (!parsedData.packingListNumber && parsedData.invoiceNumber) {
-            parsedData.packingListNumber = parsedData.invoiceNumber;
-        }
         const isSinarAsia = Boolean(
             (parsedData.shipperName && /sinar\s*asia/i.test(parsedData.shipperName)) ||
             (parsedData.safeCheck?.matchedIdentifiers && parsedData.safeCheck.matchedIdentifiers.some(m => /sinar\s*asia/i.test(m))) ||

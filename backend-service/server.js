@@ -14,14 +14,15 @@ const {
     ATTACHMENTS_DIR,
     ZIPS_DIR
 } = require('./doc_searcher_service');
+const printService = require('./print_service');
 
 const app = express();
 const PORT = process.env.PORT || 5005;
 
 // Middleware
 app.use(cors({ origin: '*' }));
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+app.use(express.json({ limit: '100mb' }));
+app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 app.use(express.static(path.join(__dirname, '..')));
 
 // Redirect root to primary module (PIB)
@@ -476,6 +477,124 @@ app.post('/api/doc-searcher/create-zip', async (req, res) => {
     }
 });
 
+// =========================================================================
+// SYNTHETIC PRINT HUB (LOCAL & MOBILE WEBSHARE PRINT SERVICE)
+// =========================================================================
+
+const printUploadStorage = multer.diskStorage({
+    destination: (req, file, cb) => cb(null, printService.uploadsDir),
+    filename: (req, file, cb) => {
+        const ext = path.extname(file.originalname);
+        const base = path.basename(file.originalname, ext).replace(/[^a-zA-Z0-9._-]/g, '_');
+        cb(null, `${Date.now()}_${base}${ext}`);
+    }
+});
+const uploadPrint = multer({
+    storage: printUploadStorage,
+    limits: { fileSize: 100 * 1024 * 1024 }
+});
+
+// GET /api/print/status
+app.get('/api/print/status', async (req, res) => {
+    try {
+        const status = await printService.getStatus(PORT);
+        res.json({ success: true, ...status });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// GET /api/print/printers (and /api/printers for compatibility)
+const handleGetPrinters = async (req, res) => {
+    try {
+        const data = await printService.getPrinters();
+        res.json({ success: true, ...data });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+};
+app.get('/api/print/printers', handleGetPrinters);
+app.get('/api/printers', handleGetPrinters);
+
+// GET /api/print/qr
+app.get('/api/print/qr', async (req, res) => {
+    try {
+        const qrData = await printService.getQrDataUrl(PORT);
+        res.json({ success: true, ...qrData });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// GET /api/print/queue
+app.get('/api/print/queue', async (req, res) => {
+    try {
+        const queueData = await printService.getQueue();
+        res.json({ success: true, ...queueData });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// GET /api/print/job/:jobId
+app.get('/api/print/job/:jobId', (req, res) => {
+    const job = printService.getJobStatus(req.params.jobId);
+    if (!job) {
+        return res.status(404).json({ success: false, error: 'Pekerjaan cetak tidak ditemukan.' });
+    }
+    res.json({ success: true, job });
+});
+
+// POST /api/print/base64 & /api/print-base64 (Bulletproof mobile file print)
+const handleBase64Print = (req, res) => {
+    try {
+        const result = printService.createBase64PrintJob(req.body || {});
+        res.json({ success: true, ...result });
+    } catch (err) {
+        res.status(400).json({ success: false, error: err.message });
+    }
+};
+app.post('/api/print/base64', handleBase64Print);
+app.post('/api/print-base64', handleBase64Print);
+
+// POST /api/print/file & /api/print (Multipart fallback or Base64 auto-detect)
+app.post(['/api/print/file', '/api/print'], (req, res, next) => {
+    // If request contains json/body already parsed with base64Data
+    if (req.body && req.body.base64Data) {
+        return handleBase64Print(req, res);
+    }
+    // Otherwise use multer multipart
+    uploadPrint.single('file')(req, res, (err) => {
+        if (err) {
+            return res.status(400).json({ success: false, error: err.message });
+        }
+        try {
+            const result = printService.createFilePrintJob(req.file, req.body || {});
+            res.json({ success: true, ...result });
+        } catch (printErr) {
+            res.status(400).json({ success: false, error: printErr.message });
+        }
+    });
+});
+
+// POST /api/print/text & /api/print-text (ESC/P RAW Dot-Matrix or standard text)
+const handleTextPrint = (req, res) => {
+    try {
+        const result = printService.createTextPrintJob(req.body || {});
+        res.json({ success: true, ...result });
+    } catch (err) {
+        res.status(400).json({ success: false, error: err.message });
+    }
+};
+app.post('/api/print/text', handleTextPrint);
+app.post('/api/print-text', handleTextPrint);
+
+// POST /api/print/clear-history
+app.post('/api/print/clear-history', (req, res) => {
+    printService.clearJobHistory();
+    res.json({ success: true, message: 'Riwayat cetak berhasil dibersihkan.' });
+});
+
 // POST /api/shutdown - Matikan server secara graceful (dari UI toggle)
 app.post('/api/shutdown', (req, res) => {
     res.json({ success: true, message: 'Server dimatikan. Jalankan START_SERVER.bat untuk menghidupkan kembali.' });
@@ -489,9 +608,11 @@ app.post('/api/shutdown', (req, res) => {
 });
 
 const server = app.listen(PORT, '0.0.0.0', () => {
+    const primaryIp = printService.getPrimaryIp();
     console.log(`=======================================================`);
-    console.log(`CEISA Document Parser Server AKTIF di port ${PORT}`);
-    console.log(`Endpoint API: http://localhost:${PORT}/api/parse-documents`);
+    console.log(`CEISA Document Parser & Print Hub AKTIF di port ${PORT}`);
+    console.log(`Desktop Portal: http://localhost:${PORT}/print_hub.html`);
+    console.log(`Mobile Wi-Fi:   http://${primaryIp}:${PORT}/print_hub.html`);
     console.log(`Status API Key: ${process.env.GEMINI_API_KEY ? 'Terpasang' : 'BELUM DISET'}`);
     console.log(`=======================================================`);
 });

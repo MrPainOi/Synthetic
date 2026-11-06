@@ -1589,8 +1589,333 @@
                 return false;
             }
 
+            // ------------------------------------------------
+            // CEISA AUTO INPUT ROW (STEP-BY-STEP INJECTION)
+            // ------------------------------------------------
+            if (message.type === "CEISA_AUTO_INPUT_ROW") {
+                const res = handleCeisaAutoInputRow(message);
+                if (typeof sendResponse === "function") {
+                    sendResponse(res);
+                }
+                return false;
+            }
+
+            if (message.type === "CHECK_CEISA_PAGE") {
+                if (typeof sendResponse === "function") {
+                    sendResponse({ ok: true, url: window.location.href, title: document.title, isCeisa: true });
+                }
+                return false;
+            }
+
         }
     );
+
+    // ========================================================
+    // CEISA 4.0 AUTO INPUT HELPER & DOM INJECTION ENGINE
+    // ========================================================
+
+    function escapeCeisaHtml(str) {
+        if (str === null || str === undefined) return "";
+        return String(str)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+    function showCeisaAutoInputToast(title, body, type = "success") {
+        try {
+            let container = document.getElementById("ceisaAutoInputToastContainer");
+            if (!container) {
+                container = document.createElement("div");
+                container.id = "ceisaAutoInputToastContainer";
+                container.style.cssText = 'position: fixed; top: 24px; right: 24px; z-index: 999999999; display: flex; flex-direction: column; gap: 10px; pointer-events: none; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;';
+                document.body.appendChild(container);
+            }
+
+            const toast = document.createElement("div");
+            const borderColor = type === "success" ? "#10b981" : (type === "warn" ? "#f59e0b" : "#ef4444");
+
+            toast.style.cssText = 'min-width: 300px; max-width: 440px; background: linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(30, 41, 59, 0.96)); border-left: 4px solid ' + borderColor + '; border-top: 1px solid rgba(255, 255, 255, 0.12); border-right: 1px solid rgba(255, 255, 255, 0.08); border-bottom: 1px solid rgba(255, 255, 255, 0.08); box-shadow: 0 14px 28px rgba(0, 0, 0, 0.5), 0 0 15px rgba(0, 0, 0, 0.3); border-radius: 8px; padding: 12px 16px; color: #f8fafc; font-size: 13px; line-height: 1.45; pointer-events: auto; opacity: 0; transform: translateX(30px); transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);';
+
+            toast.innerHTML = '<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">' +
+                '<div style="display: flex; align-items: center; gap: 6px;">' +
+                    '<span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: ' + borderColor + '; box-shadow: 0 0 6px ' + borderColor + ';"></span>' +
+                    '<strong style="color: #ffffff; font-size: 13px; letter-spacing: -0.2px;">' + escapeCeisaHtml(title) + '</strong>' +
+                '</div>' +
+                '<span style="font-size: 10px; background: rgba(255, 255, 255, 0.12); padding: 2px 6px; border-radius: 4px; color: #94a3b8; font-weight: 600;">CEISA 4.0 AUTO</span>' +
+            '</div>' +
+            '<div style="color: #cbd5e1; font-size: 12px;">' + escapeCeisaHtml(body) + '</div>';
+
+            container.appendChild(toast);
+
+            requestAnimationFrame(() => {
+                toast.style.opacity = "1";
+                toast.style.transform = "translateX(0)";
+            });
+
+            setTimeout(() => {
+                toast.style.opacity = "0";
+                toast.style.transform = "translateX(30px)";
+                setTimeout(() => {
+                    if (toast.parentNode) toast.parentNode.removeChild(toast);
+                }, 350);
+            }, 3800);
+        } catch (err) {
+            console.warn("showCeisaAutoInputToast error:", err);
+        }
+    }
+
+    function highlightCeisaInput(el) {
+        if (!el) return;
+        const prevTransition = el.style.transition;
+        const prevOutline = el.style.outline;
+        const prevBoxShadow = el.style.boxShadow;
+
+        el.style.transition = "all 0.3s ease";
+        el.style.outline = "2px solid #10b981";
+        el.style.boxShadow = "0 0 10px rgba(16, 185, 129, 0.6)";
+
+        setTimeout(() => {
+            el.style.outline = prevOutline;
+            el.style.boxShadow = prevBoxShadow;
+            el.style.transition = prevTransition;
+        }, 1500);
+    }
+
+    function setNativeInputValue(element, val) {
+        if (!element) return false;
+        try {
+            element.focus();
+            const strVal = String(val ?? "");
+
+            // React 16+ / Ant Design value setter override
+            const valueSetter = Object.getOwnPropertyDescriptor(element, "value")?.set;
+            const prototype = Object.getPrototypeOf(element);
+            const prototypeValueSetter = Object.getOwnPropertyDescriptor(prototype, "value")?.set;
+
+            if (prototypeValueSetter && valueSetter !== prototypeValueSetter) {
+                prototypeValueSetter.call(element, strVal);
+            } else if (valueSetter) {
+                valueSetter.call(element, strVal);
+            } else {
+                element.value = strVal;
+            }
+
+            // Dispatch events for React synthetic state sync
+            element.dispatchEvent(new Event("focus", { bubbles: true }));
+            element.dispatchEvent(new Event("input", { bubbles: true, composed: true }));
+            element.dispatchEvent(new Event("change", { bubbles: true }));
+            element.dispatchEvent(new Event("blur", { bubbles: true }));
+
+            highlightCeisaInput(element);
+            return true;
+        } catch (e) {
+            console.error("setNativeInputValue error:", e);
+            return false;
+        }
+    }
+
+    function findCeisaTargetContainer() {
+        const openModal = document.querySelector(".ant-modal-wrap:not([style*='display: none']) .ant-modal, .ant-modal-content, .ant-drawer-content");
+        if (openModal) return openModal;
+        const activeTabPane = document.querySelector(".ant-tabs-tabpane-active, .tab-pane.active, .tab-content > .active");
+        if (activeTabPane) return activeTabPane;
+        return document;
+    }
+
+    function findFieldByKeywords(keywords, parent = document) {
+        if (!parent) parent = document;
+
+        // 1. Match by input name, id, placeholder, aria-label
+        for (const kw of keywords) {
+            const lowerKw = kw.toLowerCase();
+            const candidates = parent.querySelectorAll('input:not([type="hidden"]):not([disabled]), textarea:not([disabled]), select:not([disabled])');
+
+            for (const input of candidates) {
+                const name = (input.name || "").toLowerCase();
+                const id = (input.id || "").toLowerCase();
+                const placeholder = (input.placeholder || "").toLowerCase();
+                const aria = (input.getAttribute("aria-label") || "").toLowerCase();
+
+                if (name.includes(lowerKw) || id.includes(lowerKw) || placeholder.includes(lowerKw) || aria.includes(lowerKw)) {
+                    return input;
+                }
+            }
+        }
+
+        // 2. Match by Label association
+        const labels = Array.from(parent.querySelectorAll(".ant-form-item-label label, .form-group label, label"));
+        for (const kw of keywords) {
+            const lowerKw = kw.toLowerCase();
+            for (const lbl of labels) {
+                const text = (lbl.innerText || lbl.textContent || "").toLowerCase();
+                if (text.includes(lowerKw)) {
+                    const forId = lbl.getAttribute("for");
+                    if (forId) {
+                        const byId = parent.querySelector('#' + forId);
+                        if (byId) return byId;
+                    }
+                    const formItem = lbl.closest(".ant-form-item, .form-group, .row, .col, div");
+                    if (formItem) {
+                        const inp = formItem.querySelector('input:not([type="hidden"]):not([disabled]), textarea:not([disabled]), select:not([disabled])');
+                        if (inp) return inp;
+                    }
+                }
+            }
+        }
+
+        return null;
+    }
+
+    function handleCeisaAutoInputRow(message) {
+        const { section, draftType, item, index, total } = message;
+        if (!item) {
+            return { ok: false, message: "Data baris kosong." };
+        }
+
+        const container = findCeisaTargetContainer();
+        const filledFields = [];
+
+        // SECTION: DOKUMEN LAMPIRAN
+        if (section === "dokumen") {
+            const docCode = item.code || (item.type === "INVOICE" ? "380" : item.type === "PACKING_LIST" ? "217" : item.type === "BL" ? "705" : item.type === "COO" ? "861" : "380");
+            const docNum = item.number || "";
+            const docDate = item.date || "";
+
+            const codeInput = findFieldByKeywords(["kodeDokumen", "kodeJenisDokumen", "jenisDokumen", "kode_dokumen", "kode jenis", "kode"], container);
+            if (codeInput) {
+                setNativeInputValue(codeInput, docCode);
+                filledFields.push('Jenis: ' + docCode);
+            }
+
+            const numInput = findFieldByKeywords(["nomorDokumen", "nomor", "noDok", "no_dok", "no dokumen", "number"], container);
+            if (numInput) {
+                setNativeInputValue(numInput, docNum);
+                filledFields.push('Nomor: ' + docNum);
+            }
+
+            const dateInput = findFieldByKeywords(["tanggalDokumen", "tanggal", "tglDok", "tgl_dok", "tgl", "date"], container);
+            if (dateInput) {
+                setNativeInputValue(dateInput, docDate);
+                filledFields.push('Tanggal: ' + docDate);
+            }
+
+            const successMsg = 'Dokumen [' + (index + 1) + '/' + total + '] ' + (item.type || 'DOC') + ': ' + (docNum || docCode) + ' dimasukkan ke CEISA.';
+            showCeisaAutoInputToast('Auto Input Dokumen (' + (index + 1) + '/' + total + ')', (item.name || item.type) + ': ' + docNum + ' (' + docDate + ')', filledFields.length > 0 ? 'success' : 'warn');
+
+            return {
+                ok: true,
+                message: filledFields.length > 0 
+                    ? successMsg + ' (' + filledFields.join(', ') + ')' 
+                    : successMsg + ' (Form terdeteksi, pastikan modal Tambah Dokumen telah terbuka di CEISA).'
+            };
+        }
+
+        // SECTION: DATA BARANG
+        if (section === "barang") {
+            const hs = String(item.hsCode || item.posTarif || "").replace(/[^0-9]/g, "");
+            let desc = item.description || item.uraianJenisBarang || item.uraianBarang || item.namaBarang || "";
+            let qty = item.quantity || item.jumlahSatuan || item.qty || "";
+            let uom = item.uom || item.kodeSatuan || item.satuan || "";
+            let val = item.cifValue || item.fobValue || item.nilaiBarang || item.amount || item.harga || "";
+            let netto = item.netWeight || item.beratBersih || "";
+
+            if (!qty && item.jumlahDanSatuanBarang) {
+                const m = String(item.jumlahDanSatuanBarang).match(/^([\d\s.,]+)\s*([a-zA-Z/]+)?$/);
+                if (m) {
+                    qty = m[1].replace(/\s/g, "");
+                    if (!uom && m[2]) uom = m[2];
+                } else {
+                    qty = item.jumlahDanSatuanBarang;
+                }
+            }
+
+            const hsInput = findFieldByKeywords(["posTarif", "pos_tarif", "hsCode", "hs", "pos", "tarif"], container);
+            if (hsInput) {
+                setNativeInputValue(hsInput, hs || item.hsCode);
+                filledFields.push('HS: ' + hs);
+            }
+
+            const descInput = findFieldByKeywords(["uraian", "namaBarang", "description", "deskripsi"], container);
+            if (descInput) {
+                setNativeInputValue(descInput, desc);
+                filledFields.push('Uraian: ' + desc.substring(0, 20) + '...');
+            }
+
+            const qtyInput = findFieldByKeywords(["jumlahSatuan", "jumlah_satuan", "qty", "jumlah"], container);
+            if (qtyInput) {
+                setNativeInputValue(qtyInput, qty);
+                filledFields.push('Qty: ' + qty);
+            }
+
+            const uomInput = findFieldByKeywords(["kodeSatuan", "kode_satuan", "satuan", "uom"], container);
+            if (uomInput) {
+                setNativeInputValue(uomInput, uom);
+                filledFields.push('Satuan: ' + uom);
+            }
+
+            const valInput = findFieldByKeywords(["nilaiBarang", "nilaiPabean", "cif", "fob", "nilai", "harga"], container);
+            if (valInput) {
+                setNativeInputValue(valInput, val);
+                filledFields.push('Nilai: ' + val);
+            }
+
+            const nettoInput = findFieldByKeywords(["netto", "beratBersih", "berat"], container);
+            if (nettoInput) {
+                setNativeInputValue(nettoInput, netto);
+                filledFields.push('Netto: ' + netto);
+            }
+
+            const successMsg = 'Barang [' + (index + 1) + '/' + total + '] HS ' + hs + ': ' + desc.substring(0, 25) + ' dimasukkan.';
+            showCeisaAutoInputToast('Auto Input Barang (' + (index + 1) + '/' + total + ')', 'HS ' + hs + ' | Qty: ' + qty + ' ' + uom + ' | Val: ' + val, filledFields.length > 0 ? 'success' : 'warn');
+
+            return {
+                ok: true,
+                message: filledFields.length > 0
+                    ? successMsg + ' (' + filledFields.join(', ') + ')'
+                    : successMsg + ' (Field form barang terdeteksi, pastikan form barang aktif).'
+            };
+        }
+
+        // SECTION: HEADER / ENTITAS / PENGANGKUT
+        if (section === "header") {
+            const noAju = item.nomorAju || item.noAju || "";
+            const kdKantor = item.kodeKantor || item.kantorPabean || "";
+            const ajuInput = findFieldByKeywords(["nomorAju", "noAju", "nomor_aju", "no_aju"], container);
+            if (ajuInput && noAju) {
+                setNativeInputValue(ajuInput, noAju);
+                filledFields.push('No Aju: ' + noAju);
+            }
+            const ktrInput = findFieldByKeywords(["kodeKantor", "kantorPabean", "kantor"], container);
+            if (ktrInput && kdKantor) {
+                setNativeInputValue(ktrInput, kdKantor);
+                filledFields.push('Kantor: ' + kdKantor);
+            }
+        }
+
+        if (section === "entitas") {
+            const shipper = item.shipperName || item.supplierName || item.eksportirNama || "";
+            const consignee = item.consigneeName || item.importirName || item.pembeliNama || "";
+            const shpInput = findFieldByKeywords(["namaPemasok", "namaEksportir", "pemasok", "eksportir", "shipper"], container);
+            if (shpInput && shipper) {
+                setNativeInputValue(shpInput, shipper);
+                filledFields.push('Pemasok: ' + shipper);
+            }
+            const csgInput = findFieldByKeywords(["namaImportir", "importir", "consignee", "penerima"], container);
+            if (csgInput && consignee) {
+                setNativeInputValue(csgInput, consignee);
+                filledFields.push('Importir: ' + consignee);
+            }
+        }
+
+        showCeisaAutoInputToast('Auto Input Section: ' + section.toUpperCase(), 'Memasukkan parameter draft ' + section, 'success');
+        return {
+            ok: true,
+            message: `Data section "${section}" berhasil diproses ke CEISA.`
+        };
+    }
 
 
     // ========================================================

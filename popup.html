@@ -15,9 +15,30 @@
     <div class="app">
         <div class="header">
             <div class="title">CEISA 4.0 Automation</div>
-            <div id="status" class="status">IDLE</div>
+            <span id="popupVersionText" class="version-badge" title="Versi Ekstensi">v2.1.2</span>
         </div>
 
+        <!-- SUB-HEADER DUA TOMBOL: GANTI FUNGSI POPUP -->
+        <div class="popup-mode-switcher" role="tablist" aria-label="Mode Operasi Popup">
+            <button type="button" class="mode-tab-btn active" id="btnModeScanner" role="tab" aria-selected="true" title="Fungsi Saat Ini: Scanner & Monitoring SPPB">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <span>Scanner Status</span>
+            </button>
+            <button type="button" class="mode-tab-btn" id="btnModeAutoInput" role="tab" aria-selected="false" title="Fitur Baru: Auto Input Draft Dokumen ke CEISA 4.0">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
+                <span>Auto Input CEISA</span>
+                <span class="mode-tab-badge">Baru</span>
+            </button>
+        </div>
+
+        <!-- VIEW 1: SCANNER & MONITORING STATUS (FUNGSI SAAT INI) -->
+        <div id="viewScanner" class="popup-view-container active">
         <div class="control">
             <input type="date" id="scanDate">
             <button id="start" class="icon-btn" title="Mulai Scan">▶</button>
@@ -96,15 +117,163 @@
                 </ul>
             </div>
         </div>
+        </div> <!-- /#viewScanner -->
 
-        <!-- FOOTER PEMBARUAN SISTEM (AUTO-UPDATE) -->
-        <div class="popup-update-bar">
-            <div class="update-bar-left">
-                <span class="update-bar-dot" id="popupUpdateDot"></span>
-                <span class="update-bar-version" id="popupVersionText">v2.1.2</span>
+        <!-- VIEW 2: FITUR AUTO INPUT DRAFT KE CEISA 4.0 (FITUR BARU) -->
+        <div id="viewAutoInput" class="popup-view-container auto-input-view" style="display: none;">
+            
+            <!-- CARD 1: STATUS PORTAL & PILIH SUMBER DRAFT -->
+            <div class="ai-control-deck" id="ceisaPortalStatusCard">
+                <!-- Baris Atas: Status Tab CEISA -->
+                <div class="ai-status-bar">
+                    <div class="ai-status-indicator">
+                        <span class="ai-dot dot-offline" id="ceisaPortalDot"></span>
+                        <div class="ai-status-info">
+                            <span class="ai-status-title">Portal CEISA 4.0</span>
+                            <span class="ai-status-sub" id="ceisaPortalText">Memeriksa tab CEISA...</span>
+                        </div>
+                    </div>
+                    <button type="button" class="ai-btn-portal" id="btnFocusCeisaTab" title="Buka atau fokuskan tab portal CEISA">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                        <span>Buka CEISA</span>
+                    </button>
+                </div>
+
+                <!-- Baris Bawah: Mode Dokumen & Sumber Draft -->
+                <div class="ai-source-bar">
+                    <div class="ai-type-toggle">
+                        <button type="button" class="ai-pill-btn pill-btn active" id="btnSelectTypePib">PIB (Impor)</button>
+                        <button type="button" class="ai-pill-btn pill-btn" id="btnSelectTypePeb">PEB (Ekspor)</button>
+                    </div>
+                    <div class="ai-source-actions">
+                        <button type="button" class="ai-btn-action" id="btnLoadLatestDraft" title="Muat draft dokumen aktif">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+                            <span>Muat Draft</span>
+                        </button>
+                        <label class="ai-btn-action ai-btn-upload" title="Unggah berkas JSON draft dari komputer">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                            <span>JSON</span>
+                            <input type="file" id="autoInputJsonFile" accept=".json" style="display: none;">
+                        </label>
+                    </div>
+                </div>
             </div>
-            <button type="button" id="popupCheckUpdateBtn" class="popup-btn-update">Cek Update</button>
-        </div>
+
+            <!-- CARD 2: KARTU IDENTITAS DRAFT (DOCKET PASSPORT) -->
+            <div class="ai-docket-card" id="autoInputDraftSummaryCard">
+                <div class="ai-docket-header">
+                    <div class="ai-docket-title-wrap">
+                        <span class="ai-doc-badge draft-badge bg-pib" id="lblDraftBadge">PIB</span>
+                        <strong class="ai-docket-title draft-title-no" id="lblDraftAjuNo">Belum Ada Draft Dimuat</strong>
+                    </div>
+                    <span class="ai-draft-status-pill">Draft Aktif</span>
+                </div>
+                
+                <div class="ai-docket-route">
+                    <div class="ai-route-node">
+                        <span class="ai-route-label">Pengirim</span>
+                        <span class="ai-route-val detail-val" id="lblDraftShipper">-</span>
+                    </div>
+                    <div class="ai-route-arrow">➔</div>
+                    <div class="ai-route-node">
+                        <span class="ai-route-label">Penerima</span>
+                        <span class="ai-route-val detail-val" id="lblDraftConsignee">-</span>
+                    </div>
+                </div>
+
+                <div class="ai-docket-chips draft-detail-chips">
+                    <div class="ai-chip">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        <span><b id="lblDraftDocCount">0</b> Dokumen</span>
+                    </div>
+                    <div class="ai-chip">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+                        <span><b id="lblDraftItemCount">0</b> Barang</span>
+                    </div>
+                    <div class="ai-chip ai-chip-val">
+                        <span>Valuta: <b id="lblDraftValuta">USD</b></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CARD 3: STUDIO PENGISIAN FORMULIR CEISA (CORE WORKSPACE) -->
+            <div class="ai-workspace-card">
+                
+                <!-- Section Picker -->
+                <div class="ai-field-group">
+                    <label for="autoInputSectionSelect" class="ai-label">Pilih Bagian / Tab CEISA:</label>
+                    <div class="ai-select-wrapper">
+                        <select id="autoInputSectionSelect" class="ai-select section-select">
+                            <option value="dokumen" selected>3. Dokumen Lampiran (Invoice, PL, BL, COO)</option>
+                            <option value="barang">7. Data Barang (Pos Tarif, Uraian, Qty, Nilai)</option>
+                            <option value="header">1. Header (Aju, Kantor, Jenis, Kategori)</option>
+                            <option value="entitas">2. Entitas (Importir/Eksportir, PPJK, Pemasok)</option>
+                            <option value="pengangkut">4. Pengangkut (Sarana, Pelabuhan)</option>
+                            <option value="kemasan">5. Kemasan &amp; Peti Kemas</option>
+                            <option value="transaksi">6. Transaksi (Valuta, Nilai Pabean)</option>
+                        </select>
+                        <span class="ai-select-arrow">▾</span>
+                    </div>
+                </div>
+
+                <!-- Stepper Box (Input Satu Persatu) -->
+                <div class="ai-stepper-deck" id="stepItemControllerBox">
+                    <div class="ai-stepper-header">
+                        <div class="ai-stepper-mode-title">
+                            <span class="ai-stepper-pulse"></span>
+                            <span id="lblStepperMode">Input Satu Persatu:</span>
+                        </div>
+                        <span class="ai-stepper-counter" id="lblStepperIndex">0 / 0</span>
+                    </div>
+
+                    <!-- Live Item Preview Box -->
+                    <div class="ai-preview-box" id="itemPreviewCard">
+                        <div class="ai-preview-title" id="lblItemPreviewTitle">Pilih Dokumen / Muat Draft</div>
+                        <div class="ai-preview-desc" id="lblItemPreviewDesc">Klik 'Muat Draft' untuk memulai pengisian.</div>
+                    </div>
+
+                    <!-- Stepper Primary Nav Row -->
+                    <div class="ai-stepper-actions">
+                        <button type="button" class="ai-btn-step-prev" id="btnStepPrev" title="Mundur ke baris sebelumnya" disabled>
+                            ◀ Mundur
+                        </button>
+                        <button type="button" class="ai-btn-step-inject" id="btnStepInject">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                            <span id="lblBtnInjectText">Masukkan Baris Ini &amp; Lanjut ▶</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Quick Bulk Actions -->
+                <div class="ai-bulk-deck">
+                    <span class="ai-bulk-divider-label">Atau eksekusi seluruh baris:</span>
+                    <div class="ai-bulk-actions">
+                        <button type="button" class="ai-btn-bulk" id="btnFillActiveSection" title="Isi seluruh data pada bagian/tab ini sekaligus">
+                            ⚡ Isi Semua Baris
+                        </button>
+                        <button type="button" class="ai-btn-auto" id="btnAutoInputAll" title="Jalankan pengisian berurutan otomatis">
+                            🚀 Auto Input Berurutan
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- CARD 4: MONITOR LOG AKTIVITAS -->
+            <div class="ai-log-deck">
+                <div class="ai-log-header">
+                    <div class="ai-log-header-left">
+                        <span class="ai-log-terminal-icon">❯_</span>
+                        <span class="ai-log-title">Log Eksekusi &amp; Aktivitas</span>
+                    </div>
+                    <button type="button" class="ai-btn-clear-log" id="btnClearAutoInputLog">Bersihkan Log</button>
+                </div>
+                <div class="ai-log-body" id="autoInputLogBody">
+                    <div class="log-entry log-info">[Sistem] Siap melakukan input draft ke CEISA 4.0.</div>
+                </div>
+            </div>
+        </div> <!-- /#viewAutoInput -->
+
     </div>
 
     <script src="config.js"></script>

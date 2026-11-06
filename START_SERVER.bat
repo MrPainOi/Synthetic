@@ -4,7 +4,7 @@ title CEISA Document Parser Backend Server
 cd /d "%~dp0backend-service"
 
 echo ================================================================
-echo    CEISA DOCUMENT PARSER BACKEND SERVER (Port 5005)
+echo    CEISA DOCUMENT PARSER & PRINT HUB BACKEND SERVER (Port 5005)
 echo ================================================================
 echo.
 

@@ -564,64 +564,526 @@ if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onMessage)
 }
 
 // ============================================================
-// POPUP UPDATE BAR LOGIC
+// POPUP VERSION DISPLAY
 // ============================================================
-(function initPopupUpdate() {
+(function initPopupVersion() {
     const versionText = document.getElementById("popupVersionText");
-    const updateDot = document.getElementById("popupUpdateDot");
-    const updateBtn = document.getElementById("popupCheckUpdateBtn");
+    if (!versionText) return;
 
-    if (!updateBtn) return;
+    // 1. Ambil instan dari manifest ekstensi
+    try {
+        if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.getManifest) {
+            const manifest = chrome.runtime.getManifest();
+            if (manifest && manifest.version) {
+                versionText.textContent = "v" + manifest.version;
+            }
+        }
+    } catch (e) {
+        console.warn("Could not read manifest version", e);
+    }
 
-    let isUpdateReady = false;
-
-    // Ambil info versi lokal
+    // 2. Ambil dari sistem service worker jika tersedia
     if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.sendMessage) {
         chrome.runtime.sendMessage({ type: "GET_SYSTEM_VERSION" }, (res) => {
+            if (chrome.runtime.lastError) return;
             if (res && res.ok && res.data && res.data.data) {
                 const info = res.data.data;
-                if (versionText) versionText.textContent = "v" + (info.version || "2.1.1");
+                if (info.version) {
+                    versionText.textContent = "v" + info.version;
+                }
+            }
+        });
+    }
+})();
+
+// ============================================================
+// POPUP MODE SWITCHER & AUTO INPUT CEISA MODULE
+// ============================================================
+(function initPopupAutoInput() {
+    const btnModeScanner = document.getElementById("btnModeScanner");
+    const btnModeAutoInput = document.getElementById("btnModeAutoInput");
+    const viewScanner = document.getElementById("viewScanner");
+    const viewAutoInput = document.getElementById("viewAutoInput");
+
+    if (!btnModeScanner || !btnModeAutoInput || !viewScanner || !viewAutoInput) return;
+
+    // 1. Tab Switching Function
+    function switchMode(mode) {
+        if (mode === 'autoinput') {
+            btnModeAutoInput.classList.add('active');
+            btnModeAutoInput.setAttribute('aria-selected', 'true');
+            btnModeScanner.classList.remove('active');
+            btnModeScanner.setAttribute('aria-selected', 'false');
+            viewScanner.style.display = 'none';
+            viewAutoInput.style.display = 'flex';
+            checkCeisaPortalTab();
+            if (!currentDraft) {
+                loadLatestDraftAuto();
+            }
+        } else {
+            btnModeScanner.classList.add('active');
+            btnModeScanner.setAttribute('aria-selected', 'true');
+            btnModeAutoInput.classList.remove('active');
+            btnModeAutoInput.setAttribute('aria-selected', 'false');
+            viewScanner.style.display = 'flex';
+            viewAutoInput.style.display = 'none';
+        }
+        if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.local) {
+            chrome.storage.local.set({ popup_active_tab: mode }).catch(() => {});
+        }
+    }
+
+    btnModeScanner.addEventListener('click', () => switchMode('scanner'));
+    btnModeAutoInput.addEventListener('click', () => switchMode('autoinput'));
+
+    // Restore last active mode from storage
+    if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.local) {
+        chrome.storage.local.get("popup_active_tab").then(res => {
+            if (res && res.popup_active_tab === 'autoinput') {
+                switchMode('autoinput');
+            }
+        }).catch(() => {});
+    }
+
+    // 2. CEISA Portal Tab Detection & Focus
+    const portalDot = document.getElementById("ceisaPortalDot");
+    const portalText = document.getElementById("ceisaPortalText");
+    const btnFocusCeisaTab = document.getElementById("btnFocusCeisaTab");
+
+    let activeCeisaTab = null;
+
+    async function checkCeisaPortalTab() {
+        if (typeof chrome === "undefined" || !chrome.tabs) return;
+        try {
+            const tabs = await chrome.tabs.query({ url: ["*://portal.beacukai.go.id/*", "*://*.beacukai.go.id/*"] });
+            if (tabs && tabs.length > 0) {
+                activeCeisaTab = tabs.find(t => t.active) || tabs[0];
+                if (portalDot) {
+                    portalDot.classList.remove("dot-offline");
+                }
+                if (portalText) {
+                    portalText.textContent = "CEISA 4.0 Terdeteksi (" + (tabs[0].title ? tabs[0].title.slice(0, 20) + "..." : "Aktif") + ")";
+                }
+                if (btnFocusCeisaTab) {
+                    btnFocusCeisaTab.textContent = "Buka Tab";
+                }
+                appendLog("Terhubung ke tab CEISA 4.0 (ID: " + activeCeisaTab.id + ").", "log-success");
+            } else {
+                activeCeisaTab = null;
+                if (portalDot) {
+                    portalDot.classList.add("dot-offline");
+                }
+                if (portalText) {
+                    portalText.textContent = "Tab CEISA 4.0 Belum Dibuka";
+                }
+                if (btnFocusCeisaTab) {
+                    btnFocusCeisaTab.textContent = "Buka CEISA";
+                }
+                appendLog("Tab portal.beacukai.go.id belum dibuka.", "log-warn");
+            }
+        } catch (e) {
+            console.warn("Could not check CEISA tabs", e);
+        }
+    }
+
+    if (btnFocusCeisaTab) {
+        btnFocusCeisaTab.addEventListener('click', async () => {
+            if (activeCeisaTab?.id) {
+                chrome.tabs.update(activeCeisaTab.id, { active: true });
+                if (activeCeisaTab.windowId) {
+                    chrome.windows.update(activeCeisaTab.windowId, { focused: true });
+                }
+            } else {
+                chrome.tabs.create({ url: "https://portal.beacukai.go.id" });
             }
         });
     }
 
-    updateBtn.addEventListener("click", () => {
-        if (isUpdateReady) {
-            updateBtn.disabled = true;
-            updateBtn.textContent = "Memasang...";
-            chrome.runtime.sendMessage({ type: "PERFORM_PULL_UPDATE" }, (res) => {
-                if (res && res.ok && res.data && res.data.status === "success") {
-                    updateBtn.textContent = "Selesai!";
-                } else {
-                    updateBtn.disabled = false;
-                    const errMsg = (res && res.error) || (chrome.runtime.lastError && chrome.runtime.lastError.message) || "";
-                    if (errMsg.toLowerCase().includes("native messaging") || errMsg.toLowerCase().includes("not found")) {
-                        updateBtn.textContent = "Aktifkan Updater";
-                        alert("Pembaruan Tersedia!\n\nAgar tombol ini bisa dipakai langsung tanpa Node.js:\nCukup klik 1x file 'AKTIFKAN_UPDATE_DI_CHROME.bat' di folder ekstensi (cuma 1 detik).\n\nAtau Anda juga bisa langsung klik 'UPDATE.bat' untuk memasang update.");
-                    } else {
-                        updateBtn.textContent = "Gagal. Coba lagi";
-                    }
+    // 3. Draft State & Selection
+    let currentDraft = null;
+    let currentDraftType = 'impor'; // 'impor' (PIB) or 'ekspor' (PEB)
+    let currentSection = 'dokumen';
+    let currentItemIndex = 0;
+    let isAutoLoopRunning = false;
+
+    const btnSelectTypePib = document.getElementById("btnSelectTypePib");
+    const btnSelectTypePeb = document.getElementById("btnSelectTypePeb");
+    const btnLoadLatestDraft = document.getElementById("btnLoadLatestDraft");
+    const autoInputJsonFile = document.getElementById("autoInputJsonFile");
+
+    if (btnSelectTypePib && btnSelectTypePeb) {
+        btnSelectTypePib.addEventListener('click', () => {
+            btnSelectTypePib.classList.add('active');
+            btnSelectTypePeb.classList.remove('active');
+            currentDraftType = 'impor';
+            loadLatestDraftAuto();
+        });
+        btnSelectTypePeb.addEventListener('click', () => {
+            btnSelectTypePeb.classList.add('active');
+            btnSelectTypePib.classList.remove('active');
+            currentDraftType = 'ekspor';
+            loadLatestDraftAuto();
+        });
+    }
+
+    // Load Draft from Backend or Storage
+    async function loadLatestDraftAuto() {
+        appendLog(`Memuat draft terbaru (${currentDraftType.toUpperCase()})...`, "log-info");
+        try {
+            const resp = await fetch(`http://localhost:5005/api/get-latest-draft?mode=${currentDraftType}`);
+            if (resp.ok) {
+                const draft = await resp.json();
+                if (draft && typeof draft === 'object' && (draft.invoiceNumber || draft.nomorAju || draft.invoices)) {
+                    setDraftData(draft);
+                    appendLog(`Draft berhasil dimuat dari sistem lokal!`, "log-success");
+                    return;
                 }
-            });
+            }
+        } catch (_) {}
+
+        // Fallback to chrome.storage
+        if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.local) {
+            const storageKey = currentDraftType === 'impor' ? 'ceisa_pib_draft' : 'ceisa_peb_draft';
+            const data = await chrome.storage.local.get(storageKey);
+            if (data[storageKey]) {
+                setDraftData(data[storageKey]);
+                appendLog(`Draft berhasil dimuat dari memori browser.`, "log-success");
+                return;
+            }
+        }
+
+        appendLog(`Belum ada draft ${currentDraftType.toUpperCase()} aktif. Buka Web Dashboard atau unggah file JSON.`, "log-warn");
+    }
+
+    if (btnLoadLatestDraft) {
+        btnLoadLatestDraft.addEventListener('click', () => loadLatestDraftAuto());
+    }
+
+    // Load JSON via File Upload
+    if (autoInputJsonFile) {
+        autoInputJsonFile.addEventListener('change', (e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (evt) => {
+                try {
+                    const parsed = JSON.parse(evt.target.result);
+                    setDraftData(parsed);
+                    appendLog(`Berkas '${file.name}' berhasil dimuat!`, "log-success");
+                } catch (err) {
+                    appendLog(`Format JSON tidak valid: ${err.message}`, "log-err");
+                }
+            };
+            reader.readAsText(file);
+        });
+    }
+
+    // Render Draft Summary
+    function setDraftData(draft) {
+        currentDraft = draft;
+        currentItemIndex = 0;
+
+        const lblDraftBadge = document.getElementById("lblDraftBadge");
+        const lblDraftAjuNo = document.getElementById("lblDraftAjuNo");
+        const lblDraftShipper = document.getElementById("lblDraftShipper");
+        const lblDraftConsignee = document.getElementById("lblDraftConsignee");
+        const lblDraftDocCount = document.getElementById("lblDraftDocCount");
+        const lblDraftItemCount = document.getElementById("lblDraftItemCount");
+        const lblDraftValuta = document.getElementById("lblDraftValuta");
+
+        const isPib = currentDraftType === 'impor';
+        if (lblDraftBadge) {
+            lblDraftBadge.textContent = isPib ? "PIB" : "PEB";
+            lblDraftBadge.className = isPib ? "ai-doc-badge draft-badge bg-pib" : "ai-doc-badge draft-badge bg-peb";
+        }
+
+        if (lblDraftAjuNo) {
+            lblDraftAjuNo.textContent = draft.nomorAju || draft.noAju || (draft.invoices?.[0]?.invoiceNumber ? `Draft Inv #${draft.invoices[0].invoiceNumber}` : "Draft Tanpa Nomor Aju");
+        }
+
+        if (lblDraftShipper) {
+            lblDraftShipper.textContent = draft.shipperName || draft.supplierName || draft.eksportirNama || "-";
+        }
+
+        if (lblDraftConsignee) {
+            lblDraftConsignee.textContent = draft.consigneeName || draft.importirName || draft.pembeliNama || "-";
+        }
+
+        const docItems = getSectionItems('dokumen');
+        const itemRows = getSectionItems('barang');
+
+        if (lblDraftDocCount) lblDraftDocCount.textContent = docItems.length;
+        if (lblDraftItemCount) lblDraftItemCount.textContent = itemRows.length;
+        if (lblDraftValuta) lblDraftValuta.textContent = draft.currency || draft.valuta || "USD";
+
+        updateSectionUI();
+    }
+
+    // Extract Items for Section
+    function getSectionItems(section) {
+        if (!currentDraft) return [];
+
+        if (section === 'dokumen') {
+            const list = [];
+            // BL
+            if (currentDraft.blNumber && currentDraft.blNumber !== 'null') {
+                list.push({ type: 'BL', code: '705', name: 'Bill of Lading', number: currentDraft.blNumber, date: currentDraft.blDate || '' });
+            }
+            // Invoices
+            if (Array.isArray(currentDraft.invoices) && currentDraft.invoices.length > 0) {
+                currentDraft.invoices.forEach(inv => {
+                    list.push({ type: 'INVOICE', code: '380', name: 'Commercial Invoice', number: inv.invoiceNumber, date: inv.invoiceDate || currentDraft.invoiceDate || '', amount: inv.amount, currency: inv.currency });
+                });
+            } else if (currentDraft.invoiceNumber && currentDraft.invoiceNumber !== 'null') {
+                const parts = String(currentDraft.invoiceNumber).split(',').map(s => s.trim()).filter(Boolean);
+                parts.forEach(p => {
+                    list.push({ type: 'INVOICE', code: '380', name: 'Commercial Invoice', number: p, date: currentDraft.invoiceDate || '' });
+                });
+            }
+            // Packing List
+            if (currentDraft.packingListNumber && currentDraft.packingListNumber !== 'null') {
+                const parts = String(currentDraft.packingListNumber).split(',').map(s => s.trim()).filter(Boolean);
+                parts.forEach(p => {
+                    list.push({ type: 'PACKING_LIST', code: '217', name: 'Packing List', number: p, date: currentDraft.packingListDate || currentDraft.invoiceDate || '' });
+                });
+            }
+            // COO
+            if (currentDraft.cooNumber && currentDraft.cooNumber !== 'null') {
+                list.push({ type: 'COO', code: '861', name: 'Certificate of Origin', number: currentDraft.cooNumber, date: currentDraft.cooDate || '' });
+            }
+            return list;
+        }
+
+        if (section === 'barang') {
+            return Array.isArray(currentDraft.items) ? currentDraft.items : [];
+        }
+
+        // Single object sections
+        return [currentDraft];
+    }
+
+    // Section Selector Listener
+    const sectionSelect = document.getElementById("autoInputSectionSelect");
+    if (sectionSelect) {
+        sectionSelect.addEventListener('change', () => {
+            currentSection = sectionSelect.value;
+            currentItemIndex = 0;
+            updateSectionUI();
+        });
+    }
+
+    // Update Stepper & Preview UI
+    function updateSectionUI() {
+        const items = getSectionItems(currentSection);
+        const total = items.length;
+
+        const lblStepperIndex = document.getElementById("lblStepperIndex");
+        const lblItemPreviewTitle = document.getElementById("lblItemPreviewTitle");
+        const lblItemPreviewDesc = document.getElementById("lblItemPreviewDesc");
+        const btnStepPrev = document.getElementById("btnStepPrev");
+        const lblBtnInjectText = document.getElementById("lblBtnInjectText");
+
+        if (total === 0) {
+            if (lblStepperIndex) lblStepperIndex.textContent = "0 / 0";
+            if (lblItemPreviewTitle) lblItemPreviewTitle.textContent = "Tidak Ada Data";
+            if (lblItemPreviewDesc) lblItemPreviewDesc.textContent = "Bagian ini tidak memiliki baris data pada draft terpilih.";
+            if (btnStepPrev) btnStepPrev.disabled = true;
+            if (lblBtnInjectText) lblBtnInjectText.textContent = "Tidak Ada Data";
             return;
         }
 
-        updateBtn.disabled = true;
-        updateBtn.textContent = "Memeriksa...";
+        if (currentItemIndex < 0) currentItemIndex = 0;
+        if (currentItemIndex >= total) currentItemIndex = total - 1;
 
-        chrome.runtime.sendMessage({ type: "CHECK_UPDATE" }, (res) => {
-            updateBtn.disabled = false;
-            if (res && res.ok && res.data && res.data.update_available) {
-                isUpdateReady = true;
-                updateBtn.textContent = "Pasang Pembaruan";
-                updateBtn.classList.add("btn-has-update");
-                if (updateDot) updateDot.classList.add("has-update");
-            } else {
-                updateBtn.textContent = "Versi Terbaru";
-                setTimeout(() => {
-                    updateBtn.textContent = "Cek Update";
-                }, 2500);
+        if (lblStepperIndex) lblStepperIndex.textContent = `${currentItemIndex + 1} / ${total}`;
+        if (btnStepPrev) btnStepPrev.disabled = (currentItemIndex === 0);
+
+        const curr = items[currentItemIndex];
+
+        if (currentSection === 'dokumen') {
+            if (lblItemPreviewTitle) lblItemPreviewTitle.textContent = `[${curr.code || '380'}] ${curr.name || 'Dokumen'} #${curr.number || '-'}`;
+            if (lblItemPreviewDesc) lblItemPreviewDesc.textContent = `Tgl: ${curr.date || '-'} ${curr.amount ? '• Nilai: ' + (curr.currency || '') + ' ' + curr.amount : ''}`;
+            if (lblBtnInjectText) lblBtnInjectText.textContent = `Input Dokumen #${curr.number || currentItemIndex + 1} & Lanjut ▶`;
+        } else if (currentSection === 'barang') {
+            const hs = curr.hsCode || 'Pos Tarif';
+            const desc = curr.uraianJenisBarang || curr.description || 'Barang';
+            if (lblItemPreviewTitle) lblItemPreviewTitle.textContent = `[HS ${hs}] ${desc}`;
+            if (lblItemPreviewDesc) lblItemPreviewDesc.textContent = `Jumlah: ${curr.jumlahDanSatuanBarang || curr.quantity || '-'} • Kemasan: ${curr.kemasan || '-'} • Nilai: ${curr.amount || curr.cifValue || '-'}`;
+            if (lblBtnInjectText) lblBtnInjectText.textContent = `Input Barang #${currentItemIndex + 1} & Lanjut ▶`;
+        } else if (currentSection === 'header') {
+            if (lblItemPreviewTitle) lblItemPreviewTitle.textContent = `1. Header: ${curr.nomorAju || curr.noAju || 'Draft Dokumen'}`;
+            if (lblItemPreviewDesc) lblItemPreviewDesc.textContent = `Kantor: ${curr.kodeKantor || '010700 - TANJUNG PRIOK'} • Kategori: UMUM • Jenis: ${currentDraftType === 'impor' ? 'UNTUK DIPAKAI' : 'EKSPOR UMUM'}`;
+            if (lblBtnInjectText) lblBtnInjectText.textContent = `Masukkan Data Header ke CEISA ▶`;
+        } else if (currentSection === 'entitas') {
+            const shp = curr.shipperName || curr.supplierName || curr.eksportirNama || 'Pemasok Luar Negeri';
+            const csg = curr.consigneeName || curr.importirName || curr.pembeliNama || 'Importir Indonesia';
+            if (lblItemPreviewTitle) lblItemPreviewTitle.textContent = `2. Entitas: ${shp.slice(0, 20)} ➔ ${csg.slice(0, 20)}`;
+            if (lblItemPreviewDesc) lblItemPreviewDesc.textContent = `Importir: ${csg} • Pemasok: ${shp}`;
+            if (lblBtnInjectText) lblBtnInjectText.textContent = `Masukkan Data Entitas ke CEISA ▶`;
+        } else if (currentSection === 'pengangkut') {
+            const dPort = curr.dischargePort || 'SINGAPORE / BATAM';
+            const lPort = curr.loadingPort || '-';
+            if (lblItemPreviewTitle) lblItemPreviewTitle.textContent = `4. Pengangkut: Sarana & Pelabuhan`;
+            if (lblItemPreviewDesc) lblItemPreviewDesc.textContent = `Pelabuhan Bongkar: ${dPort} • Pelabuhan Muat: ${lPort}`;
+            if (lblBtnInjectText) lblBtnInjectText.textContent = `Masukkan Data Pengangkut ke CEISA ▶`;
+        } else if (currentSection === 'kemasan') {
+            const kemasan = curr.totalKemasan || 'Multiple Colli / Karton';
+            const bruto = curr.totalGrossWeightKGM || '-';
+            const netto = curr.totalNetWeightKGM || '-';
+            if (lblItemPreviewTitle) lblItemPreviewTitle.textContent = `5. Kemasan & Peti Kemas`;
+            if (lblItemPreviewDesc) lblItemPreviewDesc.textContent = `Kemasan: ${kemasan} • Bruto: ${bruto} • Netto: ${netto}`;
+            if (lblBtnInjectText) lblBtnInjectText.textContent = `Masukkan Data Kemasan ke CEISA ▶`;
+        } else if (currentSection === 'transaksi') {
+            const valuta = curr.currency || curr.valuta || 'USD';
+            if (lblItemPreviewTitle) lblItemPreviewTitle.textContent = `6. Transaksi: Nilai & Valuta`;
+            if (lblItemPreviewDesc) lblItemPreviewDesc.textContent = `Valuta: ${valuta} • Cara Pembayaran: 1 - BIASA / TUNAI`;
+            if (lblBtnInjectText) lblBtnInjectText.textContent = `Masukkan Data Transaksi ke CEISA ▶`;
+        } else {
+            if (lblItemPreviewTitle) lblItemPreviewTitle.textContent = `Bagian: ${currentSection.toUpperCase()}`;
+            if (lblItemPreviewDesc) lblItemPreviewDesc.textContent = `Data siap dimasukkan ke formulir CEISA.`;
+            if (lblBtnInjectText) lblBtnInjectText.textContent = `Masukkan Data Bagian Ini ▶`;
+        }
+    }
+
+    // Step Navigation Handlers
+    const btnStepPrev = document.getElementById("btnStepPrev");
+    const btnStepInject = document.getElementById("btnStepInject");
+
+    if (btnStepPrev) {
+        btnStepPrev.addEventListener('click', () => {
+            if (currentItemIndex > 0) {
+                currentItemIndex--;
+                updateSectionUI();
             }
         });
-    });
+    }
+
+    // Manual Step-by-Step Injection
+    async function injectCurrentStep(advanceAfter = true) {
+        const items = getSectionItems(currentSection);
+        if (!items || items.length === 0) {
+            appendLog("Tidak ada data untuk diinput.", "log-warn");
+            return;
+        }
+
+        const currItem = items[currentItemIndex];
+        await checkCeisaPortalTab();
+
+        if (!activeCeisaTab?.id) {
+            appendLog("Gagal: Tab portal CEISA 4.0 tidak ditemukan. Klik 'Buka CEISA'.", "log-err");
+            return;
+        }
+
+        appendLog(`Mengirim baris ${currentItemIndex + 1}/${items.length} ke tab CEISA...`, "log-info");
+
+        try {
+            chrome.tabs.sendMessage(activeCeisaTab.id, {
+                type: "CEISA_AUTO_INPUT_ROW",
+                section: currentSection,
+                draftType: currentDraftType,
+                item: currItem,
+                index: currentItemIndex,
+                total: items.length
+            }, (res) => {
+                if (chrome.runtime.lastError) {
+                    appendLog(`Error: ${chrome.runtime.lastError.message}`, "log-err");
+                    return;
+                }
+                if (res && res.ok) {
+                    appendLog(`[SUKSES] ${res.message || 'Baris berhasil diinput ke CEISA!'}`, "log-success");
+                    if (advanceAfter && currentItemIndex < items.length - 1) {
+                        currentItemIndex++;
+                        updateSectionUI();
+                    }
+                } else {
+                    appendLog(`[PERINGATAN] ${(res && res.message) || 'Halaman CEISA belum siap atau field tidak ditemukan.'}`, "log-warn");
+                }
+            });
+        } catch (e) {
+            appendLog(`Kesalahan komunikasi: ${e.message}`, "log-err");
+        }
+    }
+
+    if (btnStepInject) {
+        btnStepInject.addEventListener('click', () => injectCurrentStep(true));
+    }
+
+    // Fill Whole Active Section
+    const btnFillActiveSection = document.getElementById("btnFillActiveSection");
+    if (btnFillActiveSection) {
+        btnFillActiveSection.addEventListener('click', async () => {
+            const items = getSectionItems(currentSection);
+            if (!items || items.length === 0) {
+                appendLog("Tidak ada data untuk diinput.", "log-warn");
+                return;
+            }
+            appendLog(`Mengisi seluruh bagian '${currentSection}' (${items.length} data)...`, "log-info");
+            for (let i = 0; i < items.length; i++) {
+                currentItemIndex = i;
+                updateSectionUI();
+                await injectCurrentStep(false);
+                await new Promise(r => setTimeout(r, 600)); // safe delay
+            }
+            appendLog(`Pengisian seluruh bagian '${currentSection}' selesai!`, "log-success");
+        });
+    }
+
+    // Auto Input All (Continuous Loop)
+    const btnAutoInputAll = document.getElementById("btnAutoInputAll");
+    if (btnAutoInputAll) {
+        btnAutoInputAll.addEventListener('click', async () => {
+            if (isAutoLoopRunning) {
+                isAutoLoopRunning = false;
+                btnAutoInputAll.classList.remove('running');
+                btnAutoInputAll.textContent = "🚀 Auto Input Semua";
+                appendLog("Proses auto input dihentikan oleh pengguna.", "log-warn");
+                return;
+            }
+
+            const items = getSectionItems(currentSection);
+            if (!items || items.length === 0) {
+                appendLog("Tidak ada data untuk diinput.", "log-warn");
+                return;
+            }
+
+            isAutoLoopRunning = true;
+            btnAutoInputAll.classList.add('running');
+            btnAutoInputAll.textContent = "⏹ Hentikan";
+            appendLog(`Memulai Auto Input bertahap untuk ${items.length} baris...`, "log-info");
+
+            for (let i = currentItemIndex; i < items.length; i++) {
+                if (!isAutoLoopRunning) break;
+                currentItemIndex = i;
+                updateSectionUI();
+                await injectCurrentStep(false);
+                await new Promise(r => setTimeout(r, 800)); // safe delay
+            }
+
+            isAutoLoopRunning = false;
+            btnAutoInputAll.classList.remove('running');
+            btnAutoInputAll.textContent = "🚀 Auto Input Semua";
+            appendLog("Selesai memproses seluruh baris!", "log-success");
+        });
+    }
+
+    // Logging helper
+    const logBody = document.getElementById("autoInputLogBody");
+    const btnClearLog = document.getElementById("btnClearAutoInputLog");
+
+    function appendLog(text, className = "log-info") {
+        if (!logBody) return;
+        const now = new Date();
+        const timeStr = `[${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}]`;
+        const div = document.createElement("div");
+        div.className = `log-entry ${className}`;
+        div.textContent = `${timeStr} ${text}`;
+        logBody.appendChild(div);
+        logBody.scrollTop = logBody.scrollHeight;
+    }
+
+    if (btnClearLog && logBody) {
+        btnClearLog.addEventListener('click', () => {
+            logBody.innerHTML = '';
+        });
+    }
 })();

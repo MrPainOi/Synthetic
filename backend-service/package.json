@@ -24,6 +24,8 @@
     "mailparser": "^3.9.20",
     "multer": "^2.4.0",
     "pdf-parse": "^2.4.5",
-    "pdfjs-dist": "^3.11.174"
+    "pdf-to-printer": "^5.8.1",
+    "pdfjs-dist": "^3.11.174",
+    "qrcode": "^1.5.4"
   }
 }

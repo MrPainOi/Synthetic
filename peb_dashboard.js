@@ -548,7 +548,8 @@ function loadDraftData(data, shouldSave = true) {
 
     setVal('invoiceNumber', data.invoiceNumber);
     setVal('invoiceDate', data.invoiceDate);
-    setVal('packingListNumber', data.packingListNumber || data.invoiceNumber);
+    const isSinarAsiaCheck = Boolean((data.shipperName && /sinar\s*asia/i.test(data.shipperName)) || (data.consigneeName && /sinar\s*asia/i.test(data.consigneeName)));
+    setVal('packingListNumber', (data.packingListNumber && data.packingListNumber !== 'null') ? data.packingListNumber : (isSinarAsiaCheck ? (data.invoiceNumber || '') : ''));
     setVal('packingListDate', data.packingListDate || data.invoiceDate);
     setVal('blNumber', data.blNumber);
     setVal('blDate', data.blDate);
@@ -856,9 +857,17 @@ function renderDocumentsTable(data = {}) {
     const invFile = window._currentDocMap?.INVOICE || (invNum ? `INV.${invNum}.pdf` : 'INV.98007744.pdf');
 
     // 2. Dokumen Packing List (217)
-    const plNum = data.packingListNumber || data.invoiceNumber || '';
+    const isSinarAsiaDoc = Boolean((data.shipperName && /sinar\s*asia/i.test(data.shipperName)) || (data.consigneeName && /sinar\s*asia/i.test(data.consigneeName)));
+    const plNum = (data.packingListNumber && data.packingListNumber !== 'null') ? String(data.packingListNumber).trim() : (isSinarAsiaDoc ? (data.invoiceNumber || '') : '');
     const plDate = data.packingListDate || data.invoiceDate || '';
     const plFile = window._currentDocMap?.PACKING_LIST || (plNum ? `PL.${plNum}.pdf` : 'PL.98007744.pdf');
+    const hasPl = Boolean(
+        plNum ||
+        (window._currentDocMap?.PACKING_LIST && !window._currentDocMap.PACKING_LIST.includes('VALEO')) ||
+        docList.some(d => /packing|pl|kemasan/i.test(d.documentType || '')) ||
+        isSinarAsiaDoc ||
+        (!data.shipperName && !data.invoiceNumber)
+    );
 
     // 3. Dokumen Bill of Lading (705)
     const blNum = data.blNumber || '';
@@ -954,25 +963,40 @@ function renderDocumentsTable(data = {}) {
         });
     }
 
-    // 2. Dokumen Packing List (217 - Mendukung Multi-PL)
-    if (plNum.includes(',')) {
-        const splitPls = plNum.split(',').map(s => s.trim()).filter(Boolean);
-        if (splitPls.length > 1) {
-            splitPls.forEach((num, i) => {
-                const isFirst = i === 0;
+    // 2. Dokumen Packing List (217 - Mendukung Multi-PL, HANYA jika ada dokumen Packing List)
+    if (hasPl) {
+        if (plNum.includes(',')) {
+            const splitPls = plNum.split(',').map(s => s.trim()).filter(Boolean);
+            if (splitPls.length > 1) {
+                splitPls.forEach((num, i) => {
+                    const isFirst = i === 0;
+                    rows.push({
+                        id: isFirst ? 'row-packinglist' : `row-packinglist-${i}`,
+                        code: '217 - PACKING LIST',
+                        docType: '217 - PACKING LIST (DAFTAR KEMASAN)',
+                        inputId: isFirst ? 'packingListNumber' : `packingListNumber_${i}`,
+                        dateId: isFirst ? 'packingListDate' : `packingListDate_${i}`,
+                        btnId: isFirst ? 'btnOpenDocPackingList' : `btnOpenDocPackingList_${i}`,
+                        tagId: isFirst ? 'tagFilePackingList' : `tagFilePackingList_${i}`,
+                        number: num,
+                        date: plDate,
+                        fileName: plFile
+                    });
+                });
+            } else {
                 rows.push({
-                    id: isFirst ? 'row-packinglist' : `row-packinglist-${i}`,
+                    id: 'row-packinglist',
                     code: '217 - PACKING LIST',
                     docType: '217 - PACKING LIST (DAFTAR KEMASAN)',
-                    inputId: isFirst ? 'packingListNumber' : `packingListNumber_${i}`,
-                    dateId: isFirst ? 'packingListDate' : `packingListDate_${i}`,
-                    btnId: isFirst ? 'btnOpenDocPackingList' : `btnOpenDocPackingList_${i}`,
-                    tagId: isFirst ? 'tagFilePackingList' : `tagFilePackingList_${i}`,
-                    number: num,
+                    inputId: 'packingListNumber',
+                    dateId: 'packingListDate',
+                    btnId: 'btnOpenDocPackingList',
+                    tagId: 'tagFilePackingList',
+                    number: plNum,
                     date: plDate,
                     fileName: plFile
                 });
-            });
+            }
         } else {
             rows.push({
                 id: 'row-packinglist',
@@ -987,19 +1011,6 @@ function renderDocumentsTable(data = {}) {
                 fileName: plFile
             });
         }
-    } else {
-        rows.push({
-            id: 'row-packinglist',
-            code: '217 - PACKING LIST',
-            docType: '217 - PACKING LIST (DAFTAR KEMASAN)',
-            inputId: 'packingListNumber',
-            dateId: 'packingListDate',
-            btnId: 'btnOpenDocPackingList',
-            tagId: 'tagFilePackingList',
-            number: plNum,
-            date: plDate,
-            fileName: plFile
-        });
     }
 
     // Jika BL belum ada di rows tetapi ada blNum
@@ -1622,7 +1633,7 @@ function renderSafeCheck(safeCheck) {
                     <td style="font-family: var(--font-mono); font-size: 12px; font-weight: 600;">
                         <span style="color: var(--text-primary);">${escapeHtml(fileName)}</span>
                     </td>
-                    <td><span style="font-size: 12px; font-weight: 600; background: #e2e8f0; padding: 2px 6px; border-radius: 3px;">${escapeHtml(docType)}</span></td>
+                    <td><span style="font-size: 12px; font-weight: 600; background: var(--surface-subtle); color: var(--text-primary); border: 1px solid var(--border-color); padding: 2px 6px; border-radius: 3px;">${escapeHtml(docType)}</span></td>
                     <td style="text-align: center;">
                         <span class="${isShipmentDoc ? 'badge-safe-valid' : 'badge-safe-warning'}" style="font-size: 12px; padding: 2px 6px;">
                             ${isShipmentDoc ? 'Cocok (1 Shipment)' : 'Asing / Tidak Cocok'}

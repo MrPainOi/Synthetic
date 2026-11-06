@@ -366,16 +366,47 @@ function collectPibFormData() {
         sellerAddress: getVal('pibSellerAddress'),
         sellerCountry: getVal('pibSellerCountry'),
 
-        blNumber: getVal('pibBlNumber'),
-        blDate: getVal('pibBlDate'),
-        invoiceNumber: getVal('pibInvoiceNumber'),
-        invoiceDate: getVal('pibInvoiceDate'),
-        packingListNumber: getVal('pibPackingListNumber'),
-        packingListDate: getVal('pibPackingListDate'),
-        cooNumber: getVal('pibCooNumber'),
-        cooDate: getVal('pibCooDate'),
-        lartasNumber: getVal('pibLartasNumber'),
-        lartasDate: getVal('pibLartasDate'),
+        blNumber: document.getElementById('pibBlNumber')?.value || document.querySelector('#pibDocTableBody input[id*="BlNumber"]')?.value || '',
+        blDate: document.getElementById('pibBlDate')?.value || document.querySelector('#pibDocTableBody input[id*="BlDate"]')?.value || '',
+        invoiceNumber: (() => {
+            const el = document.getElementById('pibInvoiceNumber');
+            if (el && el.value) return el.value;
+            const invInputs = Array.from(document.querySelectorAll('#pibDocTableBody input[id*="InvoiceNumber"]'));
+            if (invInputs.length > 0) return invInputs.map(i => i.value.trim()).filter(Boolean).join(', ');
+            return '';
+        })(),
+        invoiceDate: document.getElementById('pibInvoiceDate')?.value || document.querySelector('#pibDocTableBody input[id*="InvoiceDate"]')?.value || '',
+        packingListNumber: (() => {
+            const el = document.getElementById('pibPackingListNumber');
+            if (el && el.value) return el.value;
+            const plInputs = Array.from(document.querySelectorAll('#pibDocTableBody input[id*="PackingListNumber"]'));
+            if (plInputs.length > 0) return plInputs.map(i => i.value.trim()).filter(Boolean).join(', ');
+            return '';
+        })(),
+        packingListDate: document.getElementById('pibPackingListDate')?.value || document.querySelector('#pibDocTableBody input[id*="PackingListDate"]')?.value || '',
+        cooNumber: document.getElementById('pibCooNumber')?.value || document.querySelector('#pibDocTableBody input[id*="CooNumber"]')?.value || '',
+        cooDate: document.getElementById('pibCooDate')?.value || document.querySelector('#pibDocTableBody input[id*="CooDate"]')?.value || '',
+        lartasNumber: document.getElementById('pibLartasNumber')?.value || document.querySelector('#pibDocTableBody input[id*="LartasNumber"]')?.value || '',
+        lartasDate: document.getElementById('pibLartasDate')?.value || document.querySelector('#pibDocTableBody input[id*="LartasDate"]')?.value || '',
+
+        documents: (() => {
+            const tbody = document.getElementById('pibDocTableBody');
+            if (!tbody) return [];
+            return Array.from(tbody.querySelectorAll('tr')).map(tr => {
+                const codeSelect = tr.querySelector('.doc-type-select');
+                const code = codeSelect ? codeSelect.value : (tr.querySelector('td:nth-child(2)')?.textContent?.trim() || '');
+                const inputs = tr.querySelectorAll('input.doc-input-sync');
+                const num = inputs[0]?.value?.trim() || '';
+                const date = inputs[1]?.value?.trim() || '';
+                const tag = tr.querySelector('.doc-file-tag')?.textContent?.trim() || '';
+                return {
+                    code,
+                    docNumber: num,
+                    docDate: date,
+                    fileName: tag
+                };
+            }).filter(d => d.docNumber || d.fileName);
+        })(),
 
         caraPengangkutan: getVal('pibCaraPengangkutan'),
         vesselName: getVal('pibVesselName'),
@@ -566,7 +597,8 @@ function loadPibDraftData(data, shouldSave = true) {
     if (data.sellerAddress || supplierAddress) setVal('pibSellerAddress', data.sellerAddress || supplierAddress);
     if (data.sellerCountry || supplierCountry) setVal('pibSellerCountry', data.sellerCountry || supplierCountry);
 
-    // Dokumen
+    // Dokumen (Render Dynamic Document Table)
+    renderPibDocumentsTable(data);
     if (data.blNumber) setVal('pibBlNumber', data.blNumber);
     if (data.blDate) setVal('pibBlDate', data.blDate);
     if (data.invoiceNumber) setVal('pibInvoiceNumber', data.invoiceNumber);
@@ -645,6 +677,7 @@ function loadPibDraftData(data, shouldSave = true) {
 
     // Sinkronisasi Tabel Dokumen Pelengkap Pabean Impor
     updatePibDocTable(data);
+    renderPibSafeCheck(data.safeCheck);
 
     if (shouldSave) {
         saveCurrentPibDraftState();
@@ -1077,76 +1110,501 @@ function deletePibItemAt(idx) {
     }
 }
 
-// SYNC & RENDER ATTACHED DOCUMENTS IN PIB TAB DOKUMEN
-function updatePibDocTable(data = {}) {
-    const setTag = (id, fileName) => {
-        const el = document.getElementById(id);
-        if (el && fileName) {
-            el.textContent = fileName;
-            el.title = fileName;
+// ====================================================================
+// RENDER TABEL DOKUMEN LAMPIRAN DINAMIS (TAB DOKUMEN PIB - CEISA 4.0)
+// ====================================================================
+function renderPibDocumentsTable(data = {}) {
+    const tbody = document.getElementById('pibDocTableBody');
+    if (!tbody) return;
+
+    tbody.innerHTML = '';
+
+    const docList = data.safeCheck?.documentList || data.documentList || data.documents || [];
+    const rows = [];
+
+    // Helper: cari nama file dari memory/cache atau dokumen terunggah
+    const resolveFileName = (typePattern, defaultName) => {
+        if (window._currentDocMap && window._currentDocMap[typePattern]) {
+            return window._currentDocMap[typePattern];
         }
+        if (window._lastUploadedFiles && window._lastUploadedFiles.length > 0) {
+            const f = window._lastUploadedFiles.find(file => new RegExp(typePattern, 'i').test(file.name));
+            if (f) return f.name;
+        }
+        if (docList && docList.length > 0) {
+            const d = docList.find(doc => new RegExp(typePattern, 'i').test(doc.documentType || '') || new RegExp(typePattern, 'i').test(doc.fileName || ''));
+            if (d && d.fileName) return d.fileName;
+        }
+        return defaultName;
     };
 
-    // Cari nama file dari window._currentDocMap, window._docFileMap, window._lastUploadedFiles, atau data
-    let blFile = window._currentDocMap?.BILL_OF_LADING || data.blFileName || null;
-    let invFile = window._currentDocMap?.INVOICE || data.invoiceFileName || null;
-    let plFile = window._currentDocMap?.PACKING_LIST || data.packingListFileName || null;
-    let cooFile = window._currentDocMap?.COO || data.cooFileName || null;
-    let lartasFile = data.lartasFileName || null;
+    // Identifikasi Data & Dokumen Nyata (Abaikan null/undefined/placeholder)
+    const cleanStr = (val) => (val && val !== 'null' && val !== 'undefined') ? String(val).trim() : '';
 
-    if (!blFile && window._lastUploadedFiles) {
-        const f = window._lastUploadedFiles.find(file => /bl|lading|waybill/i.test(file.name));
-        if (f) blFile = f.name;
-    }
-    if (!invFile && window._lastUploadedFiles) {
-        const f = window._lastUploadedFiles.find(file => /inv|faktur|commercial/i.test(file.name));
-        if (f) invFile = f.name;
-    }
-    if (!plFile && window._lastUploadedFiles) {
-        const f = window._lastUploadedFiles.find(file => /pl|packing|kemasan/i.test(file.name));
-        if (f) plFile = f.name;
-    }
-    if (!cooFile && window._lastUploadedFiles) {
-        const f = window._lastUploadedFiles.find(file => /coo|origin|ska/i.test(file.name));
-        if (f) cooFile = f.name;
+    const blNum = cleanStr(data.blNumber);
+    const blDate = cleanStr(data.blDate);
+    const hasBlDoc = docList.some(d => /lading|bl|waybill/i.test((d.documentType || '') + ' ' + (d.fileName || '')));
+
+    const invNum = cleanStr(data.invoiceNumber);
+    const invDate = cleanStr(data.invoiceDate);
+
+    const plNum = cleanStr(data.packingListNumber);
+    const plDate = cleanStr(data.packingListDate) || invDate;
+    const hasPlDoc = docList.some(d => /packing|pl|kemasan/i.test((d.documentType || '') + ' ' + (d.fileName || '')));
+
+    const cooNum = cleanStr(data.cooNumber);
+    const cooDate = cleanStr(data.cooDate);
+    const hasCooDoc = docList.some(d => /coo|origin|ska/i.test((d.documentType || '') + ' ' + (d.fileName || '')));
+
+    const lartasNum = cleanStr(data.lartasNumber);
+    const lartasDate = cleanStr(data.lartasDate);
+    const hasLartasDoc = docList.some(d => /lartas|kemendag|surveyor|ls|pi/i.test((d.documentType || '') + ' ' + (d.fileName || '')));
+
+    // 1. Dokumen Bill of Lading (705) - HANYA jika dokumen B/L memang ada
+    if (blNum || hasBlDoc) {
+        const blFile = resolveFileName('lading|bl|waybill', blNum ? `BL_${blNum.replace(/[^a-zA-Z0-9-]/g, '_')}.pdf` : 'BL_Dokumen.pdf');
+        rows.push({
+            id: 'row-pib-bl',
+            code: '705 - B/L',
+            docType: '705 - BILL OF LADING (OCEAN B/L)',
+            inputId: 'pibBlNumber',
+            dateId: 'pibBlDate',
+            btnId: 'btnOpenDocPibBL',
+            tagId: 'tagFilePibBL',
+            number: blNum,
+            date: blDate,
+            fileName: blFile
+        });
     }
 
-    if (!blFile && data.blNumber) blFile = `BL_${data.blNumber}.pdf`;
-    if (!invFile && data.invoiceNumber) invFile = `INV_${data.invoiceNumber.replace(/[^a-zA-Z0-9-]/g, '_')}.pdf`;
-    if (!plFile && data.packingListNumber) plFile = `PL_${data.packingListNumber.replace(/[^a-zA-Z0-9-]/g, '_')}.pdf`;
-    if (!cooFile && data.cooNumber) cooFile = `COO_${data.cooNumber}.pdf`;
-    if (!lartasFile && data.lartasNumber) lartasFile = `PI_${data.lartasNumber.replace(/[^a-zA-Z0-9-]/g, '_')}.pdf`;
+    // 2. Dokumen Invoice (380 - Mendukung Multi-Invoice)
+    const invFile = resolveFileName('inv|invoice|faktur', invNum ? `INV_${invNum.replace(/[^a-zA-Z0-9-]/g, '_')}.pdf` : 'INV-SPM_2026_0904.pdf');
 
-    if (blFile) setTag('tagFilePibBL', blFile);
-    if (invFile) setTag('tagFilePibInvoice', invFile);
-    if (plFile) setTag('tagFilePibPackingList', plFile);
-    if (cooFile) setTag('tagFilePibCOO', cooFile);
-    if (lartasFile) setTag('tagFilePibLartas', lartasFile);
+    if (Array.isArray(data.invoices) && data.invoices.length > 0) {
+        data.invoices.forEach((inv, i) => {
+            const num = cleanStr(inv.invoiceNumber);
+            const dt = cleanStr(inv.invoiceDate) || invDate;
+            const isFirst = i === 0;
+            const specificFile = inv.fileName || resolveFileName(num || 'inv', invFile);
+            rows.push({
+                id: isFirst ? 'row-pib-invoice' : `row-pib-invoice-${i}`,
+                code: '380 - INVOICE',
+                docType: '380 - COMMERCIAL INVOICE',
+                inputId: isFirst ? 'pibInvoiceNumber' : `pibInvoiceNumber_${i}`,
+                dateId: isFirst ? 'pibInvoiceDate' : `pibInvoiceDate_${i}`,
+                btnId: isFirst ? 'btnOpenDocPibInvoice' : `btnOpenDocPibInvoice_${i}`,
+                tagId: isFirst ? 'tagFilePibInvoice' : `tagFilePibInvoice_${i}`,
+                number: num,
+                date: dt,
+                fileName: specificFile
+            });
+        });
+    } else if (invNum.includes(',')) {
+        const splitInvs = invNum.split(',').map(s => s.trim()).filter(Boolean);
+        splitInvs.forEach((num, i) => {
+            const isFirst = i === 0;
+            rows.push({
+                id: isFirst ? 'row-pib-invoice' : `row-pib-invoice-${i}`,
+                code: '380 - INVOICE',
+                docType: '380 - COMMERCIAL INVOICE',
+                inputId: isFirst ? 'pibInvoiceNumber' : `pibInvoiceNumber_${i}`,
+                dateId: isFirst ? 'pibInvoiceDate' : `pibInvoiceDate_${i}`,
+                btnId: isFirst ? 'btnOpenDocPibInvoice' : `btnOpenDocPibInvoice_${i}`,
+                tagId: isFirst ? 'tagFilePibInvoice' : `tagFilePibInvoice_${i}`,
+                number: num,
+                date: invDate,
+                fileName: invFile
+            });
+        });
+    } else if (invNum || (!blNum && !plNum && !cooNum && !lartasNum)) {
+        rows.push({
+            id: 'row-pib-invoice',
+            code: '380 - INVOICE',
+            docType: '380 - COMMERCIAL INVOICE',
+            inputId: 'pibInvoiceNumber',
+            dateId: 'pibInvoiceDate',
+            btnId: 'btnOpenDocPibInvoice',
+            tagId: 'tagFilePibInvoice',
+            number: invNum || 'INV-SPM/2026/0904',
+            date: invDate || '2026-09-15',
+            fileName: invFile
+        });
+    }
 
-    // Click handler to open doc viewer
-    const setupTagClick = (tagId, docType, numId, dateId) => {
-        const tagEl = document.getElementById(tagId);
-        if (tagEl && !tagEl._hasDocViewerListener) {
-            tagEl._hasDocViewerListener = true;
-            tagEl.style.cursor = 'pointer';
-            tagEl.addEventListener('click', () => {
-                if (typeof openCeisaDocViewer === 'function') {
-                    openCeisaDocViewer({
-                        docType: docType,
-                        fileName: tagEl.textContent.trim(),
-                        docNumber: document.getElementById(numId)?.value || '',
-                        docDate: document.getElementById(dateId)?.value || ''
-                    });
-                }
+    // 3. Dokumen Packing List (217 - HANYA jika dokumen Packing List memang ada)
+    if (plNum || hasPlDoc) {
+        const plFile = resolveFileName('packing|pl|kemasan', plNum ? `PL_${plNum.replace(/[^a-zA-Z0-9-]/g, '_')}.pdf` : 'PL-SPM_2026_0904.pdf');
+
+        if (plNum.includes(',')) {
+            const splitPls = plNum.split(',').map(s => s.trim()).filter(Boolean);
+            splitPls.forEach((num, i) => {
+                const isFirst = i === 0;
+                rows.push({
+                    id: isFirst ? 'row-pib-packinglist' : `row-pib-packinglist-${i}`,
+                    code: '217 - PACKING LIST',
+                    docType: '217 - PACKING LIST',
+                    inputId: isFirst ? 'pibPackingListNumber' : `pibPackingListNumber_${i}`,
+                    dateId: isFirst ? 'pibPackingListDate' : `pibPackingListDate_${i}`,
+                    btnId: isFirst ? 'btnOpenDocPibPackingList' : `btnOpenDocPibPackingList_${i}`,
+                    tagId: isFirst ? 'tagFilePibPackingList' : `tagFilePibPackingList_${i}`,
+                    number: num,
+                    date: plDate,
+                    fileName: plFile
+                });
+            });
+        } else {
+            rows.push({
+                id: 'row-pib-packinglist',
+                code: '217 - PACKING LIST',
+                docType: '217 - PACKING LIST',
+                inputId: 'pibPackingListNumber',
+                dateId: 'pibPackingListDate',
+                btnId: 'btnOpenDocPibPackingList',
+                tagId: 'tagFilePibPackingList',
+                number: plNum,
+                date: plDate,
+                fileName: plFile
+            });
+        }
+    }
+
+    // 4. Dokumen COO (861 - HANYA jika memang ada)
+    if (cooNum || hasCooDoc) {
+        const cooFile = resolveFileName('coo|origin|ska', cooNum ? `COO_${cooNum.replace(/[^a-zA-Z0-9-]/g, '_')}.pdf` : 'COO_Dokumen.pdf');
+        rows.push({
+            id: 'row-pib-coo',
+            code: '861 - COO',
+            docType: '861 - CERTIFICATE OF ORIGIN',
+            inputId: 'pibCooNumber',
+            dateId: 'pibCooDate',
+            btnId: 'btnOpenDocPibCOO',
+            tagId: 'tagFilePibCOO',
+            number: cooNum,
+            date: cooDate,
+            fileName: cooFile
+        });
+    }
+
+    // 5. Dokumen Perizinan Lartas (999 - HANYA jika memang ada)
+    if (lartasNum || hasLartasDoc) {
+        const lartasFile = resolveFileName('lartas|kemendag|surveyor|ls|pi', lartasNum ? `PI_${lartasNum.replace(/[^a-zA-Z0-9-]/g, '_')}.pdf` : 'PI_Kemendag.pdf');
+        rows.push({
+            id: 'row-pib-lartas',
+            code: '999 - LARTAS',
+            docType: '999 - PERIZINAN LARTAS',
+            inputId: 'pibLartasNumber',
+            dateId: 'pibLartasDate',
+            btnId: 'btnOpenDocPibLartas',
+            tagId: 'tagFilePibLartas',
+            number: lartasNum,
+            date: lartasDate,
+            fileName: lartasFile
+        });
+    }
+
+    // 6. Dokumen Tambahan Lainnya dari docList (Health Cert, Phytosanitary, Asuransi, Surveyor Report, MSDS, dll.)
+    docList.forEach((d, idx) => {
+        const dt = d.documentType || '';
+        const fn = d.fileName || '';
+        if (!/invoice|inv|faktur|packing|pl|lading|bl|waybill|coo|origin|ska|lartas|kemendag/i.test(dt + ' ' + fn)) {
+            const extraCode = /surveyor|ls/i.test(dt + ' ' + fn) ? '810 - LAPORAN SURVEYOR' :
+                             /insurance|asuransi/i.test(dt + ' ' + fn) ? '011 - POLIS ASURANSI' :
+                             /karantina|health|phyto/i.test(dt + ' ' + fn) ? '851 - SERTIFIKAT KARANTINA' :
+                             '999 - DOKUMEN LAINNYA';
+            rows.push({
+                id: `row-pib-extra-${idx}`,
+                code: extraCode,
+                docType: dt || 'DOKUMEN PABEAN IMPOR',
+                inputId: `pibDocExtraNum_${idx}`,
+                dateId: `pibDocExtraDate_${idx}`,
+                btnId: `btnOpenDocPibExtra_${idx}`,
+                tagId: `tagFilePibExtra_${idx}`,
+                number: d.notes?.match(/No[.:\s]+([^\s,]+)/i)?.[1] || d.docNumber || '',
+                date: d.notes?.match(/(\d{2}[-/]\d{2}[-/]\d{4}|\d{4}[-/]\d{2}[-/]\d{2})/)?.[1] || d.docDate || '',
+                fileName: fn || d.fileName || 'Dokumen_Impor.pdf'
+            });
+        }
+    });
+
+    // Render baris dokumen
+    rows.forEach((row, index) => {
+        appendPibDocRow(row, index + 1);
+    });
+
+    updatePibDocTableIndices();
+}
+
+function appendPibDocRow(row, index) {
+    const tbody = document.getElementById('pibDocTableBody');
+    if (!tbody) return;
+
+    const tr = document.createElement('tr');
+    tr.id = row.id || `row-pib-doc-${Date.now()}`;
+    tr.innerHTML = `
+        <td style="text-align: center; font-family: var(--font-mono); font-weight: 600;" class="doc-row-num">${index}</td>
+        <td>
+            <select class="table-input-mono doc-type-select" style="font-weight: 600; font-size: 11.5px; padding: 3px 6px; width: 100%;">
+                <option value="705 - B/L" ${row.code.includes('705') ? 'selected' : ''}>705 - B/L</option>
+                <option value="380 - INVOICE" ${row.code.includes('380') ? 'selected' : ''}>380 - INVOICE</option>
+                <option value="217 - PACKING LIST" ${row.code.includes('217') ? 'selected' : ''}>217 - PACKING LIST</option>
+                <option value="861 - COO" ${row.code.includes('861') ? 'selected' : ''}>861 - COO / SKA</option>
+                <option value="999 - LARTAS" ${row.code.includes('999') || row.code.includes('LARTAS') ? 'selected' : ''}>999 - PERIZINAN LARTAS</option>
+                <option value="810 - LAPORAN SURVEYOR" ${row.code.includes('810') || row.code.includes('SURVEYOR') ? 'selected' : ''}>810 - LAPORAN SURVEYOR</option>
+                <option value="011 - POLIS ASURANSI" ${row.code.includes('011') || row.code.includes('ASURANSI') ? 'selected' : ''}>011 - POLIS ASURANSI</option>
+                <option value="851 - SERTIFIKAT KARANTINA" ${row.code.includes('851') || row.code.includes('KARANTINA') ? 'selected' : ''}>851 - SERTIFIKAT KARANTINA</option>
+                <option value="999 - DOKUMEN LAINNYA" ${(!row.code.includes('705') && !row.code.includes('380') && !row.code.includes('217') && !row.code.includes('861') && !row.code.includes('810') && !row.code.includes('011') && !row.code.includes('851') && !row.code.includes('LARTAS')) ? 'selected' : ''}>999 - DOKUMEN LAINNYA</option>
+            </select>
+        </td>
+        <td><input type="text" id="${row.inputId}" class="table-input-mono doc-input-sync" value="${escapePibHtml(row.number || '')}" placeholder="Nomor dokumen..."></td>
+        <td><input type="text" id="${row.dateId}" class="table-input-mono doc-input-sync" value="${escapePibHtml(row.date || '')}" placeholder="YYYY-MM-DD"></td>
+        <td style="text-align: center; color: #94a3b8;">-</td>
+        <td style="text-align: center; color: #94a3b8;">-</td>
+        <td style="text-align: center; color: #94a3b8;">-</td>
+        <td>
+            <div class="doc-link-wrap">
+                <button type="button" class="btn-doc-link" id="${row.btnId}" data-doc-type="${escapePibHtml(row.docType || row.code)}" data-filename="${escapePibHtml(row.fileName || '')}" title="Buka berkas ${escapePibHtml(row.fileName || '')}">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                </button>
+                <span class="doc-file-tag" id="${row.tagId}" title="${escapePibHtml(row.fileName || '')}">${escapePibHtml(row.fileName || 'Dokumen.pdf')}</span>
+            </div>
+        </td>
+        <td style="text-align: center;">
+            <div style="display: flex; justify-content: center; gap: 6px;">
+                <button type="button" class="btn-ceisa-sub btn-icon-only btn-doc-delete" data-row-id="${tr.id}" title="Hapus Dokumen">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="3 6 5 6 21 6"></polyline>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    </svg>
+                </button>
+            </div>
+        </td>
+    `;
+
+    // Wire Buka Dokumen
+    const btnOpen = tr.querySelector('.btn-doc-link');
+    const tagEl = tr.querySelector('.doc-file-tag');
+    const handleOpenViewer = () => {
+        const numInput = tr.querySelector(`#${row.inputId}`) || tr.querySelector('input.doc-input-sync');
+        const dateInput = tr.querySelector(`#${row.dateId}`) || tr.querySelectorAll('input.doc-input-sync')[1];
+        const targetFile = tagEl?.textContent?.trim() || row.fileName || 'Dokumen.pdf';
+        const codeSelect = tr.querySelector('.doc-type-select');
+        const selectedCode = codeSelect ? codeSelect.value : (row.docType || row.code);
+        if (typeof openCeisaDocViewer === 'function') {
+            openCeisaDocViewer({
+                docType: selectedCode,
+                fileName: targetFile,
+                docNumber: numInput?.value || row.number,
+                docDate: dateInput?.value || row.date
             });
         }
     };
 
-    setupTagClick('tagFilePibBL', '705 - BILL OF LADING', 'pibBlNumber', 'pibBlDate');
-    setupTagClick('tagFilePibInvoice', '380 - COMMERCIAL INVOICE', 'pibInvoiceNumber', 'pibInvoiceDate');
-    setupTagClick('tagFilePibPackingList', '217 - PACKING LIST', 'pibPackingListNumber', 'pibPackingListDate');
-    setupTagClick('tagFilePibCOO', '861 - CERTIFICATE OF ORIGIN', 'pibCooNumber', 'pibCooDate');
-    setupTagClick('tagFilePibLartas', '999 - PERIZINAN LARTAS', 'pibLartasNumber', 'pibLartasDate');
+    if (btnOpen) btnOpen.addEventListener('click', handleOpenViewer);
+    if (tagEl) {
+        tagEl.style.cursor = 'pointer';
+        tagEl.addEventListener('click', handleOpenViewer);
+    }
+
+    // Wire Hapus Dokumen
+    const btnDel = tr.querySelector('.btn-doc-delete');
+    if (btnDel) {
+        btnDel.addEventListener('click', function () {
+            tr.style.transition = 'opacity 0.2s';
+            tr.style.opacity = '0';
+            setTimeout(() => {
+                tr.remove();
+                updatePibDocTableIndices();
+                triggerPibAutoSave();
+            }, 200);
+        });
+    }
+
+    // Wire input sync auto-save
+    tr.querySelectorAll('input, select').forEach(inp => {
+        inp.addEventListener('input', () => triggerPibAutoSave());
+        inp.addEventListener('change', () => triggerPibAutoSave());
+    });
+
+    tbody.appendChild(tr);
+}
+
+function updatePibDocTableIndices() {
+    const tbody = document.getElementById('pibDocTableBody');
+    const totalSpan = document.getElementById('pibDocTableTotal');
+    if (!tbody) return;
+
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    rows.forEach((tr, idx) => {
+        const numCell = tr.querySelector('td:first-child');
+        if (numCell) numCell.textContent = idx + 1;
+    });
+
+    if (totalSpan) {
+        totalSpan.textContent = `Total ${rows.length} Dokumen`;
+    }
+}
+
+function addNewPibDocRow() {
+    const tbody = document.getElementById('pibDocTableBody');
+    if (!tbody) return;
+
+    const currentCount = tbody.querySelectorAll('tr').length;
+    const newIdx = currentCount + 1;
+    const randId = Date.now();
+
+    const newRow = {
+        id: `row-pib-doc-${randId}`,
+        code: '999 - DOKUMEN LAINNYA',
+        docType: 'DOKUMEN PABEAN IMPOR',
+        inputId: `pibDocCustomNum_${randId}`,
+        dateId: `pibDocCustomDate_${randId}`,
+        btnId: `btnOpenDocPibCustom_${randId}`,
+        tagId: `tagFilePibCustom_${randId}`,
+        number: '',
+        date: '',
+        fileName: 'Pilih_Dokumen.pdf'
+    };
+
+    appendPibDocRow(newRow, newIdx);
+    updatePibDocTableIndices();
+    triggerPibAutoSave();
+    if (typeof showToast === 'function') {
+        showToast('Baris dokumen lampiran PIB baru ditambahkan.', 'info');
+    }
+}
+
+function sortPibDocRows() {
+    const tbody = document.getElementById('pibDocTableBody');
+    if (!tbody) return;
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    const orderScore = (row) => {
+        const text = row.textContent || '';
+        if (text.includes('705') || text.includes('B/L') || text.includes('LADING')) return 1;
+        if (text.includes('380') || text.includes('INVOICE')) return 2;
+        if (text.includes('217') || text.includes('PACKING')) return 3;
+        if (text.includes('861') || text.includes('ORIGIN') || text.includes('COO')) return 4;
+        if (text.includes('999') || text.includes('LARTAS') || text.includes('KEMENDAG')) return 5;
+        if (text.includes('810') || text.includes('SURVEYOR')) return 6;
+        if (text.includes('011') || text.includes('ASURANSI')) return 7;
+        return 8;
+    };
+
+    rows.sort((a, b) => orderScore(a) - orderScore(b));
+    rows.forEach(r => tbody.appendChild(r));
+    updatePibDocTableIndices();
+    triggerPibAutoSave();
+    if (typeof showToast === 'function') {
+        showToast('Tabel dokumen lampiran PIB telah diurutkan.', 'info');
+    }
+}
+
+// SYNC & RENDER ATTACHED DOCUMENTS IN PIB TAB DOKUMEN (BACKWARD COMPATIBLE WRAPPER)
+
+
+// RENDER PIB SAFETY CHECK AUDIT CARD
+function renderPibSafeCheck(safeCheck) {
+    const container = document.getElementById('pibSafeCheckSection');
+    if (!container) return;
+
+    if (!safeCheck) {
+        container.style.display = 'none';
+        return;
+    }
+
+    container.style.display = 'block';
+
+    const isRelated = safeCheck.isRelated !== false;
+    const score = safeCheck.confidenceScore !== undefined ? safeCheck.confidenceScore : 100;
+    const banner = document.getElementById('pibSafeCheckBanner');
+    const statusBadge = document.getElementById('pibSafeCheckStatusBadge');
+    const scoreVal = document.getElementById('pibSafeCheckScore');
+    const title = document.getElementById('pibSafeCheckTitle');
+    const summary = document.getElementById('pibSafeCheckSummary');
+    const matchedList = document.getElementById('pibSafeCheckMatchedList');
+    const warningsBox = document.getElementById('pibSafeCheckWarningsBox');
+    const warningsList = document.getElementById('pibSafeCheckWarningsList');
+    const docTbody = document.getElementById('pibSafeCheckDocTableBody');
+
+    if (scoreVal) scoreVal.textContent = score + '%';
+    if (summary) summary.textContent = safeCheck.summary || 'Validasi keterkaitan dokumen selesai.';
+
+    if (banner && statusBadge && title) {
+        if (isRelated) {
+            banner.className = 'safecheck-banner';
+            statusBadge.className = 'badge-safe-valid';
+            statusBadge.textContent = 'Tervalidasi: 1 Shipment';
+            title.textContent = 'Semua Dokumen Cocok & Terverifikasi 1 Kesatuan Pengiriman';
+        } else {
+            banner.className = 'safecheck-banner safecheck-banner-warning';
+            statusBadge.className = 'badge-safe-warning';
+            statusBadge.textContent = 'Peringatan: Dokumen Asing / Selisih';
+            title.textContent = 'Perhatian: Ditemukan Ketidaksesuaian Antar-Dokumen';
+        }
+    }
+
+    if (matchedList) {
+        matchedList.innerHTML = '';
+        const matched = safeCheck.matchedIdentifiers || [];
+        if (matched.length > 0) {
+            matched.forEach(m => {
+                const li = document.createElement('li');
+                li.innerHTML = `<span style="color: var(--color-green-text); font-weight: 700; flex-shrink: 0;">✓</span><span>${escapePibHtml(m)}</span>`;
+                matchedList.appendChild(li);
+            });
+        } else {
+            matchedList.innerHTML = `<li style="color: var(--text-muted);">Tidak ada catatan parameter khusus.</li>`;
+        }
+    }
+
+    if (warningsBox && warningsList) {
+        const warnings = safeCheck.discrepanciesOrWarnings || [];
+        if (warnings && warnings.length > 0) {
+            warningsBox.style.display = 'block';
+            warningsList.innerHTML = '';
+            warnings.forEach(w => {
+                const li = document.createElement('li');
+                li.innerHTML = `<span style="color: var(--color-red-text); font-weight: 700; flex-shrink: 0;">!</span><span>${escapePibHtml(w)}</span>`;
+                warningsList.appendChild(li);
+            });
+        } else {
+            warningsBox.style.display = 'none';
+        }
+    }
+
+    if (docTbody) {
+        docTbody.innerHTML = '';
+        const docs = safeCheck.documentList || [];
+        if (docs.length > 0) {
+            docs.forEach((d, idx) => {
+                const tr = document.createElement('tr');
+                const isShipmentDoc = d.belongsToShipment !== false;
+                const fileName = d.fileName || 'Dokumen_Pabean.pdf';
+                const docType = d.documentType || 'DOKUMEN';
+                tr.innerHTML = `
+                    <td style="text-align: center; font-family: var(--font-mono); font-weight: 600;">${idx + 1}</td>
+                    <td style="font-family: var(--font-mono); font-size: 12px; font-weight: 600;">
+                        <span style="color: var(--text-primary);">${escapePibHtml(fileName)}</span>
+                    </td>
+                    <td><span style="font-size: 12px; font-weight: 600; background: var(--surface-subtle); color: var(--text-primary); border: 1px solid var(--border-color); padding: 2px 6px; border-radius: 3px;">${escapePibHtml(docType)}</span></td>
+                    <td style="text-align: center;">
+                        <span class="${isShipmentDoc ? 'badge-safe-valid' : 'badge-safe-warning'}" style="font-size: 12px; padding: 2px 6px;">
+                            ${isShipmentDoc ? 'Cocok (1 Shipment)' : 'Asing / Tidak Cocok'}
+                        </span>
+                    </td>
+                    <td style="font-size: 12px; color: var(--text-secondary);">${escapePibHtml(d.notes || '-')}</td>
+                `;
+                docTbody.appendChild(tr);
+            });
+        }
+    }
+}
+
+function updatePibDocTable(data = {}) {
+    renderPibDocumentsTable(data);
 }
 
 // RESET PIB FORM TO BLANK/DEFAULTS
@@ -1374,6 +1832,38 @@ function initPibDashboard() {
 
     const btnSubmit = document.getElementById('btnPibSubmitCustoms');
     if (btnSubmit) btnSubmit.addEventListener('click', submitPibCustoms);
+
+    // Tab Dokumen Actions: Tambah & Urutkan
+    
+    // PIB SafeCheck collapsible toggle
+    const pibSafeCheckHdr = document.getElementById('pibSafeCheckHeader');
+    const pibSafeCheckBdy = document.getElementById('pibSafeCheckBody');
+    const btnTogglePibSafe = document.getElementById('btnTogglePibSafeCheck');
+    if (pibSafeCheckHdr && pibSafeCheckBdy && btnTogglePibSafe) {
+        pibSafeCheckHdr.addEventListener('click', () => {
+            const isCollapsed = pibSafeCheckBdy.classList.contains('collapsed');
+            if (isCollapsed) {
+                pibSafeCheckBdy.classList.remove('collapsed');
+                pibSafeCheckBdy.style.display = 'block';
+                btnTogglePibSafe.classList.add('open');
+                btnTogglePibSafe.setAttribute('aria-expanded', 'true');
+            } else {
+                pibSafeCheckBdy.classList.add('collapsed');
+                pibSafeCheckBdy.style.display = 'none';
+                btnTogglePibSafe.classList.remove('open');
+                btnTogglePibSafe.setAttribute('aria-expanded', 'false');
+            }
+        });
+    }
+
+    const btnAddPibDoc = document.getElementById('btnAddPibDoc');
+    if (btnAddPibDoc) {
+        btnAddPibDoc.addEventListener('click', addNewPibDocRow);
+    }
+    const btnSortPibDoc = document.getElementById('btnSortPibDoc');
+    if (btnSortPibDoc) {
+        btnSortPibDoc.addEventListener('click', sortPibDocRows);
+    }
 
     // 9. Copy entity helpers
     setupPibCopyHandlers();
