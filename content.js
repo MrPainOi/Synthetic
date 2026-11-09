@@ -1769,11 +1769,41 @@
         return null;
     }
 
+    function switchCeisaActiveTab(section) {
+        try {
+            const tabKeywords = {
+                'entitas': ['entitas', 'entity'],
+                'dokumen': ['dokumen', 'lampiran', 'document'],
+                'pengangkut': ['pengangkut', 'sarana', 'carrier'],
+                'kemasan': ['kemasan', 'peti kemas', 'package', 'container'],
+                'transaksi': ['transaksi', 'transaction'],
+                'barang': ['barang', 'item', 'goods'],
+                'pungutan': ['pungutan', 'levy', 'billing']
+            };
+            const kws = tabKeywords[section] || [section];
+            const allTabs = Array.from(document.querySelectorAll('.ant-tabs-tab, .nav-tabs .nav-link, [role="tab"], .tab-item'));
+            for (const tab of allTabs) {
+                const text = (tab.textContent || '').toLowerCase().trim();
+                if (kws.some(kw => text.includes(kw))) {
+                    const btn = tab.querySelector('div, span, a') || tab;
+                    btn.click();
+                    return true;
+                }
+            }
+        } catch (e) {
+            console.warn('[Auto-Switch Tab Error]', e);
+        }
+        return false;
+    }
+
     function handleCeisaAutoInputRow(message) {
         const { section, draftType, item, index, total } = message;
         if (!item) {
             return { ok: false, message: "Data baris kosong." };
         }
+
+        // Buka tab CEISA yang sesuai secara otomatis jika belum aktif
+        switchCeisaActiveTab(section);
 
         const container = findCeisaTargetContainer();
         const filledFields = [];
@@ -1882,31 +1912,290 @@
         // SECTION: HEADER / ENTITAS / PENGANGKUT
         if (section === "header") {
             const noAju = item.nomorAju || item.noAju || "";
-            const kdKantor = item.kodeKantor || item.kantorPabean || "";
+            const kdKantor = item.kodeKantor || item.kantorPabean || item.kantorAsal || "";
+            const jnsPemasukan = item.jenisPemasukan || item.jenisImpor || "";
+            const jnsPemberitahuan = item.jenisPemberitahuan || item.jenisProsedur || "";
+            const katPemasukan = item.kategoriPemasukan || item.kategoriImpor || "";
+            const tujPemasukan = item.tujuanPemasukan || "";
+            const jnsPajak = item.jenisTransaksiPajak || item.jenisTransaksiPerpajakan || "";
+
             const ajuInput = findFieldByKeywords(["nomorAju", "noAju", "nomor_aju", "no_aju"], container);
             if (ajuInput && noAju) {
                 setNativeInputValue(ajuInput, noAju);
                 filledFields.push('No Aju: ' + noAju);
             }
-            const ktrInput = findFieldByKeywords(["kodeKantor", "kantorPabean", "kantor"], container);
+            const ktrInput = findFieldByKeywords(["kodeKantor", "kantorPabean", "kantorAsal", "kantor"], container);
             if (ktrInput && kdKantor) {
                 setNativeInputValue(ktrInput, kdKantor);
                 filledFields.push('Kantor: ' + kdKantor);
+            }
+            const jnsInp = findFieldByKeywords(["jenisPemasukan", "jenisImpor", "jenis"], container);
+            if (jnsInp && jnsPemasukan) {
+                setNativeInputValue(jnsInp, jnsPemasukan);
+                filledFields.push('Jenis: ' + jnsPemasukan);
+            }
+            const pmbInp = findFieldByKeywords(["jenisPemberitahuan", "jenisProsedur", "pemberitahuan"], container);
+            if (pmbInp && jnsPemberitahuan) {
+                setNativeInputValue(pmbInp, jnsPemberitahuan);
+                filledFields.push('Pemberitahuan: ' + jnsPemberitahuan);
+            }
+            const katInp = findFieldByKeywords(["kategoriPemasukan", "kategoriImpor", "kategori"], container);
+            if (katInp && katPemasukan) {
+                setNativeInputValue(katInp, katPemasukan);
+                filledFields.push('Kategori: ' + katPemasukan);
+            }
+            const tujInp = findFieldByKeywords(["tujuanPemasukan", "tujuan"], container);
+            if (tujInp && tujPemasukan) {
+                setNativeInputValue(tujInp, tujPemasukan);
+                filledFields.push('Tujuan: ' + tujPemasukan);
+            }
+            const pjkInp = findFieldByKeywords(["jenisTransaksiPajak", "jenisTransaksiPerpajakan", "transaksiPajak", "pajak"], container);
+            if (pjkInp && jnsPajak) {
+                setNativeInputValue(pjkInp, jnsPajak);
+                filledFields.push('Pajak: ' + jnsPajak);
             }
         }
 
         if (section === "entitas") {
             const shipper = item.shipperName || item.supplierName || item.eksportirNama || "";
             const consignee = item.consigneeName || item.importirName || item.pembeliNama || "";
-            const shpInput = findFieldByKeywords(["namaPemasok", "namaEksportir", "pemasok", "eksportir", "shipper"], container);
+            const importirId = item.importirId || item.npwpImportir || "";
+            const importirNib = item.importirNib || item.nib || "";
+            const importirAddr = item.importirAddress || item.consigneeAddress || "";
+            const supplierAddr = item.supplierAddress || item.shipperAddress || "";
+            const supplierCountry = item.supplierCountry || item.negaraPemasok || "";
+
+            const csgInput = findFieldByKeywords(["namaImportir", "importir", "consignee", "penerima", "nama_importir"], container);
+            if (csgInput && consignee) {
+                setNativeInputValue(csgInput, consignee);
+                filledFields.push('Importir: ' + consignee);
+            }
+            const idInput = findFieldByKeywords(["nomorIdentitasImportir", "npwpImportir", "idImportir", "npwp", "nomor identitas"], container);
+            if (idInput && importirId) {
+                setNativeInputValue(idInput, importirId);
+                filledFields.push('NPWP: ' + importirId);
+            }
+            const nibInput = findFieldByKeywords(["nibImportir", "nib", "nomor induk berusaha"], container);
+            if (nibInput && importirNib) {
+                setNativeInputValue(nibInput, importirNib);
+                filledFields.push('NIB: ' + importirNib);
+            }
+            const addrInput = findFieldByKeywords(["alamatImportir", "alamat", "alamat penerima"], container);
+            if (addrInput && importirAddr) {
+                setNativeInputValue(addrInput, importirAddr);
+                filledFields.push('Alamat Imp: ' + importirAddr.substring(0, 15) + '...');
+            }
+
+            const shpInput = findFieldByKeywords(["namaPemasok", "namaEksportir", "pemasok", "eksportir", "shipper", "pengirim"], container);
             if (shpInput && shipper) {
                 setNativeInputValue(shpInput, shipper);
                 filledFields.push('Pemasok: ' + shipper);
             }
-            const csgInput = findFieldByKeywords(["namaImportir", "importir", "consignee", "penerima"], container);
-            if (csgInput && consignee) {
-                setNativeInputValue(csgInput, consignee);
-                filledFields.push('Importir: ' + consignee);
+            const sAddrInput = findFieldByKeywords(["alamatPemasok", "alamatEksportir", "alamat pemasok"], container);
+            if (sAddrInput && supplierAddr) {
+                setNativeInputValue(sAddrInput, supplierAddr);
+                filledFields.push('Alamat Pem: ' + supplierAddr.substring(0, 15) + '...');
+            }
+            const sCtryInput = findFieldByKeywords(["negaraPemasok", "negaraEksportir", "negara asal", "country"], container);
+            if (sCtryInput && supplierCountry) {
+                setNativeInputValue(sCtryInput, supplierCountry);
+                filledFields.push('Negara: ' + supplierCountry);
+            }
+        }
+
+        if (section === "pengangkut") {
+            const caraAngkut = item.caraPengangkutan || item.modeTransport || "1 - LAUT";
+            const vessel = item.vesselName || item.namaSaranaPengangkut || item.namaKapal || "";
+            const voyage = item.voyageNumber || item.nomorPengangkut || item.voyage || "";
+            const flag = item.vesselFlag || item.bendera || "";
+            const portLoad = item.portLoading || item.pelabuhanMuat || "";
+            const portDischarge = item.portDischarge || item.dischargePort || item.pelabuhanBongkar || "";
+            const tps = item.tpsLocation || item.kodeTps || "";
+
+            const caraInp = findFieldByKeywords(["caraPengangkutan", "cara angkut", "mode transport", "pengangkutan"], container);
+            if (caraInp && caraAngkut) {
+                setNativeInputValue(caraInp, caraAngkut);
+                filledFields.push('Cara: ' + caraAngkut);
+            }
+            const vslInp = findFieldByKeywords(["namaSaranaPengangkut", "namaPengangkut", "nama kapal", "sarana pengangkut", "vessel"], container);
+            if (vslInp && vessel) {
+                setNativeInputValue(vslInp, vessel);
+                filledFields.push('Sarana: ' + vessel);
+            }
+            const voyInp = findFieldByKeywords(["nomorPengangkut", "nomorVoyage", "voyage", "voy", "no pengangkut"], container);
+            if (voyInp && voyage) {
+                setNativeInputValue(voyInp, voyage);
+                filledFields.push('Voyage: ' + voyage);
+            }
+            const flgInp = findFieldByKeywords(["benderaPengangkut", "bendera", "negara bendera", "flag"], container);
+            if (flgInp && flag) {
+                setNativeInputValue(flgInp, flag);
+                filledFields.push('Bendera: ' + flag);
+            }
+            const pLoadInp = findFieldByKeywords(["pelabuhanMuat", "pelabuhan muat", "loading port", "port of loading"], container);
+            if (pLoadInp && portLoad) {
+                setNativeInputValue(pLoadInp, portLoad);
+                filledFields.push('Muat: ' + portLoad);
+            }
+            const pDscInp = findFieldByKeywords(["pelabuhanBongkar", "pelabuhan bongkar", "pelabuhan tujuan", "discharge port"], container);
+            if (pDscInp && portDischarge) {
+                setNativeInputValue(pDscInp, portDischarge);
+                filledFields.push('Bongkar: ' + portDischarge);
+            }
+            const tpsInp = findFieldByKeywords(["tempatPenimbunan", "kodeTps", "tps", "lokasi tps"], container);
+            if (tpsInp && tps) {
+                setNativeInputValue(tpsInp, tps);
+                filledFields.push('TPS: ' + tps);
+            }
+        }
+
+        if (section === "kemasan") {
+            const pkgType = item.packageType || item.jenisKemasan || "CT - CARTON";
+            const pkgQty = item.packageQty || item.jumlahKemasan || "";
+            const pkgBrand = item.packageBrand || item.merekKemasan || "";
+            const contNum = item.containerNumber || item.nomorKontainer || "";
+            const contSize = item.containerSize || item.ukuranKontainer || "";
+            const contType = item.containerType || item.jenisKontainer || "";
+            const bruto = item.grossWeight || item.totalGrossWeightKGM || item.beratKotor || "";
+            const netto = item.netWeight || item.totalNetWeightKGM || item.beratBersih || "";
+
+            const typeInp = findFieldByKeywords(["jenisKemasan", "kodeJenisKemasan", "kemasan", "jenis kemasan", "package type"], container);
+            if (typeInp && pkgType) {
+                setNativeInputValue(typeInp, pkgType);
+                filledFields.push('Kemasan: ' + pkgType);
+            }
+            const qtyInp = findFieldByKeywords(["jumlahKemasan", "jumlah kemasan", "banyak kemasan", "package qty"], container);
+            if (qtyInp && pkgQty) {
+                setNativeInputValue(qtyInp, pkgQty);
+                filledFields.push('Jml Kemasan: ' + pkgQty);
+            }
+            const brandInp = findFieldByKeywords(["merekKemasan", "merek", "tanda kemasan"], container);
+            if (brandInp && pkgBrand) {
+                setNativeInputValue(brandInp, pkgBrand);
+                filledFields.push('Merek: ' + pkgBrand);
+            }
+            const cntInp = findFieldByKeywords(["nomorKontainer", "nomor peti kemas", "nomor container", "peti kemas"], container);
+            if (cntInp && contNum) {
+                setNativeInputValue(cntInp, contNum);
+                filledFields.push('Kontainer: ' + contNum);
+            }
+            const cszInp = findFieldByKeywords(["ukuranKontainer", "ukuran peti kemas", "size"], container);
+            if (cszInp && contSize) {
+                setNativeInputValue(cszInp, contSize);
+                filledFields.push('Ukuran: ' + contSize);
+            }
+            const ctpInp = findFieldByKeywords(["jenisKontainer", "tipe kontainer", "tipe peti kemas"], container);
+            if (ctpInp && contType) {
+                setNativeInputValue(ctpInp, contType);
+                filledFields.push('Tipe Peti Kemas: ' + contType);
+            }
+            const grsInp = findFieldByKeywords(["beratKotor", "bruto", "gross weight", "gross"], container);
+            if (grsInp && bruto) {
+                setNativeInputValue(grsInp, bruto);
+                filledFields.push('Bruto: ' + bruto);
+            }
+            const netInp = findFieldByKeywords(["beratBersih", "netto", "net weight", "net"], container);
+            if (netInp && netto) {
+                setNativeInputValue(netInp, netto);
+                filledFields.push('Netto: ' + netto);
+            }
+        }
+
+        if (section === "transaksi") {
+            const valuta = item.currency || item.valuta || "USD";
+            const kurs = item.exchangeRate || item.kurs || item.ndpbm || "";
+            const incoterm = item.incoterm || item.jenisTransaksi || "FOB";
+            const invAmt = item.invoiceAmount || item.nilaiInvoice || item.fob || item.amount || "";
+            const freight = item.freightAmount || item.freight || "";
+            const asuransi = item.insuranceAmount || item.asuransi || "";
+            const jnsAsuransi = item.insuranceType || "LN";
+
+            const valInp = findFieldByKeywords(["kodeValuta", "valuta", "mata uang", "currency"], container);
+            if (valInp && valuta) {
+                setNativeInputValue(valInp, valuta);
+                filledFields.push('Valuta: ' + valuta);
+            }
+            const krsInp = findFieldByKeywords(["kurs", "nilaiTukar", "exchange rate", "ndpbm"], container);
+            if (krsInp && kurs) {
+                setNativeInputValue(krsInp, kurs);
+                filledFields.push('Kurs: ' + kurs);
+            }
+            const incoInp = findFieldByKeywords(["jenisHarga", "incoterm", "metode penyerahan", "cara penyerahan"], container);
+            if (incoInp && incoterm) {
+                setNativeInputValue(incoInp, incoterm);
+                filledFields.push('Incoterm: ' + incoterm);
+            }
+            const amtInp = findFieldByKeywords(["nilaiTransaksi", "nilaiInvoice", "nilai barang", "fob", "harga barang"], container);
+            if (amtInp && invAmt) {
+                setNativeInputValue(amtInp, invAmt);
+                filledFields.push('Nilai: ' + invAmt);
+            }
+            const frtInp = findFieldByKeywords(["freight", "ongkos angkut", "biaya pengangkutan"], container);
+            if (frtInp && freight) {
+                setNativeInputValue(frtInp, freight);
+                filledFields.push('Freight: ' + freight);
+            }
+            const asrInp = findFieldByKeywords(["asuransi", "nilaiAsuransi", "insurance"], container);
+            if (asrInp && asuransi) {
+                setNativeInputValue(asrInp, asuransi);
+                filledFields.push('Asuransi: ' + asuransi);
+            }
+            const jAsrInp = findFieldByKeywords(["jenisAsuransi", "asuransi bayar", "tipe asuransi"], container);
+            if (jAsrInp && jnsAsuransi) {
+                setNativeInputValue(jAsrInp, jnsAsuransi);
+                filledFields.push('Jenis Asuransi: ' + jnsAsuransi);
+            }
+        }
+
+        if (section === "pungutan") {
+            const cifRp = item.cifRupiah || item.cifRp || item.nilaiPabeanRp || (item.pungutan && item.pungutan.cifRupiah) || item.pibPungutanCifRp || "";
+            const tarifBm = item.tarifBm !== undefined ? item.tarifBm : (item.pungutan && item.pungutan.tarifBm !== undefined ? item.pungutan.tarifBm : "");
+            const nilaiBm = item.nilaiBm || (item.pungutan && item.pungutan.nilaiBm) || "";
+            const tarifPpn = item.tarifPpn !== undefined ? item.tarifPpn : (item.pungutan && item.pungutan.tarifPpn !== undefined ? item.pungutan.tarifPpn : "11");
+            const nilaiPpn = item.nilaiPpn || (item.pungutan && item.pungutan.nilaiPpn) || "";
+            const tarifPph = item.tarifPph !== undefined ? item.tarifPph : (item.pungutan && item.pungutan.tarifPph !== undefined ? item.pungutan.tarifPph : "2.5");
+            const nilaiPph = item.nilaiPph || (item.pungutan && item.pungutan.nilaiPph) || "";
+            const totalBilling = item.totalBilling || (item.pungutan && item.pungutan.totalBilling) || "";
+
+            const cifInp = findFieldByKeywords(["nilaiPabean", "cifRupiah", "cif rp", "nilai impor", "cif (rp)"], container);
+            if (cifInp && cifRp) {
+                setNativeInputValue(cifInp, cifRp);
+                filledFields.push('CIF Rp: ' + cifRp);
+            }
+            const tBmInp = findFieldByKeywords(["tarifBm", "tarif bea masuk", "bm tarif", "bm %"], container);
+            if (tBmInp && tarifBm !== "") {
+                setNativeInputValue(tBmInp, tarifBm);
+                filledFields.push('Tarif BM: ' + tarifBm + '%');
+            }
+            const nBmInp = findFieldByKeywords(["nilaiBm", "nilai bea masuk", "bm bayar", "bea masuk bayar"], container);
+            if (nBmInp && nilaiBm) {
+                setNativeInputValue(nBmInp, nilaiBm);
+                filledFields.push('Nilai BM: ' + nilaiBm);
+            }
+            const tPpnInp = findFieldByKeywords(["tarifPpn", "tarif ppn", "ppn %"], container);
+            if (tPpnInp && tarifPpn !== "") {
+                setNativeInputValue(tPpnInp, tarifPpn);
+                filledFields.push('Tarif PPN: ' + tarifPpn + '%');
+            }
+            const nPpnInp = findFieldByKeywords(["nilaiPpn", "nilai ppn", "ppn bayar"], container);
+            if (nPpnInp && nilaiPpn) {
+                setNativeInputValue(nPpnInp, nilaiPpn);
+                filledFields.push('Nilai PPN: ' + nilaiPpn);
+            }
+            const tPphInp = findFieldByKeywords(["tarifPph", "tarif pph", "pph %"], container);
+            if (tPphInp && tarifPph !== "") {
+                setNativeInputValue(tPphInp, tarifPph);
+                filledFields.push('Tarif PPh: ' + tarifPph + '%');
+            }
+            const nPphInp = findFieldByKeywords(["nilaiPph", "nilai pph", "pph bayar"], container);
+            if (nPphInp && nilaiPph) {
+                setNativeInputValue(nPphInp, nilaiPph);
+                filledFields.push('Nilai PPh: ' + nilaiPph);
+            }
+            const billInp = findFieldByKeywords(["totalBilling", "total tagihan", "total bayar", "billing"], container);
+            if (billInp && totalBilling) {
+                setNativeInputValue(billInp, totalBilling);
+                filledFields.push('Billing: ' + totalBilling);
             }
         }
 

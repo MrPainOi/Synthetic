@@ -2407,6 +2407,108 @@ body {
 }
 
 /* ==========================================================================
+   CEISA 4.0 DOCUMENT TOPBAR (1:1 SCREENSHOT FTZ01 / RESMI CEISA)
+   ========================================================================== */
+.ceisa-doc-topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 18px;
+    margin-bottom: 12px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
+}
+
+.ceisa-doc-topbar-left {
+    display: flex;
+    align-items: center;
+}
+
+.ceisa-doc-type-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0;
+    letter-spacing: -0.2px;
+}
+
+.ceisa-doc-topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-topbar-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #475569;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.btn-topbar-action:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+    border-color: #94a3b8;
+}
+
+.btn-topbar-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    color: #475569;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.btn-topbar-icon:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+    border-color: #94a3b8;
+}
+
+/* Dark Mode Overrides for Topbar */
+[data-theme="dark"] .ceisa-doc-topbar {
+    background: #1e293b;
+    border-color: #334155;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+}
+
+[data-theme="dark"] .ceisa-doc-type-title {
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .btn-topbar-action,
+[data-theme="dark"] .btn-topbar-icon {
+    background: #0f172a;
+    border-color: #334155;
+    color: #cbd5e1;
+}
+
+[data-theme="dark"] .btn-topbar-action:hover,
+[data-theme="dark"] .btn-topbar-icon:hover {
+    background: #1e293b;
+    border-color: #475569;
+    color: #ffffff;
+}
+
+
+/* ==========================================================================
    4. MODUL PEB: CEISA 4.0 TABS & FORM CARDS (1:1 STANDAR RESMI)
    ========================================================================== */
 .ceisa-tabs {

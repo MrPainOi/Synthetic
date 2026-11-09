@@ -702,7 +702,7 @@ if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onMessage)
     // 3. Draft State & Selection
     let currentDraft = null;
     let currentDraftType = 'impor'; // 'impor' (PIB) or 'ekspor' (PEB)
-    let currentSection = 'dokumen';
+    let currentSection = 'entitas';
     let currentItemIndex = 0;
     let isAutoLoopRunning = false;
 
@@ -858,7 +858,11 @@ if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onMessage)
             return Array.isArray(currentDraft.items) ? currentDraft.items : [];
         }
 
-        // Single object sections
+        if (section === 'pungutan') {
+            return [currentDraft.pungutan || currentDraft];
+        }
+
+        // Single object sections (entitas, pengangkut, kemasan, transaksi)
         return [currentDraft];
     }
 
@@ -900,44 +904,51 @@ if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onMessage)
 
         const curr = items[currentItemIndex];
 
-        if (currentSection === 'dokumen') {
-            if (lblItemPreviewTitle) lblItemPreviewTitle.textContent = `[${curr.code || '380'}] ${curr.name || 'Dokumen'} #${curr.number || '-'}`;
-            if (lblItemPreviewDesc) lblItemPreviewDesc.textContent = `Tgl: ${curr.date || '-'} ${curr.amount ? '• Nilai: ' + (curr.currency || '') + ' ' + curr.amount : ''}`;
-            if (lblBtnInjectText) lblBtnInjectText.textContent = `Input Dokumen #${curr.number || currentItemIndex + 1} & Lanjut ▶`;
-        } else if (currentSection === 'barang') {
-            const hs = curr.hsCode || 'Pos Tarif';
-            const desc = curr.uraianJenisBarang || curr.description || 'Barang';
-            if (lblItemPreviewTitle) lblItemPreviewTitle.textContent = `[HS ${hs}] ${desc}`;
-            if (lblItemPreviewDesc) lblItemPreviewDesc.textContent = `Jumlah: ${curr.jumlahDanSatuanBarang || curr.quantity || '-'} • Kemasan: ${curr.kemasan || '-'} • Nilai: ${curr.amount || curr.cifValue || '-'}`;
-            if (lblBtnInjectText) lblBtnInjectText.textContent = `Input Barang #${currentItemIndex + 1} & Lanjut ▶`;
-        } else if (currentSection === 'header') {
-            if (lblItemPreviewTitle) lblItemPreviewTitle.textContent = `1. Header: ${curr.nomorAju || curr.noAju || 'Draft Dokumen'}`;
-            if (lblItemPreviewDesc) lblItemPreviewDesc.textContent = `Kantor: ${curr.kodeKantor || '010700 - TANJUNG PRIOK'} • Kategori: UMUM • Jenis: ${currentDraftType === 'impor' ? 'UNTUK DIPAKAI' : 'EKSPOR UMUM'}`;
-            if (lblBtnInjectText) lblBtnInjectText.textContent = `Masukkan Data Header ke CEISA ▶`;
-        } else if (currentSection === 'entitas') {
+        if (currentSection === 'entitas') {
             const shp = curr.shipperName || curr.supplierName || curr.eksportirNama || 'Pemasok Luar Negeri';
             const csg = curr.consigneeName || curr.importirName || curr.pembeliNama || 'Importir Indonesia';
             if (lblItemPreviewTitle) lblItemPreviewTitle.textContent = `2. Entitas: ${shp.slice(0, 20)} ➔ ${csg.slice(0, 20)}`;
             if (lblItemPreviewDesc) lblItemPreviewDesc.textContent = `Importir: ${csg} • Pemasok: ${shp}`;
             if (lblBtnInjectText) lblBtnInjectText.textContent = `Masukkan Data Entitas ke CEISA ▶`;
+        } else if (currentSection === 'dokumen') {
+            if (lblItemPreviewTitle) lblItemPreviewTitle.textContent = `[${curr.code || '380'}] ${curr.name || 'Dokumen'} #${curr.number || '-'}`;
+            if (lblItemPreviewDesc) lblItemPreviewDesc.textContent = `Tgl: ${curr.date || '-'} ${curr.amount ? '• Nilai: ' + (curr.currency || '') + ' ' + curr.amount : ''}`;
+            if (lblBtnInjectText) lblBtnInjectText.textContent = `Input Dokumen #${curr.number || currentItemIndex + 1} & Lanjut ▶`;
         } else if (currentSection === 'pengangkut') {
-            const dPort = curr.dischargePort || 'SINGAPORE / BATAM';
-            const lPort = curr.loadingPort || '-';
-            if (lblItemPreviewTitle) lblItemPreviewTitle.textContent = `4. Pengangkut: Sarana & Pelabuhan`;
+            const dPort = curr.portDischarge || curr.dischargePort || 'BATAM';
+            const lPort = curr.portLoading || curr.loadingPort || '-';
+            const vName = curr.vesselName || curr.namaSaranaPengangkut || curr.caraPengangkutan || 'Sarana Pengangkut';
+            if (lblItemPreviewTitle) lblItemPreviewTitle.textContent = `4. Pengangkut: ${vName}`;
             if (lblItemPreviewDesc) lblItemPreviewDesc.textContent = `Pelabuhan Bongkar: ${dPort} • Pelabuhan Muat: ${lPort}`;
             if (lblBtnInjectText) lblBtnInjectText.textContent = `Masukkan Data Pengangkut ke CEISA ▶`;
         } else if (currentSection === 'kemasan') {
-            const kemasan = curr.totalKemasan || 'Multiple Colli / Karton';
-            const bruto = curr.totalGrossWeightKGM || '-';
-            const netto = curr.totalNetWeightKGM || '-';
+            const kemasan = curr.totalKemasan || (curr.packageQty ? `${curr.packageQty} ${curr.packageType || 'Colli'}` : 'Multiple Colli / Karton');
+            const bruto = curr.grossWeight || curr.totalGrossWeightKGM || '-';
+            const netto = curr.netWeight || curr.totalNetWeightKGM || '-';
             if (lblItemPreviewTitle) lblItemPreviewTitle.textContent = `5. Kemasan & Peti Kemas`;
-            if (lblItemPreviewDesc) lblItemPreviewDesc.textContent = `Kemasan: ${kemasan} • Bruto: ${bruto} • Netto: ${netto}`;
+            if (lblItemPreviewDesc) lblItemPreviewDesc.textContent = `Kemasan: ${kemasan} • Bruto: ${bruto} Kg • Netto: ${netto} Kg`;
             if (lblBtnInjectText) lblBtnInjectText.textContent = `Masukkan Data Kemasan ke CEISA ▶`;
         } else if (currentSection === 'transaksi') {
             const valuta = curr.currency || curr.valuta || 'USD';
-            if (lblItemPreviewTitle) lblItemPreviewTitle.textContent = `6. Transaksi: Nilai & Valuta`;
-            if (lblItemPreviewDesc) lblItemPreviewDesc.textContent = `Valuta: ${valuta} • Cara Pembayaran: 1 - BIASA / TUNAI`;
+            const invAmt = curr.invoiceAmount || curr.amount || '0';
+            const incoterm = curr.incoterm || 'FOB';
+            if (lblItemPreviewTitle) lblItemPreviewTitle.textContent = `6. Transaksi: ${incoterm} ${valuta} ${invAmt}`;
+            if (lblItemPreviewDesc) lblItemPreviewDesc.textContent = `Valuta: ${valuta} • Nilai: ${invAmt} • Cara Bayar: TUNAI/BIASA`;
             if (lblBtnInjectText) lblBtnInjectText.textContent = `Masukkan Data Transaksi ke CEISA ▶`;
+        } else if (currentSection === 'barang') {
+            const hs = curr.hsCode || curr.posTarif || 'Pos Tarif';
+            const desc = curr.uraianJenisBarang || curr.description || curr.namaBarang || 'Barang';
+            if (lblItemPreviewTitle) lblItemPreviewTitle.textContent = `[HS ${hs}] ${desc}`;
+            if (lblItemPreviewDesc) lblItemPreviewDesc.textContent = `Jumlah: ${curr.jumlahDanSatuanBarang || curr.quantity || '-'} • Kemasan: ${curr.kemasan || '-'} • Nilai: ${curr.amount || curr.cifUsd || curr.cifValue || '-'}`;
+            if (lblBtnInjectText) lblBtnInjectText.textContent = `Input Barang #${currentItemIndex + 1} & Lanjut ▶`;
+        } else if (currentSection === 'pungutan') {
+            const cifRp = curr.cifRupiah || curr.cifRp || (curr.pungutan && curr.pungutan.cifRupiah) || curr.pibPungutanCifRp || 'Rp 0';
+            const bm = curr.tarifBm !== undefined ? `${curr.tarifBm}%` : '5.0%';
+            const ppn = curr.tarifPpn !== undefined ? `${curr.tarifPpn}%` : '11.0%';
+            const pph = curr.tarifPph !== undefined ? `${curr.tarifPph}%` : '2.5%';
+            if (lblItemPreviewTitle) lblItemPreviewTitle.textContent = `8. Pungutan: BM ${bm} • PPN ${ppn} • PPh ${pph}`;
+            if (lblItemPreviewDesc) lblItemPreviewDesc.textContent = `Nilai Pabean: ${cifRp} • Simulasi Pungutan Terlampir`;
+            if (lblBtnInjectText) lblBtnInjectText.textContent = `Masukkan Data Pungutan ke CEISA ▶`;
         } else {
             if (lblItemPreviewTitle) lblItemPreviewTitle.textContent = `Bagian: ${currentSection.toUpperCase()}`;
             if (lblItemPreviewDesc) lblItemPreviewDesc.textContent = `Data siap dimasukkan ke formulir CEISA.`;
@@ -1028,7 +1039,7 @@ if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onMessage)
         });
     }
 
-    // Auto Input All (Continuous Loop)
+    // Auto Input All (Continuous Loop across Sections 2 to 8)
     const btnAutoInputAll = document.getElementById("btnAutoInputAll");
     if (btnAutoInputAll) {
         btnAutoInputAll.addEventListener('click', async () => {
@@ -1040,29 +1051,43 @@ if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onMessage)
                 return;
             }
 
-            const items = getSectionItems(currentSection);
-            if (!items || items.length === 0) {
-                appendLog("Tidak ada data untuk diinput.", "log-warn");
-                return;
-            }
+            const ALLOWED_SECTIONS = ['entitas', 'dokumen', 'pengangkut', 'kemasan', 'transaksi', 'barang', 'pungutan'];
+            const startSecIdx = ALLOWED_SECTIONS.indexOf(currentSection);
+            const sectionsToProcess = startSecIdx !== -1 ? ALLOWED_SECTIONS.slice(startSecIdx) : ALLOWED_SECTIONS;
 
             isAutoLoopRunning = true;
             btnAutoInputAll.classList.add('running');
             btnAutoInputAll.textContent = "⏹ Hentikan";
-            appendLog(`Memulai Auto Input bertahap untuk ${items.length} baris...`, "log-info");
+            appendLog(`Memulai Auto Input urut mulai tab '${currentSection}' hingga Tab 8 (Pungutan)...`, "log-info");
 
-            for (let i = currentItemIndex; i < items.length; i++) {
+            for (let s = 0; s < sectionsToProcess.length; s++) {
                 if (!isAutoLoopRunning) break;
-                currentItemIndex = i;
-                updateSectionUI();
-                await injectCurrentStep(false);
-                await new Promise(r => setTimeout(r, 800)); // safe delay
+                currentSection = sectionsToProcess[s];
+                if (sectionSelect) sectionSelect.value = currentSection;
+
+                const items = getSectionItems(currentSection);
+                if (!items || items.length === 0) continue;
+
+                appendLog(`[Auto Input] Memproses Bagian: ${currentSection.toUpperCase()} (${items.length} data)...`, "log-info");
+
+                const startIdx = (s === 0) ? currentItemIndex : 0;
+                for (let i = startIdx; i < items.length; i++) {
+                    if (!isAutoLoopRunning) break;
+                    currentItemIndex = i;
+                    updateSectionUI();
+                    await injectCurrentStep(false);
+                    await new Promise(r => setTimeout(r, 800)); // safe delay
+                }
+
+                if (isAutoLoopRunning) {
+                    await new Promise(r => setTimeout(r, 400));
+                }
             }
 
             isAutoLoopRunning = false;
             btnAutoInputAll.classList.remove('running');
             btnAutoInputAll.textContent = "🚀 Auto Input Semua";
-            appendLog("Selesai memproses seluruh baris!", "log-success");
+            appendLog("🎉 Auto Input Selesai! Pengisian telah berhenti di Tab 8 (Pungutan). Tab 9 (Pernyataan) siap direview manual.", "log-success");
         });
     }
 

@@ -56,11 +56,16 @@ let pibAutoSaveTimer = null;
 
 // SAMPLE DEFAULT PIB DATA (AUTHENTIC IMPORT CLEARANCE DRAFT)
 const SAMPLE_PIB_DATA = {
-    nomorAju: "010700-001234-20260923-000881",
-    kantorPabean: "010700 - KPU BEA DAN CUKAI TIPE A TANJUNG PRIOK",
-    jenisImpor: "1 - UNTUK DIPAKAI",
+    nomorAju: "000511OTA39120261103000002",
+    kantorPabean: "020400 - KPU BEA DAN CUKAI TIPE B BATAM",
+    jenisPemasukan: "01 - DARI LDP",
+    jenisPemberitahuan: "1 - BIASA",
+    kategoriPemasukan: "001",
+    tujuanPemasukan: "2 - PEMAKAIAN LANGSUNG",
+    jenisTransaksiPajak: "4",
+    jenisImpor: "01 - DARI LDP",
     jenisProsedur: "1 - BIASA",
-    kategoriImpor: "1 - UMUM",
+    kategoriImpor: "001",
     caraBayar: "1 - BIASA / TUNAI",
     
     // Importir & Entitas
@@ -335,9 +340,14 @@ function collectPibFormData() {
     return {
         nomorAju: getVal('pibNoAju'),
         kantorPabean: getVal('pibKantorPabean'),
-        jenisImpor: getVal('pibJenisImpor'),
-        jenisProsedur: getVal('pibJenisProsedur'),
-        kategoriImpor: getVal('pibKategoriImpor'),
+        jenisPemasukan: getVal('pibJenisPemasukan') || getVal('pibJenisImpor'),
+        jenisPemberitahuan: getVal('pibJenisPemberitahuan') || getVal('pibJenisProsedur'),
+        kategoriPemasukan: getVal('pibKategoriPemasukan') || getVal('pibKategoriImpor'),
+        tujuanPemasukan: getVal('pibTujuanPemasukan'),
+        jenisTransaksiPajak: getVal('pibJenisTransaksiPajak'),
+        jenisImpor: getVal('pibJenisPemasukan') || getVal('pibJenisImpor'),
+        jenisProsedur: getVal('pibJenisPemberitahuan') || getVal('pibJenisProsedur'),
+        kategoriImpor: getVal('pibKategoriPemasukan') || getVal('pibKategoriImpor'),
         caraBayar: getVal('pibCaraBayar'),
 
         importirIdType: getVal('pibImportirIdType'),
@@ -435,6 +445,25 @@ function collectPibFormData() {
         insuranceType: getVal('pibInsuranceType'),
 
         tarifBm: parseFloat(getVal('pibTarifBm')) || 0,
+        tarifPpn: 11,
+        tarifPph: 2.5,
+        cifRupiah: getVal('pibPungutanCifRp') || getVal('pibCifIdr'),
+        nilaiBm: getVal('pibPungutanNilaiBm'),
+        nilaiImpor: getVal('pibPungutanNilaiImpor'),
+        nilaiPpn: getVal('pibPungutanNilaiPpn'),
+        nilaiPph: getVal('pibPungutanNilaiPph'),
+        totalBilling: getVal('pibPungutanTotalBilling'),
+        pungutan: {
+            cifRupiah: getVal('pibPungutanCifRp') || getVal('pibCifIdr'),
+            tarifBm: parseFloat(getVal('pibTarifBm')) || 0,
+            nilaiBm: getVal('pibPungutanNilaiBm'),
+            nilaiImpor: getVal('pibPungutanNilaiImpor'),
+            tarifPpn: 11,
+            nilaiPpn: getVal('pibPungutanNilaiPpn'),
+            tarifPph: 2.5,
+            nilaiPph: getVal('pibPungutanNilaiPph'),
+            totalBilling: getVal('pibPungutanTotalBilling')
+        },
 
         pernyataanKota: getVal('pibPernyataanKota'),
         pernyataanTanggal: getVal('pibPernyataanTanggal'),
@@ -565,12 +594,13 @@ function loadPibDraftData(data, shouldSave = true) {
     const lblNoAju = document.getElementById('lblPibNoAju');
     if (lblNoAju) lblNoAju.textContent = noAju;
 
-    // Header
-    if (data.kantorPabean) setVal('pibKantorPabean', data.kantorPabean);
-    if (data.jenisImpor) setVal('pibJenisImpor', data.jenisImpor);
-    if (data.jenisProsedur) setVal('pibJenisProsedur', data.jenisProsedur);
-    if (data.kategoriImpor) setVal('pibKategoriImpor', data.kategoriImpor);
-    if (data.caraBayar) setVal('pibCaraBayar', data.caraBayar);
+    // Header (1:1 FTZ01 / PIB)
+    if (data.kantorPabean || data.kantorAsal) setVal('pibKantorPabean', data.kantorPabean || data.kantorAsal);
+    if (data.jenisPemasukan || data.jenisImpor) setVal('pibJenisPemasukan', data.jenisPemasukan || data.jenisImpor);
+    if (data.jenisPemberitahuan || data.jenisProsedur) setVal('pibJenisPemberitahuan', data.jenisPemberitahuan || data.jenisProsedur);
+    if (data.kategoriPemasukan || data.kategoriImpor) setVal('pibKategoriPemasukan', data.kategoriPemasukan || data.kategoriImpor);
+    if (data.tujuanPemasukan) setVal('pibTujuanPemasukan', data.tujuanPemasukan);
+    if (data.jenisTransaksiPajak || data.jenisTransaksiPerpajakan) setVal('pibJenisTransaksiPajak', data.jenisTransaksiPajak || data.jenisTransaksiPerpajakan);
 
     // Entitas
     if (data.importirIdType) setVal('pibImportirIdType', data.importirIdType);
@@ -1749,6 +1779,33 @@ function initPibDashboard() {
     const btnNext = document.getElementById('btnPibTabNext');
     if (btnPrev) btnPrev.addEventListener('click', handlePibTabPrev);
     if (btnNext) btnNext.addEventListener('click', handlePibTabNext);
+
+    // 2b. Header Tab Next Button & Topbar Buttons (FTZ01 1:1)
+    const btnNextHeader = document.getElementById('btnNextFromPibHeader');
+    if (btnNextHeader) {
+        btnNextHeader.addEventListener('click', () => {
+            switchPibTab('pib-tab-entitas');
+        });
+    }
+
+    const btnPibKembali = document.getElementById('btnPibKembali');
+    if (btnPibKembali) {
+        btnPibKembali.addEventListener('click', () => {
+            if (window.history.length > 1) {
+                window.history.back();
+            } else {
+                window.location.href = 'dashboard.html';
+            }
+        });
+    }
+
+    const btnPibUpdateData = document.getElementById('btnPibUpdateData');
+    if (btnPibUpdateData) {
+        btnPibUpdateData.addEventListener('click', () => {
+            saveCurrentPibDraft(true);
+            showToast('Data draft PIB / FTZ01 berhasil diperbarui!', 'success');
+        });
+    }
 
     // 3. Calculation Triggers
     const calcTriggers = [

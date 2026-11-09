@@ -240,6 +240,26 @@
                 <!-- Main Workspace PIB (Standar Resmi 1:1 CEISA 4.0) -->
                 <main class="main-workspace" style="padding-top: 4px;">
 
+                    <!-- CEISA 4.0 Document Topbar (1:1 FTZ01 Portal Screen) -->
+                    <div class="ceisa-doc-topbar">
+                        <div class="ceisa-doc-topbar-left">
+                            <h2 class="ceisa-doc-type-title">FTZ01 - Pemasukan dari Luar Daerah Pabean</h2>
+                        </div>
+                        <div class="ceisa-doc-topbar-right">
+                            <button type="button" class="btn-topbar-action" id="btnPibKembali" title="Kembali ke Beranda">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                                <span>Kembali</span>
+                            </button>
+                            <button type="button" class="btn-topbar-action" id="btnPibUpdateData" title="Update Data Draft">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                                <span>Update Data</span>
+                            </button>
+                            <button type="button" class="btn-topbar-icon" id="btnPibMenuToggle" title="Menu Opsi">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+                            </button>
+                        </div>
+                    </div>
+
                     <!-- CEISA 4.0 Tabs Strip (1:1 Standar CEISA) -->
                     <nav class="ceisa-tabs" role="tablist">
                         <button type="button" class="ceisa-tab-btn active" data-pib-tab="pib-tab-header">Header</button>
@@ -253,7 +273,7 @@
                         <button type="button" class="ceisa-tab-btn" data-pib-tab="pib-tab-pernyataan">Pernyataan</button>
                     </nav>
 
-                    <!-- TAB 1: HEADER PIB -->
+                    <!-- TAB 1: HEADER PIB (1:1 FORM FTZ01 RESMI CEISA 4.0) -->
                     <section id="pib-tab-header" class="tab-content-panel active">
                         <div class="ceisa-form-card">
                             <div class="ceisa-header-form">
@@ -261,62 +281,95 @@
                                     <div class="ceisa-form-row-label">Nomor Aju</div>
                                     <div class="ceisa-form-row-control">
                                         <input type="text" id="pibNoAju" class="form-control form-control-mono"
-                                            value="010700-001234-20260923-000881" readonly>
+                                            value="000511OTA39120261103000002" readonly>
                                     </div>
                                 </div>
                                 <div class="ceisa-form-row">
-                                    <div class="ceisa-form-row-label">Kantor Pabean Bongkar / Pengawasan <span class="req">*</span></div>
+                                    <div class="ceisa-form-row-label">Kantor Pabean Asal <span class="req">*</span></div>
                                     <div class="ceisa-form-row-control">
                                         <select id="pibKantorPabean" class="form-control">
-                                            <option value="010700 - KPU BEA DAN CUKAI TIPE A TANJUNG PRIOK" selected>010700 - KPU BEA DAN CUKAI TIPE A TANJUNG PRIOK</option>
-                                            <option value="030000 - KPU BEA DAN CUKAI TIPE B BATAM">030000 - KPU BEA DAN CUKAI TIPE B BATAM</option>
-                                            <option value="070100 - KPU BEA DAN CUKAI TIPE A TANJUNG PERAK">070100 - KPU BEA DAN CUKAI TIPE A TANJUNG PERAK</option>
-                                            <option value="050100 - KPU BEA DAN CUKAI TIPE C SOEKARNO HATTA">050100 - KPU BEA DAN CUKAI TIPE C SOEKARNO HATTA</option>
+                                            <option value="020400 - KPU BEA DAN CUKAI TIPE B BATAM" selected>020400 - KPU BEA DAN CUKAI TIPE B BATAM</option>
+                                            <option disabled value="">------------------------------</option>
+                                            <option value="010000 - KANWIL DJBC SUMATERA UTARA">010000 - KANWIL DJBC SUMATERA UTARA</option>
+                                            <option value="010100 - KPPBC TMP B KUALANAMU">010100 - KPPBC TMP B KUALANAMU</option>
+                                            <option value="010700 - KPPBC TMP BELAWAN">010700 - KPPBC TMP BELAWAN</option>
+                                            <option value="010800 - KPPBC TMP B MEDAN">010800 - KPPBC TMP B MEDAN</option>
+                                            <option value="010900 - KPPBC PANGKALAN SUSU">010900 - KPPBC PANGKALAN SUSU</option>
+                                            <option value="011000 - KPPBC TMP C PEMATANGSIANTAR">011000 - KPPBC TMP C PEMATANGSIANTAR</option>
+                                            <option value="011100 - KPPBC TMP C TELUK NIBUNG">011100 - KPPBC TMP C TELUK NIBUNG</option>
+                                            <option value="010700 - KPU BEA DAN CUKAI TIPE A TANJUNG PRIOK">010700 - KPU BEA DAN CUKAI TIPE A TANJUNG PRIOK</option>
                                         </select>
                                     </div>
                                 </div>
                                 <div class="ceisa-form-row">
-                                    <div class="ceisa-form-row-label">Jenis Impor <span class="req">*</span></div>
+                                    <div class="ceisa-form-row-label">Jenis Pemasukan <span class="req">*</span></div>
                                     <div class="ceisa-form-row-control">
-                                        <select id="pibJenisImpor" class="form-control">
-                                            <option value="1 - UNTUK DIPAKAI" selected>1 - UNTUK DIPAKAI</option>
-                                            <option value="2 - SEMENTARA">2 - SEMENTARA</option>
-                                            <option value="3 - RE-IMPOR">3 - RE-IMPOR</option>
-                                            <option value="5 - PELAYANAN SEGERA (RUSH HANDLING)">5 - PELAYANAN SEGERA (RUSH HANDLING)</option>
-                                            <option value="6 - GABUNGAN">6 - GABUNGAN</option>
+                                        <select id="pibJenisPemasukan" class="form-control">
+                                            <option value="01 - DARI LDP" selected>01 - DARI LDP</option>
+                                            <option value="02 - DARI TLDP">02 - DARI TLDP</option>
+                                            <option value="03 - DARI KPBPB LAIN">03 - DARI KPBPB LAIN</option>
+                                            <option value="04 - DARI TPB">04 - DARI TPB</option>
+                                            <option value="05 - DARI KEK">05 - DARI KEK</option>
                                         </select>
                                     </div>
                                 </div>
                                 <div class="ceisa-form-row">
-                                    <div class="ceisa-form-row-label">Jenis Prosedur <span class="req">*</span></div>
+                                    <div class="ceisa-form-row-label">Jenis Pemberitahuan <span class="req">*</span></div>
                                     <div class="ceisa-form-row-control">
-                                        <select id="pibJenisProsedur" class="form-control">
+                                        <select id="pibJenisPemberitahuan" class="form-control">
                                             <option value="1 - BIASA" selected>1 - BIASA</option>
                                             <option value="2 - BERKALA">2 - BERKALA</option>
                                         </select>
                                     </div>
                                 </div>
                                 <div class="ceisa-form-row">
-                                    <div class="ceisa-form-row-label">Kategori / Jalur Impor <span class="req">*</span></div>
+                                    <div class="ceisa-form-row-label">Kategori Pemasukan <span class="req">*</span></div>
                                     <div class="ceisa-form-row-control">
-                                        <select id="pibKategoriImpor" class="form-control">
-                                            <option value="1 - UMUM" selected>1 - UMUM</option>
-                                            <option value="2 - MITA NON PRIORITAS">2 - MITA NON PRIORITAS</option>
-                                            <option value="3 - AEO / MITRA UTAMA">3 - AEO / MITRA UTAMA</option>
+                                        <select id="pibKategoriPemasukan" class="form-control">
+                                            <option value="001" selected>A - BIASA; (001)</option>
+                                            <option value="B - SEMENTARA;">B - SEMENTARA;</option>
+                                            <option value="C - KEMBALI;">C - KEMBALI;</option>
+                                            <option value="D - PELAYANAN SEGERA;">D - PELAYANAN SEGERA;</option>
+                                            <option value="E - GABUNGAN; ATAU">E - GABUNGAN; ATAU</option>
+                                            <option value="F1">F1 - KHUSUS BARANG PERWAKILAN NEGARA ASING BESERTA PARA PEJABATNYA YANG BERTUGAS DI INDONESIA BERDASARKAN ASAS TIMBAL BALIK (KODE 1);</option>
+                                            <option value="F11">F11 - KHUSUS OBAT-OBATAN YANG DIMASUKKAN DENGAN MENGGUNAKAN ANGGARAN PEMERINTAH YANG DIPERUNTUKKAN BAGI KEPENTINGAN MASYARAKAT (KODE 11);</option>
+                                            <option value="F12">F12 - KHUSUS BAHAN TERAPI MANUSIA, PENGELOMPOKAN DARAH, DAN PENJENISAN JARINGAN (KODE 12);</option>
+                                            <option value="F13">F13 - KHUSUS PERALATAN DAN BAHAN YANG DIGUNAKAN UNTUK MENCEGAH PENCEMARAN LINGKUNGAN (KODE 13);</option>
                                         </select>
                                     </div>
                                 </div>
                                 <div class="ceisa-form-row">
-                                    <div class="ceisa-form-row-label">Cara Pembayaran <span class="req">*</span></div>
+                                    <div class="ceisa-form-row-label">Tujuan Pemasukan</div>
                                     <div class="ceisa-form-row-control">
-                                        <select id="pibCaraBayar" class="form-control">
-                                            <option value="1 - BIASA / TUNAI" selected>1 - BIASA / TUNAI</option>
-                                            <option value="2 - BERKALA">2 - BERKALA</option>
-                                            <option value="3 - JAMINAN">3 - JAMINAN</option>
-                                            <option value="4 - LAINNYA">4 - LAINNYA</option>
+                                        <select id="pibTujuanPemasukan" class="form-control">
+                                            <option value="1 - PENJUALAN">1 - PENJUALAN</option>
+                                            <option value="10 - LAINNYA">10 - LAINNYA</option>
+                                            <option value="2 - PEMAKAIAN LANGSUNG" selected>2 - PEMAKAIAN LANGSUNG</option>
+                                            <option value="3 - PENIMBUNAN/LOGISTIK">3 - PENIMBUNAN/LOGISTIK</option>
+                                            <option value="4 - PENGOLAHAN">4 - PENGOLAHAN</option>
+                                            <option value="5 - PENGERJAAN PROYEK">5 - PENGERJAAN PROYEK</option>
+                                            <option value="6 - PEKERJAAN SUBKONTRAK">6 - PEKERJAAN SUBKONTRAK</option>
+                                            <option value="7A - PEMASUKAN KEMBALI BARANG TUJUAN TERTENTU">7A - PEMASUKAN KEMBALI BARANG TUJUAN TERTENTU DALAM JANGKA WAKTU TERTENTU KE TEMPAT LAIN DALAM DAERAH PABEAN</option>
+                                            <option value="7B - PEMASUKAN KEMBALI BARANG FASILITAS HULU MIGAS">7B - PEMASUKAN KEMBALI BARANG FASILITAS UNTUK KEGIATAN HULU MINYAK DAN GAS BUMI</option>
                                         </select>
                                     </div>
                                 </div>
+                                <div class="ceisa-form-row">
+                                    <div class="ceisa-form-row-label">Jenis Transaksi Perpajakan</div>
+                                    <div class="ceisa-form-row-control">
+                                        <select id="pibJenisTransaksiPajak" class="form-control">
+                                            <option value="A - PENYERAHAN BARANG KENA PAJAK">A - PENYERAHAN BARANG KENA PAJAK</option>
+                                            <option value="B - BUKAN PENYERAHAN BARANG KENA PAJAK" selected>B - BUKAN PENYERAHAN BARANG KENA PAJAK</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Bottom Stepper / Navigasi Selanjutnya (1:1 Screenshot CEISA 4.0) -->
+                            <div class="ceisa-tab-next-footer" style="display: flex; justify-content: flex-end; padding: 14px 24px; border-top: 1px solid var(--border-color, #e2e8f0);">
+                                <button type="button" class="btn btn-ceisa-primary btn-tab-next" id="btnNextFromPibHeader" style="display: inline-flex; align-items: center; gap: 7px; background: #0284c7; color: #ffffff; padding: 7px 18px; border-radius: 6px; font-weight: 600; font-size: 13px; border: none; cursor: pointer; box-shadow: 0 1px 3px rgba(2, 132, 199, 0.3);">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 8 16 12 12 16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                                    <span>Selanjutnya</span>
+                                </button>
                             </div>
                         </div>
 
