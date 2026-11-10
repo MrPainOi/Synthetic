@@ -48,7 +48,7 @@
         const detected = (typeof detectCeisaPortalDate === "function") ? detectCeisaPortalDate() : null;
         if (detected) {
             scanDate = detected;
-            chrome.storage.local.set({ ceisa_last_scan_date: detected, ceisa_scan_date: detected }).catch(() => {});
+            chrome.storage.local.set({ ceisa_last_scan_date: detected, ceisa_scan_date: detected }).catch(() => { });
             return detected;
         }
         const data = await chrome.storage.local.get("ceisa_last_scan_date");
@@ -573,7 +573,7 @@
         }
 
         if (typeof syncWithWifiServer === "function") {
-            syncWithWifiServer().catch(() => {});
+            syncWithWifiServer().catch(() => { });
         }
     }
 
@@ -1087,7 +1087,7 @@
                     return bestDate;
                 }
             }
-        } catch (_) {}
+        } catch (_) { }
 
         return null;
     }
@@ -1105,8 +1105,8 @@
                 chrome.runtime.sendMessage({
                     type: "CEISA_PORTAL_DATE_CHANGED",
                     date: activeDate
-                }).catch(() => {});
-            } catch (_) {}
+                }).catch(() => { });
+            } catch (_) { }
             await Promise.all([
                 loadCompletedNumbers(),
                 loadPibPebNumbers(),
@@ -1641,16 +1641,21 @@
 
             toast.innerHTML = '<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">' +
                 '<div style="display: flex; align-items: center; gap: 6px;">' +
-                    '<span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: ' + borderColor + '; box-shadow: 0 0 6px ' + borderColor + ';"></span>' +
-                    '<strong style="color: #ffffff; font-size: 13px; letter-spacing: -0.2px;">' + escapeCeisaHtml(title) + '</strong>' +
+                '<span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: ' + borderColor + '; box-shadow: 0 0 6px ' + borderColor + ';"></span>' +
+                '<strong style="color: #ffffff; font-size: 13px; letter-spacing: -0.2px;">' + escapeCeisaHtml(title) + '</strong>' +
                 '</div>' +
                 '<span style="font-size: 10px; background: rgba(255, 255, 255, 0.12); padding: 2px 6px; border-radius: 4px; color: #94a3b8; font-weight: 600;">CEISA 4.0 AUTO</span>' +
-            '</div>' +
-            '<div style="color: #cbd5e1; font-size: 12px;">' + escapeCeisaHtml(body) + '</div>';
+                '</div>' +
+                '<div style="color: #cbd5e1; font-size: 12px;">' + escapeCeisaHtml(body) + '</div>';
 
             container.appendChild(toast);
 
-            requestAnimationFrame(() => {
+            const raf = typeof requestAnimationFrame !== 'undefined'
+                ? requestAnimationFrame
+                : (typeof window !== 'undefined' && typeof window.requestAnimationFrame !== 'undefined'
+                    ? window.requestAnimationFrame
+                    : (cb) => setTimeout(cb, 16));
+            raf(() => {
                 toast.style.opacity = "1";
                 toast.style.transform = "translateX(0)";
             });
@@ -1686,28 +1691,124 @@
 
     function setNativeInputValue(element, val) {
         if (!element) return false;
+        if (element.disabled || element.readOnly) return false;
         try {
-            element.focus();
+            if (typeof element.focus === "function") {
+                try { element.focus(); } catch (e) { }
+            }
             const strVal = String(val ?? "");
 
-            // React 16+ / Ant Design value setter override
-            const valueSetter = Object.getOwnPropertyDescriptor(element, "value")?.set;
-            const prototype = Object.getPrototypeOf(element);
-            const prototypeValueSetter = Object.getOwnPropertyDescriptor(prototype, "value")?.set;
+            // If it is a SELECT element, match option by value or text
+            if (element.tagName === "SELECT") {
+                let matched = false;
+                const lowerStr = strVal.toLowerCase().trim();
 
-            if (prototypeValueSetter && valueSetter !== prototypeValueSetter) {
-                prototypeValueSetter.call(element, strVal);
-            } else if (valueSetter) {
-                valueSetter.call(element, strVal);
+                if (lowerStr !== "") {
+                    // Pass 1: Exact value or text match
+                    for (let i = 0; i < element.options.length; i++) {
+                        const opt = element.options[i];
+                        const optVal = (opt.value || "").toLowerCase().trim();
+                        const optTxt = (opt.text || "").toLowerCase().trim();
+                        if (optVal === lowerStr || optTxt === lowerStr) {
+                            element.selectedIndex = i;
+                            matched = true;
+                            break;
+                        }
+                    }
+
+                    // Pass 2: Prefix / Code match (e.g. "6" matching "6 - NPWP 16 DIGIT" or "TAH" matching "TAH - Tidak berhubungan")
+                    if (!matched) {
+                        for (let i = 0; i < element.options.length; i++) {
+                            const opt = element.options[i];
+                            const optVal = (opt.value || "").toLowerCase().trim();
+                            const optTxt = (opt.text || "").toLowerCase().trim();
+
+                            if (optVal.length > 0 && (optVal.startsWith(lowerStr + ' ') || optVal.startsWith(lowerStr + '-') || optVal.startsWith(lowerStr + ':'))) {
+                                element.selectedIndex = i;
+                                matched = true;
+                                break;
+                            }
+                            if (optTxt.length > 0 && (optTxt.startsWith(lowerStr + ' ') || optTxt.startsWith(lowerStr + '-') || optTxt.startsWith(lowerStr + ' -') || optTxt.startsWith(lowerStr + ':'))) {
+                                element.selectedIndex = i;
+                                matched = true;
+                                break;
+                            }
+                            if (optVal.length > 0 && (lowerStr.startsWith(optVal + ' ') || lowerStr.startsWith(optVal + '-') || lowerStr.startsWith(optVal + ':'))) {
+                                element.selectedIndex = i;
+                                matched = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    // Pass 3: Whole word boundary match (e.g. \bHUB\b does not match "TAH - Tidak berhubungan")
+                    if (!matched) {
+                        const escapedStr = lowerStr.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                        const wordRegex = new RegExp('(?:^|\\b|\\s)' + escapedStr + '(?:$|\\b|\\s)', 'i');
+                        for (let i = 0; i < element.options.length; i++) {
+                            const opt = element.options[i];
+                            const optVal = (opt.value || "").toLowerCase().trim();
+                            const optTxt = (opt.text || "").toLowerCase().trim();
+                            if ((optVal.length > 0 && wordRegex.test(optVal)) || (optTxt.length > 0 && wordRegex.test(optTxt))) {
+                                element.selectedIndex = i;
+                                matched = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    // Pass 4: Substring match with strict non-empty guards (never match against empty strings)
+                    if (!matched && lowerStr.length >= 2) {
+                        for (let i = 0; i < element.options.length; i++) {
+                            const opt = element.options[i];
+                            const optVal = (opt.value || "").toLowerCase().trim();
+                            const optTxt = (opt.text || "").toLowerCase().trim();
+                            const valMatch = optVal.length >= 2 && (optVal.includes(lowerStr) || (lowerStr.length >= 3 && lowerStr.includes(optVal)));
+                            const txtMatch = optTxt.length >= 2 && (optTxt.includes(lowerStr) || (lowerStr.length >= 4 && lowerStr.includes(optTxt)));
+                            if (valMatch || txtMatch) {
+                                element.selectedIndex = i;
+                                matched = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (!matched) {
+                    try { element.value = strVal; } catch (e) { }
+                }
             } else {
-                element.value = strVal;
+                // React 16+ / Ant Design value setter override
+                const valueSetter = Object.getOwnPropertyDescriptor(element, "value")?.set;
+                const prototype = Object.getPrototypeOf(element);
+                const prototypeValueSetter = Object.getOwnPropertyDescriptor(prototype, "value")?.set;
+
+                if (prototypeValueSetter && valueSetter !== prototypeValueSetter) {
+                    prototypeValueSetter.call(element, strVal);
+                } else if (valueSetter) {
+                    valueSetter.call(element, strVal);
+                } else {
+                    element.value = strVal;
+                }
+
+                if (element.tagName === "TEXTAREA" && element.value !== strVal) {
+                    try {
+                        Object.defineProperty(element, "value", {
+                            get: () => strVal,
+                            set: (v) => { strVal = String(v ?? ""); },
+                            configurable: true
+                        });
+                    } catch (_) { }
+                }
             }
 
             // Dispatch events for React synthetic state sync
             element.dispatchEvent(new Event("focus", { bubbles: true }));
             element.dispatchEvent(new Event("input", { bubbles: true, composed: true }));
             element.dispatchEvent(new Event("change", { bubbles: true }));
-            element.dispatchEvent(new Event("blur", { bubbles: true }));
+            if (typeof element.blur === "function") {
+                try { element.blur(); } catch (e) { }
+            }
 
             highlightCeisaInput(element);
             return true;
@@ -1718,15 +1819,27 @@
     }
 
     function findCeisaTargetContainer() {
-        const openModal = document.querySelector(".ant-modal-wrap:not([style*='display: none']) .ant-modal, .ant-modal-content, .ant-drawer-content");
+        const openModal = document.querySelector(".ant-modal-wrap:not([style*='display: none']):not([style*='display:none']) .ant-modal, .ant-modal-wrap:not([style*='display: none']):not([style*='display:none']) .ant-modal-content, .ant-drawer:not([style*='display: none']):not([style*='display:none']) .ant-drawer-content");
         if (openModal) return openModal;
         const activeTabPane = document.querySelector(".ant-tabs-tabpane-active, .tab-pane.active, .tab-content > .active");
         if (activeTabPane) return activeTabPane;
         return document;
     }
 
-    function findFieldByKeywords(keywords, parent = document) {
-        if (!parent) parent = document;
+    function findFieldByKeywords(arg1, arg2 = document) {
+        let keywords = [];
+        let parent = document;
+
+        if (Array.isArray(arg1) || typeof arg1 === "string") {
+            keywords = Array.isArray(arg1) ? arg1 : [arg1];
+            parent = (arg2 && typeof arg2.querySelector === "function") ? arg2 : document;
+        } else if (arg1 && typeof arg1.querySelector === "function") {
+            parent = arg1;
+            keywords = Array.isArray(arg2) ? arg2 : (typeof arg2 === "string" ? [arg2] : []);
+        } else if (Array.isArray(arg2) || typeof arg2 === "string") {
+            keywords = Array.isArray(arg2) ? arg2 : [arg2];
+            parent = document;
+        }
 
         // 1. Match by input name, id, placeholder, aria-label
         for (const kw of keywords) {
@@ -1757,7 +1870,7 @@
                         const byId = parent.querySelector('#' + forId);
                         if (byId) return byId;
                     }
-                    const formItem = lbl.closest(".ant-form-item, .form-group, .row, .col, div");
+                    const formItem = lbl.closest(".ant-form-item, .form-group, .row, .col, fieldset, tr");
                     if (formItem) {
                         const inp = formItem.querySelector('input:not([type="hidden"]):not([disabled]), textarea:not([disabled]), select:not([disabled])');
                         if (inp) return inp;
@@ -1796,17 +1909,184 @@
         return false;
     }
 
-    function handleCeisaAutoInputRow(message) {
-        const { section, draftType, item, index, total } = message;
-        if (!item) {
-            return { ok: false, message: "Data baris kosong." };
+    function findCeisaCard(target, container = document) {
+        if (!container) container = document;
+
+        const cardRegexMap = {
+            'pengirim': /(?:^|\b)(?:pengirim|shipper|supplier)(?:\b|$)/i,
+            'penerima': /(?:^|\b)(?:penerima|importir|importer|consignee)(?:\b|$)/i,
+            'pembeli': /(?:^|\b)(?:pembeli|buyer)(?:\b|$)/i,
+            'penjual': /(?:^|\b)(?:penjual|seller)(?:\b|$)/i,
+            'pemilik': /(?:^|\b)(?:pemilik(?:\s*barang)?|owner)(?:\b|$)/i,
+            'pemilikbarang': /(?:^|\b)(?:pemilik(?:\s*barang)?|owner)(?:\b|$)/i,
+            'ppjk': /(?:^|\b)(?:ppjk|broker)(?:\b|$)/i
+        };
+
+        let regex = null;
+        let cardKey = '';
+
+        if (target instanceof RegExp) {
+            regex = target;
+            cardKey = target.source.toLowerCase();
+        } else if (typeof target === 'string') {
+            const clean = target.toLowerCase().replace(/[^a-z0-9]/g, '');
+            if (cardRegexMap[clean]) {
+                regex = cardRegexMap[clean];
+                cardKey = clean;
+            } else {
+                regex = new RegExp(target, 'i');
+                cardKey = target.toLowerCase();
+            }
         }
 
-        // Buka tab CEISA yang sesuai secara otomatis jika belum aktif
-        switchCeisaActiveTab(section);
+        // 1. Direct class name shortcut (e.g. .card-pengirim, .card-penerima in test harness or customized DOM)
+        if (cardKey) {
+            const baseKey = cardKey.includes('pengirim') ? 'pengirim' :
+                cardKey.includes('penerima') ? 'penerima' :
+                    cardKey.includes('pembeli') ? 'pembeli' :
+                        cardKey.includes('penjual') ? 'penjual' :
+                            cardKey.includes('pemilik') ? 'pemilik' :
+                                cardKey.includes('ppjk') ? 'ppjk' : '';
+            if (baseKey) {
+                const classMatch = container.querySelector(`.card-${baseKey}, [data-card*="${baseKey}"]`);
+                if (classMatch) return classMatch;
+            }
+        }
 
-        const container = findCeisaTargetContainer();
-        const filledFields = [];
+        // Helper to extract clean title text isolated from action buttons and extra header controls
+        const extractCardTitle = (cardEl) => {
+            // First look for pure title elements
+            const titleEl = cardEl.querySelector('.ant-card-head-title, .card-title, .ceisa-card-title, h4, h5, h6, legend');
+            if (titleEl) {
+                return (titleEl.innerText || titleEl.textContent || '').trim();
+            }
+            // If only container header exists, clone and remove buttons/extra to avoid contamination
+            const headerContainer = cardEl.querySelector('.ant-card-head, .card-header');
+            if (headerContainer) {
+                try {
+                    const clone = headerContainer.cloneNode(true);
+                    clone.querySelectorAll('.ant-card-extra, button, [role="button"], a').forEach(el => el.remove());
+                    return (clone.innerText || clone.textContent || '').trim();
+                } catch (_) {
+                    return (headerContainer.innerText || headerContainer.textContent || '').trim();
+                }
+            }
+            return '';
+        };
+
+        const matchesTargetCard = (txt) => {
+            if (!regex || !regex.test(txt)) return false;
+            // Strict negative guards
+            if (cardKey.includes('penerima') && (/pemilik/i.test(txt) || /pembeli/i.test(txt) || /salin\s*penerima/i.test(txt))) return false;
+            if (cardKey.includes('pengirim') && (/penjual/i.test(txt) || /salin\s*pengirim/i.test(txt))) return false;
+            if (cardKey.includes('pembeli') && /penerima/i.test(txt) && !/pembeli/i.test(txt)) return false;
+            if (cardKey.includes('penjual') && /pengirim/i.test(txt) && !/penjual/i.test(txt)) return false;
+            if (cardKey.includes('pemilik') && !/pemilik/i.test(txt)) return false;
+            return true;
+        };
+
+        // 2. Query specific card candidates (exclude outer wrappers matching [class*="card"])
+        const cardSelectors = '.ant-card, .card, .ceisa-form-card, .ceisa-entitas-card, fieldset, .ceisa-card';
+        let candidates = Array.from(container.querySelectorAll(cardSelectors));
+        // Filter out outer wrappers that contain other candidate cards
+        candidates = candidates.filter(el => !el.querySelector('.ant-card, .card, .ceisa-form-card, .ceisa-entitas-card, .ceisa-card'));
+
+        for (const c of candidates) {
+            const txt = extractCardTitle(c);
+            if (txt && matchesTargetCard(txt)) {
+                return c;
+            }
+        }
+
+        // 3. Fallback: Check innerText or child headings in any container-like element
+        const genericCandidates = Array.from(container.querySelectorAll('div, section'));
+        for (const el of genericCandidates) {
+            // Avoid matching wrapper containers that wrap cards
+            if (el.querySelector('.ant-card, .card, .ceisa-form-card, .ceisa-entitas-card, .ceisa-card')) continue;
+            const titleEl = el.querySelector('.ant-card-head-title, .card-title, .ceisa-card-title, h4, h5, h6, legend');
+            if (titleEl) {
+                const txt = (titleEl.innerText || titleEl.textContent || '').trim();
+                if (txt && matchesTargetCard(txt)) {
+                    return el;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    function handleCeisaAutoInputRow(arg1, arg2, arg3, arg4) {
+        let item = null;
+        let container = null;
+        let section = "entitas";
+        let draftType = "PIB";
+        let filledFields = [];
+        let index = 0;
+        let total = 1;
+        let forceTab = false;
+
+        if (arg1 && typeof arg1 === "object" && arg1.type === "CEISA_AUTO_INPUT_ROW") {
+            // Case 1: chrome message
+            if (!arg1.item) {
+                return { ok: false, message: "Data baris kosong." };
+            }
+            section = arg1.section || "entitas";
+            draftType = arg1.draftType || arg1.docType || "PIB";
+            item = arg1.item || arg1.rowData || arg1.data || arg1;
+            index = arg1.index || 0;
+            total = arg1.total || 1;
+            container = findCeisaTargetContainer();
+            filledFields = [];
+            forceTab = true;
+        } else if (arg2 && (arg2.nodeType === 1 || typeof arg2.querySelector === "function")) {
+            // Case 2: item, container, section, filledFields
+            item = (arg1 && typeof arg1 === "object") ? (arg1.item || arg1.rowData || arg1) : {};
+            container = arg2;
+            section = (typeof arg3 === "string" && arg3.trim()) ? arg3.trim() : (item.section || "entitas");
+            filledFields = Array.isArray(arg4) ? arg4 : [];
+            draftType = item.draftType || item.docType || "PIB";
+            forceTab = false;
+        } else if (typeof arg2 === "string" && arg3 && typeof arg3 === "object") {
+            // Case 3: row, docType, rowData, forceTab
+            draftType = arg2;
+            item = arg3.item || arg3.rowData || arg3;
+            section = (item && item.section) ? item.section : "entitas";
+            container = findCeisaTargetContainer();
+            filledFields = Array.isArray(arg4) ? arg4 : [];
+            forceTab = arg4 === true;
+        } else if (arg1 && typeof arg1 === "object") {
+            // Case 4: payload object or single object
+            if (arg1.section && arg1.item) {
+                section = arg1.section;
+                item = arg1.item;
+                draftType = arg1.draftType || "PIB";
+            } else {
+                item = arg1.item || arg1.rowData || arg1;
+                section = typeof arg2 === "string" ? arg2 : (item.section || "entitas");
+                filledFields = Array.isArray(arg3) ? arg3 : (Array.isArray(arg2) ? arg2 : []);
+            }
+            container = (arg2 && typeof arg2.querySelector === "function") ? arg2 : findCeisaTargetContainer();
+            forceTab = false;
+        } else {
+            item = {};
+            container = findCeisaTargetContainer();
+            filledFields = [];
+            forceTab = false;
+        }
+
+        if (!item || typeof item !== "object") {
+            item = {};
+        }
+
+        if (forceTab && typeof switchCeisaActiveTab === "function") {
+            try {
+                switchCeisaActiveTab(section);
+            } catch (e) { }
+        }
+
+        if (!container) {
+            container = findCeisaTargetContainer();
+        }
 
         // SECTION: DOKUMEN LAMPIRAN
         if (section === "dokumen") {
@@ -1837,8 +2117,8 @@
 
             return {
                 ok: true,
-                message: filledFields.length > 0 
-                    ? successMsg + ' (' + filledFields.join(', ') + ')' 
+                message: filledFields.length > 0
+                    ? successMsg + ' (' + filledFields.join(', ') + ')'
                     : successMsg + ' (Form terdeteksi, pastikan modal Tambah Dokumen telah terbuka di CEISA).'
             };
         }
@@ -1957,50 +2237,169 @@
         }
 
         if (section === "entitas") {
-            const shipper = item.shipperName || item.supplierName || item.eksportirNama || "";
-            const consignee = item.consigneeName || item.importirName || item.pembeliNama || "";
-            const importirId = item.importirId || item.npwpImportir || "";
-            const importirNib = item.importirNib || item.nib || "";
-            const importirAddr = item.importirAddress || item.consigneeAddress || "";
-            const supplierAddr = item.supplierAddress || item.shipperAddress || "";
-            const supplierCountry = item.supplierCountry || item.negaraPemasok || "";
+            const ent = item.entitas || {};
 
-            const csgInput = findFieldByKeywords(["namaImportir", "importir", "consignee", "penerima", "nama_importir"], container);
-            if (csgInput && consignee) {
-                setNativeInputValue(csgInput, consignee);
-                filledFields.push('Importir: ' + consignee);
-            }
-            const idInput = findFieldByKeywords(["nomorIdentitasImportir", "npwpImportir", "idImportir", "npwp", "nomor identitas"], container);
-            if (idInput && importirId) {
-                setNativeInputValue(idInput, importirId);
-                filledFields.push('NPWP: ' + importirId);
-            }
-            const nibInput = findFieldByKeywords(["nibImportir", "nib", "nomor induk berusaha"], container);
-            if (nibInput && importirNib) {
-                setNativeInputValue(nibInput, importirNib);
-                filledFields.push('NIB: ' + importirNib);
-            }
-            const addrInput = findFieldByKeywords(["alamatImportir", "alamat", "alamat penerima"], container);
-            if (addrInput && importirAddr) {
-                setNativeInputValue(addrInput, importirAddr);
-                filledFields.push('Alamat Imp: ' + importirAddr.substring(0, 15) + '...');
+            const fillCardField = (card, keywords, value, fieldDesc) => {
+                if (!card) return;
+                if (value === null || value === undefined) return;
+                const str = String(value).trim();
+                if (str === "" || str.toLowerCase() === "null" || str.toLowerCase() === "undefined") return;
+
+                const field = findFieldByKeywords(keywords, card);
+                if (field) {
+                    if (field.disabled || field.readOnly) return;
+                    setNativeInputValue(field, value);
+                    if (Array.isArray(filledFields)) {
+                        filledFields.push(fieldDesc + ': ' + str.slice(0, 15));
+                    }
+                }
+            };
+
+            // 1. CARD PENGIRIM (Shipper / Supplier)
+            const cardPengirim = findCeisaCard('pengirim', container);
+            const pengirimIdType = ent.pengirim?.jenisIdentitas ?? item.pengirimIdType ?? item.pengirimJenisIdentitas ?? item.supplierIdType;
+            const pengirimId = ent.pengirim?.nomorIdentitas ?? item.pengirimId ?? item.pengirimNomorIdentitas ?? item.supplierId ?? item.shipperId;
+            const pengirimName = ent.pengirim?.nama ?? item.pengirimName ?? item.pengirimNama ?? item.supplierName ?? item.shipperName ?? item.eksportirNama;
+            const pengirimAddr = ent.pengirim?.alamat ?? item.pengirimAddress ?? item.pengirimAlamat ?? item.supplierAddress ?? item.shipperAddress;
+            const pengirimCountry = ent.pengirim?.negara ?? item.pengirimCountry ?? item.pengirimNegara ?? item.supplierCountry ?? item.negaraPemasok;
+
+            if (cardPengirim) {
+                fillCardField(cardPengirim, ['jenisIdentitas', 'jenis_identitas', 'jenisId', 'jenis_id', 'jenisDokumen'], pengirimIdType, 'Pengirim Jenis ID');
+                fillCardField(cardPengirim, ['nomorIdentitas', 'nomor_identitas', 'noIdentitas', 'no_identitas', 'nomorId', 'npwp', 'nomor identitas', 'no identitas'], pengirimId, 'Pengirim ID');
+                fillCardField(cardPengirim, ['nama', 'name'], pengirimName, 'Pengirim Nama');
+                fillCardField(cardPengirim, ['alamat', 'address'], pengirimAddr, 'Pengirim Alamat');
+                fillCardField(cardPengirim, ['negara', 'country'], pengirimCountry, 'Pengirim Negara');
             }
 
-            const shpInput = findFieldByKeywords(["namaPemasok", "namaEksportir", "pemasok", "eksportir", "shipper", "pengirim"], container);
-            if (shpInput && shipper) {
-                setNativeInputValue(shpInput, shipper);
-                filledFields.push('Pemasok: ' + shipper);
+            // 2. CARD PENERIMA (Importer / Consignee)
+            const cardPenerima = findCeisaCard('penerima', container);
+            const penerimaIdType = ent.penerima?.jenisIdentitas ?? item.penerimaIdType ?? item.penerimaJenisIdentitas ?? item.importirIdType;
+            const penerimaId = ent.penerima?.nomorIdentitas ?? item.penerimaId ?? item.penerimaNomorIdentitas ?? item.importirId ?? item.npwpImportir;
+            const penerimaNitku = ent.penerima?.nitku ?? item.penerimaNitku;
+            const penerimaName = ent.penerima?.nama ?? item.penerimaName ?? item.penerimaNama ?? item.importirName ?? item.consigneeName;
+            const penerimaAddr = ent.penerima?.alamat ?? item.penerimaAddress ?? item.penerimaAlamat ?? item.importirAddress ?? item.consigneeAddress;
+            const penerimaCountry = ent.penerima?.negara ?? item.penerimaCountry ?? item.penerimaNegara;
+            const penerimaStatus = ent.penerima?.status ?? item.penerimaStatus ?? item.importirStatus;
+            const ijinBpNo = ent.penerima?.ijinBpNo ?? item.ijinBpNo ?? item.ijinBpNomor ?? item.noIzinBp ?? item.noIjin;
+            const ijinBpTgl = ent.penerima?.ijinBpTgl ?? item.ijinBpTgl ?? item.ijinBpTanggal ?? item.tglIzinBp ?? item.tglIzin;
+
+            if (cardPenerima) {
+                fillCardField(cardPenerima, ['jenisIdentitas', 'jenis_identitas', 'jenisId', 'jenis_id', 'jenisDokumen'], penerimaIdType, 'Penerima Jenis ID');
+                fillCardField(cardPenerima, ['nomorIdentitas', 'nomor_identitas', 'noIdentitas', 'no_identitas', 'nomorId', 'npwp', 'nomor identitas', 'no identitas'], penerimaId, 'Penerima ID');
+                fillCardField(cardPenerima, ['nitku'], penerimaNitku, 'Penerima NITKU');
+                fillCardField(cardPenerima, ['nama', 'name'], penerimaName, 'Penerima Nama');
+                fillCardField(cardPenerima, ['alamat', 'address'], penerimaAddr, 'Penerima Alamat');
+                fillCardField(cardPenerima, ['negara', 'country'], penerimaCountry, 'Penerima Negara');
+                fillCardField(cardPenerima, ['status'], penerimaStatus, 'Penerima Status');
+                fillCardField(cardPenerima, ['noIjin', 'no_ijin', 'noIzin', 'no_izin', 'nomorIzin', 'nomorIjin', 'izin bp', 'ijin bp'], ijinBpNo, 'Ijin BP No');
+                fillCardField(cardPenerima, ['tglIzin', 'tgl_izin', 'tglIjin', 'tgl_ijin', 'tanggalIzin', 'tanggalIjin', 'tanggal', 'date'], ijinBpTgl, 'Ijin BP Tgl');
             }
-            const sAddrInput = findFieldByKeywords(["alamatPemasok", "alamatEksportir", "alamat pemasok"], container);
-            if (sAddrInput && supplierAddr) {
-                setNativeInputValue(sAddrInput, supplierAddr);
-                filledFields.push('Alamat Pem: ' + supplierAddr.substring(0, 15) + '...');
+
+            // 3. CARD PEMBELI (Buyer)
+            const cardPembeli = findCeisaCard('pembeli', container);
+            const pembeliIdType = ent.pembeli?.jenisIdentitas ?? item.pembeliIdType ?? item.pembeliJenisIdentitas;
+            const pembeliId = ent.pembeli?.nomorIdentitas ?? item.pembeliId ?? item.pembeliNomorIdentitas;
+            const pembeliNitku = ent.pembeli?.nitku ?? item.pembeliNitku;
+            const pembeliName = ent.pembeli?.nama ?? item.pembeliName ?? item.pembeliNama;
+            const pembeliAddr = ent.pembeli?.alamat ?? item.pembeliAddress ?? item.pembeliAlamat;
+            const pembeliCountry = ent.pembeli?.negara ?? item.pembeliCountry ?? item.pembeliNegara;
+
+            if (cardPembeli) {
+                fillCardField(cardPembeli, ['jenisIdentitas', 'jenis_identitas', 'jenisId', 'jenis_id', 'jenisDokumen'], pembeliIdType, 'Pembeli Jenis ID');
+                fillCardField(cardPembeli, ['nomorIdentitas', 'nomor_identitas', 'noIdentitas', 'no_identitas', 'nomorId', 'npwp', 'nomor identitas', 'no identitas'], pembeliId, 'Pembeli ID');
+                fillCardField(cardPembeli, ['nitku'], pembeliNitku, 'Pembeli NITKU');
+                fillCardField(cardPembeli, ['nama', 'name'], pembeliName, 'Pembeli Nama');
+                fillCardField(cardPembeli, ['alamat', 'address'], pembeliAddr, 'Pembeli Alamat');
+                fillCardField(cardPembeli, ['negara', 'country'], pembeliCountry, 'Pembeli Negara');
             }
-            const sCtryInput = findFieldByKeywords(["negaraPemasok", "negaraEksportir", "negara asal", "country"], container);
-            if (sCtryInput && supplierCountry) {
-                setNativeInputValue(sCtryInput, supplierCountry);
-                filledFields.push('Negara: ' + supplierCountry);
+
+            // 4. CARD PENJUAL (Seller)
+            const cardPenjual = findCeisaCard('penjual', container);
+            const penjualIdType = ent.penjual?.jenisIdentitas ?? item.penjualIdType ?? item.penjualJenisIdentitas;
+            const penjualId = ent.penjual?.nomorIdentitas ?? item.penjualId ?? item.penjualNomorIdentitas;
+            const penjualName = ent.penjual?.nama ?? item.penjualName ?? item.penjualNama ?? item.sellerName;
+            const penjualAddr = ent.penjual?.alamat ?? item.penjualAddress ?? item.penjualAlamat ?? item.sellerAddress;
+            const penjualCountry = ent.penjual?.negara ?? item.penjualCountry ?? item.penjualNegara ?? item.sellerCountry;
+
+            if (cardPenjual) {
+                fillCardField(cardPenjual, ['jenisIdentitas', 'jenis_identitas', 'jenisId', 'jenis_id', 'jenisDokumen'], penjualIdType, 'Penjual Jenis ID');
+                fillCardField(cardPenjual, ['nomorIdentitas', 'nomor_identitas', 'noIdentitas', 'no_identitas', 'nomorId', 'npwp', 'nomor identitas', 'no identitas'], penjualId, 'Penjual ID');
+                fillCardField(cardPenjual, ['nama', 'name'], penjualName, 'Penjual Nama');
+                fillCardField(cardPenjual, ['alamat', 'address'], penjualAddr, 'Penjual Alamat');
+                fillCardField(cardPenjual, ['negara', 'country'], penjualCountry, 'Penjual Negara');
             }
+
+            // 5. CARD PEMILIK BARANG (Cargo Owner)
+            const cardPemilik = findCeisaCard('pemilik', container);
+            const pemilikIdType = ent.pemilikBarang?.jenisIdentitas ?? ent.pemilik?.jenisIdentitas ?? item.pemilikIdType ?? item.pemilikJenisIdentitas;
+            const pemilikId = ent.pemilikBarang?.nomorIdentitas ?? ent.pemilik?.nomorIdentitas ?? item.pemilikId ?? item.pemilikNomorIdentitas ?? item.ownerId;
+            const pemilikNitku = ent.pemilikBarang?.nitku ?? ent.pemilik?.nitku ?? item.pemilikNitku;
+            const pemilikName = ent.pemilikBarang?.nama ?? ent.pemilik?.nama ?? item.pemilikName ?? item.pemilikNama ?? item.ownerName;
+            const pemilikAddr = ent.pemilikBarang?.alamat ?? ent.pemilik?.alamat ?? item.pemilikAddress ?? item.pemilikAlamat ?? item.ownerAddress;
+            const pemilikAfiliasi = ent.pemilikBarang?.afiliasi ?? ent.pemilik?.afiliasi ?? item.pemilikAfiliasi ?? item.afiliasi;
+
+            if (cardPemilik) {
+                fillCardField(cardPemilik, ['jenisIdentitas', 'jenis_identitas', 'jenisId', 'jenis_id', 'jenisDokumen'], pemilikIdType, 'Pemilik Jenis ID');
+                fillCardField(cardPemilik, ['nomorIdentitas', 'nomor_identitas', 'noIdentitas', 'no_identitas', 'nomorId', 'npwp', 'nomor identitas', 'no identitas'], pemilikId, 'Pemilik ID');
+                fillCardField(cardPemilik, ['nitku'], pemilikNitku, 'Pemilik NITKU');
+                fillCardField(cardPemilik, ['nama', 'name'], pemilikName, 'Pemilik Nama');
+                fillCardField(cardPemilik, ['alamat', 'address'], pemilikAddr, 'Pemilik Alamat');
+                fillCardField(cardPemilik, ['afiliasi', 'hubungan'], pemilikAfiliasi, 'Pemilik Afiliasi');
+            }
+
+            // 6. CARD PPJK (Customs Broker) - Dikecualikan dari Auto Fill
+            // Kolom PPJK sengaja tidak diisi otomatis agar pengguna dapat mengisinya secara manual di CEISA
+            const cardPpjk = null;
+
+            // Fallback for legacy CEISA portals without card containers
+            if (!cardPengirim && !cardPenerima && !cardPembeli && !cardPenjual && !cardPemilik && !cardPpjk) {
+                const csgInput = findFieldByKeywords(["namaImportir", "importir", "consignee", "penerima", "nama_importir"], container);
+                if (csgInput && penerimaName) {
+                    setNativeInputValue(csgInput, penerimaName);
+                    filledFields.push('Importir: ' + penerimaName);
+                }
+                const idInput = findFieldByKeywords(["nomorIdentitasImportir", "npwpImportir", "idImportir", "npwp", "nomor identitas"], container);
+                if (idInput && (penerimaId || item.importirId)) {
+                    setNativeInputValue(idInput, penerimaId || item.importirId);
+                    filledFields.push('NPWP: ' + (penerimaId || item.importirId));
+                }
+                const nibInput = findFieldByKeywords(["nibImportir", "nib", "nomor induk berusaha"], container);
+                if (nibInput && (item.importirNib || item.nib)) {
+                    setNativeInputValue(nibInput, item.importirNib || item.nib);
+                    filledFields.push('NIB: ' + (item.importirNib || item.nib));
+                }
+                const addrInput = findFieldByKeywords(["alamatImportir", "alamat", "alamat penerima"], container);
+                if (addrInput && penerimaAddr) {
+                    setNativeInputValue(addrInput, penerimaAddr);
+                    filledFields.push('Alamat Imp: ' + penerimaAddr.substring(0, 15) + '...');
+                }
+
+                const shpInput = findFieldByKeywords(["namaPemasok", "namaEksportir", "pemasok", "eksportir", "shipper", "pengirim"], container);
+                if (shpInput && pengirimName) {
+                    setNativeInputValue(shpInput, pengirimName);
+                    filledFields.push('Pemasok: ' + pengirimName);
+                }
+                const sAddrInput = findFieldByKeywords(["alamatPemasok", "alamatEksportir", "alamat pemasok"], container);
+                if (sAddrInput && pengirimAddr) {
+                    setNativeInputValue(sAddrInput, pengirimAddr);
+                    filledFields.push('Alamat Pem: ' + pengirimAddr.substring(0, 15) + '...');
+                }
+                const sCtryInput = findFieldByKeywords(["negaraPemasok", "negaraEksportir", "negara asal", "country"], container);
+                if (sCtryInput && pengirimCountry) {
+                    setNativeInputValue(sCtryInput, pengirimCountry);
+                    filledFields.push('Negara: ' + pengirimCountry);
+                }
+            }
+
+            const successMsg = 'Entitas [' + (index + 1) + '/' + total + '] berhasil dimasukkan ke form CEISA.';
+            showCeisaAutoInputToast('Auto Input Entitas (' + (index + 1) + '/' + total + ')', filledFields.slice(0, 3).join(', '), filledFields.length > 0 ? 'success' : 'warn');
+
+            return {
+                ok: true,
+                message: filledFields.length > 0
+                    ? successMsg + ' (' + filledFields.join(', ') + ')'
+                    : successMsg + ' (Form terdeteksi, pastikan tab Entitas aktif di CEISA).'
+            };
         }
 
         if (section === "pengangkut") {
@@ -2148,55 +2547,12 @@
         }
 
         if (section === "pungutan") {
-            const cifRp = item.cifRupiah || item.cifRp || item.nilaiPabeanRp || (item.pungutan && item.pungutan.cifRupiah) || item.pibPungutanCifRp || "";
-            const tarifBm = item.tarifBm !== undefined ? item.tarifBm : (item.pungutan && item.pungutan.tarifBm !== undefined ? item.pungutan.tarifBm : "");
-            const nilaiBm = item.nilaiBm || (item.pungutan && item.pungutan.nilaiBm) || "";
-            const tarifPpn = item.tarifPpn !== undefined ? item.tarifPpn : (item.pungutan && item.pungutan.tarifPpn !== undefined ? item.pungutan.tarifPpn : "11");
-            const nilaiPpn = item.nilaiPpn || (item.pungutan && item.pungutan.nilaiPpn) || "";
-            const tarifPph = item.tarifPph !== undefined ? item.tarifPph : (item.pungutan && item.pungutan.tarifPph !== undefined ? item.pungutan.tarifPph : "2.5");
-            const nilaiPph = item.nilaiPph || (item.pungutan && item.pungutan.nilaiPph) || "";
-            const totalBilling = item.totalBilling || (item.pungutan && item.pungutan.totalBilling) || "";
-
-            const cifInp = findFieldByKeywords(["nilaiPabean", "cifRupiah", "cif rp", "nilai impor", "cif (rp)"], container);
-            if (cifInp && cifRp) {
-                setNativeInputValue(cifInp, cifRp);
-                filledFields.push('CIF Rp: ' + cifRp);
-            }
-            const tBmInp = findFieldByKeywords(["tarifBm", "tarif bea masuk", "bm tarif", "bm %"], container);
-            if (tBmInp && tarifBm !== "") {
-                setNativeInputValue(tBmInp, tarifBm);
-                filledFields.push('Tarif BM: ' + tarifBm + '%');
-            }
-            const nBmInp = findFieldByKeywords(["nilaiBm", "nilai bea masuk", "bm bayar", "bea masuk bayar"], container);
-            if (nBmInp && nilaiBm) {
-                setNativeInputValue(nBmInp, nilaiBm);
-                filledFields.push('Nilai BM: ' + nilaiBm);
-            }
-            const tPpnInp = findFieldByKeywords(["tarifPpn", "tarif ppn", "ppn %"], container);
-            if (tPpnInp && tarifPpn !== "") {
-                setNativeInputValue(tPpnInp, tarifPpn);
-                filledFields.push('Tarif PPN: ' + tarifPpn + '%');
-            }
-            const nPpnInp = findFieldByKeywords(["nilaiPpn", "nilai ppn", "ppn bayar"], container);
-            if (nPpnInp && nilaiPpn) {
-                setNativeInputValue(nPpnInp, nilaiPpn);
-                filledFields.push('Nilai PPN: ' + nilaiPpn);
-            }
-            const tPphInp = findFieldByKeywords(["tarifPph", "tarif pph", "pph %"], container);
-            if (tPphInp && tarifPph !== "") {
-                setNativeInputValue(tPphInp, tarifPph);
-                filledFields.push('Tarif PPh: ' + tarifPph + '%');
-            }
-            const nPphInp = findFieldByKeywords(["nilaiPph", "nilai pph", "pph bayar"], container);
-            if (nPphInp && nilaiPph) {
-                setNativeInputValue(nPphInp, nilaiPph);
-                filledFields.push('Nilai PPh: ' + nilaiPph);
-            }
-            const billInp = findFieldByKeywords(["totalBilling", "total tagihan", "total bayar", "billing"], container);
-            if (billInp && totalBilling) {
-                setNativeInputValue(billInp, totalBilling);
-                filledFields.push('Billing: ' + totalBilling);
-            }
+            // Bagian pungutan sengaja dikecualikan dari auto-fill sesuai permintaan pengguna (user mengisi/menghitung manual)
+            showCeisaAutoInputToast('Auto Input Section: PUNGUTAN', 'Bagian pungutan dilewati dari auto-fill (diisi manual oleh pengguna)', 'info');
+            return {
+                ok: true,
+                message: 'Bagian pungutan dilewati dari auto-fill sesuai preferensi pengguna.'
+            };
         }
 
         showCeisaAutoInputToast('Auto Input Section: ' + section.toUpperCase(), 'Memasukkan parameter draft ' + section, 'success');
@@ -2891,7 +3247,7 @@
         await saveScanCache();
 
         if (typeof pushSingleCacheItemToSupabase === "function") {
-            pushSingleCacheItemToSupabase(scanCache[registrationNumber]).catch(() => {});
+            pushSingleCacheItemToSupabase(scanCache[registrationNumber]).catch(() => { });
         }
 
 
@@ -3355,5 +3711,19 @@
             }
         }
     });
+
+    // Expose internal functions globally for content script invocation and test harness execution
+    if (typeof window !== "undefined") {
+        window.handleCeisaAutoInputRow = handleCeisaAutoInputRow;
+        window.findFieldByKeywords = findFieldByKeywords;
+        window.setNativeInputValue = setNativeInputValue;
+        window.findCeisaCard = findCeisaCard;
+    }
+    if (typeof globalThis !== "undefined") {
+        globalThis.handleCeisaAutoInputRow = handleCeisaAutoInputRow;
+        globalThis.findFieldByKeywords = findFieldByKeywords;
+        globalThis.setNativeInputValue = setNativeInputValue;
+        globalThis.findCeisaCard = findCeisaCard;
+    }
 
 })();

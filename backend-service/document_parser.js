@@ -63,7 +63,157 @@ async function parseDocuments(pdfInputs, onProgress = () => {}, customApiKey = n
 
         const fileNamesList = uploadedMeta.map((f, i) => `${i + 1}. [File ${i + 1}]: "${f.fileName}"`).join('\n');
 
-        const prompt = `Kamu adalah sistem ahli kepabeanan Indonesia (PPJK) dan verifikator dokumen ekspor/impor yang sangat teliti dan kritis.
+        const isImporMode = Boolean(
+            (mode && (mode.toLowerCase().includes('impor') || mode.toLowerCase().includes('pib') || mode.toLowerCase().includes('import')))
+        );
+
+        const prompt = isImporMode ? `Kamu adalah sistem ahli kepabeanan Indonesia (PPJK) dan verifikator dokumen IMPOR (PIB BC 2.0 / FTZ01) yang sangat teliti, analitis, dan kritis.
+Berikut daftar file dokumen yang terlampir:
+${fileNamesList}
+
+TUGAS UTAMA:
+1. SAFECHECK (VALIDASI RELEVANSI ANTAR-DOKUMEN):
+   Lakukan analisis perbandingan dan cross-check secara ketat: apakah SEMUA dokumen di atas memang saling berhubungan dan merupakan SATU KESATUAN PENGIRIMAN (satu shipment impor yang sama)?
+   - Periksa konsistensi nomor: No. Invoice, No. Packing List (PL), No. Bill of Lading (B/L / Sea Waybill / Air Waybill), No. PO/Kontrak, No. Kontainer / Seal.
+   - Periksa kesesuaian Shipper/Pengirim Luar Negeri dan Consignee/Importir Indonesia di setiap dokumen.
+   - Periksa kesesuaian rute (Pelabuhan Muat Asal Luar Negeri & Pelabuhan Bongkar Tujuan Indonesia), tanggal pengapalan, dan jenis komoditas barang.
+   - Tentukan apakah ada dokumen yang ASING, SALAH LAMPIR, atau dari TRANSAKSI BERBEDA.
+
+2. EKSTRAKSI DATA LENGKAP CEISA 4.0 PIB (BC 2.0 / FTZ01):
+   PENTING - ATURAN PERAN PABEAN IMPOR (JANGAN TERTUKAR!):
+   - Pengirim / Shipper / Supplier: Pihak pabrik / eksportir luar negeri yang mengirimkan barang.
+   - Penjual / Seller: Pihak penjual di Invoice komersial luar negeri (biasanya sama dengan Pengirim).
+   - Penerima / Consignee / Importer: Pihak importir berbadan hukum di Indonesia yang menerima barang.
+   - Pembeli / Buyer: Pihak pembeli di Indonesia (tertera pada "Sold to" atau "Bill to" di invoice; biasanya sama dengan Penerima).
+   - Pemilik Barang: Pihak pemilik barang di Indonesia (biasanya sama dengan Penerima).
+
+Kembalikan HANYA format JSON murni tanpa markdown/backticks (\`\`\`json):
+{
+  "safeCheck": {
+    "isRelated": true,
+    "confidenceScore": 95,
+    "summary": "Ringkasan penjelasan safecheck dalam bahasa Indonesia",
+    "matchedIdentifiers": ["Nomor Invoice cocok...", "Shipper LN dan Consignee ID terkonfirmasi..."],
+    "discrepanciesOrWarnings": [],
+    "documentList": [
+      {
+        "fileName": "Nama file dokumen",
+        "documentType": "INVOICE / PACKING_LIST / BILL_OF_LADING / CERTIFICATE / OTHER",
+        "belongsToShipment": true,
+        "notes": "Penjelasan singkat isi/fungsi dokumen ini"
+      }
+    ]
+  },
+  "jenisDokumen": "PIB",
+  "blNumber": "Nomor Bill of Lading / B/L / Sea Waybill / Air Waybill (AWB)",
+  "blDate": "Tanggal B/L / Shipped on Board Date (YYYY-MM-DD)",
+  "invoiceNumber": "Nomor SEMUA Invoice lengkap (gabungkan dengan koma jika multi-invoice, misal: 'INV-001, INV-002')",
+  "invoiceDate": "Tanggal Invoice utama (YYYY-MM-DD)",
+  "invoices": [
+    {
+      "invoiceNumber": "Nomor Invoice",
+      "invoiceDate": "Tanggal Invoice (YYYY-MM-DD)",
+      "amount": 50000.00,
+      "currency": "USD / EUR / CNY / SGD / JPY",
+      "containerNumber": "Nomor kontainer terkait jika tertera",
+      "type": "COMMERCIAL / SAMPLE / OTHER"
+    }
+  ],
+  "packingListNumber": "Nomor SEMUA Packing List yang bersesuaian (isi null jika hanya lembar invoice)",
+  "packingListDate": "Tanggal Packing List (YYYY-MM-DD)",
+  "cooNumber": "Nomor Certificate of Origin / Form D / Form E / Form AK / SKA jika ada, atau null",
+  "cooDate": "Tanggal COO (YYYY-MM-DD) atau null",
+  "lartasNumber": "Nomor Dokumen Izin / Lartas (PI Kemendag / LS Surveyor) jika ada, atau null",
+  "lartasDate": "Tanggal Dokumen Lartas atau null",
+  
+  "pengirim": {
+    "nama": "Nama Lengkap Pemasok / Shipper Luar Negeri",
+    "alamat": "Alamat Lengkap Pemasok Luar Negeri",
+    "negara": "Kode 2 huruf & Nama Negara Pemasok (misal: 'CN - CHINA', 'SG - SINGAPORE', 'DE - GERMANY', 'JP - JAPAN', 'TW - TAIWAN', 'US - UNITED STATES')",
+    "nomorIdentitas": "-",
+    "jenisIdentitas": "4 - LAINNYA"
+  },
+  "penjual": {
+    "nama": "Nama Penjual di Invoice LN (biasanya sama dengan Pengirim)",
+    "alamat": "Alamat Lengkap Penjual LN",
+    "negara": "Kode & Nama Negara Penjual"
+  },
+  "penerima": {
+    "nama": "Nama Lengkap Importir / Penerima Indonesia (Consignee)",
+    "alamat": "Alamat Lengkap Importir di Indonesia",
+    "negara": "ID - INDONESIA",
+    "nomorIdentitas": "NPWP 16 digit importir jika tertera di dokumen (misal: '0830727251085000') atau null",
+    "jenisIdentitas": "6 - NPWP 16 DIGIT",
+    "nitku": "NITKU jika tertera atau null",
+    "status": "LAINNYA"
+  },
+  "pembeli": {
+    "nama": "Nama Pembeli di Indonesia (Bill To / Sold To; biasanya sama dengan Penerima)",
+    "alamat": "Alamat Pembeli di Indonesia",
+    "negara": "ID - INDONESIA",
+    "nomorIdentitas": "NPWP 16 digit pembeli atau null"
+  },
+  "pemilikBarang": {
+    "nama": "Nama Pemilik Barang di Indonesia (biasanya sama dengan Penerima)",
+    "alamat": "Alamat Pemilik Barang di Indonesia",
+    "nomorIdentitas": "NPWP 16 digit pemilik atau null",
+    "afiliasi": "TAH - Tidak berhubungan"
+  },
+
+  "caraPengangkutan": "1 - LAUT / 4 - UDARA / 3 - JALAN RAYA",
+  "vesselName": "Nama Sarana Pengangkut / Kapal Laut / Maskapai (misal: 'WAN HAI 215', 'OOCL SAVANNAH', 'SQ-950')",
+  "voyageNumber": "Nomor Voyage kapal atau nomor penerbangan (misal: '091S', 'V.2401')",
+  "vesselFlag": "Bendera Kebangsaan Kapal (misal: 'PA - PANAMA', 'SG - SINGAPORE', 'ID - INDONESIA')",
+  "etaDate": "Tanggal Perkiraan Tiba / ETA (YYYY-MM-DD)",
+  "portLoading": "Pelabuhan Muat Asal Luar Negeri (misal: 'CNSHG - SHANGHAI', 'SGSIN - SINGAPORE', 'TWKHH - KAOHSIUNG', 'DEHAM - HAMBURG')",
+  "portTransit": "Pelabuhan Transit LN jika ada, atau null",
+  "portDischarge": "Pelabuhan Bongkar Tujuan Indonesia (misal: 'IDBTM - BATAM', 'IDTPP - TANJUNG PRIOK', 'IDTPS - TANJUNG PERAK')",
+  "tpsLocation": "Lokasi TPS di pelabuhan jika tertera",
+
+  "packageType": "Kode jenis kemasan CEISA (misal: 'BX - BOX', 'CT - CARTON', 'PK - PACKAGE', 'PX - PALLET', 'DR - DRUM', 'BG - BAG')",
+  "packageQty": 816, // WAJIB ANGKA MURNI (integer) total jumlah kemasan
+  "grossWeight": 12450.50, // WAJIB ANGKA MURNI (desimal float) total berat kotor dalam KG
+  "netWeight": 11200.00, // WAJIB ANGKA MURNI (desimal float) total berat bersih dalam KG
+  "containerNumber": "Nomor Kontainer / Peti Kemas (misal: 'CIMU0654754, TLHU8158388')",
+  "containerSize": "20 / 40 / 45",
+  "containerType": "FCL / LCL",
+
+  "currency": "Mata uang faktur 3 huruf (misal: 'USD', 'EUR', 'CNY', 'SGD', 'JPY')",
+  "incoterm": "Incoterm penyerahan barang (misal: 'FOB', 'CIF', 'CFR', 'EXW', 'FCA', 'CIP', 'CPT', 'DAP', 'DDP')",
+  "invoiceAmount": 50000.00, // WAJIB ANGKA MURNI total nilai faktur / barang
+  "freightAmount": 1500.00, // Biaya pengangkutan (Freight) jika tertera di B/L atau Invoice; jika tidak ada atau Term CIF, isi 0.00
+  "insuranceAmount": 50.00, // Biaya asuransi jika tertera; jika tidak ada, isi 0.00
+  "insuranceType": "LN - Luar Negeri", // atau 'DN - Dalam Negeri'
+  "cifAmount": 51550.00, // Total nilai CIF (invoiceAmount + freightAmount + insuranceAmount)
+
+  "items": [
+    {
+      "hsCode": "Pos Tarif BTKI 8 digit (misal: '8504.40.90' atau '8471.30.20' jika tertera di invoice/PL/BL)",
+      "uraianJenisBarang": "Nama atau deskripsi komoditas barang SAJA (HAPUS part number atau customer part no dari uraian ini)",
+      "merk": "Merk dagang barang jika tertera di dokumen atau '-'",
+      "tipe": "Tipe barang jika tertera atau '-'",
+      "spesifikasi": "Spesifikasi teknis / Part Number / Customer Part No jika tertera",
+      "negaraAsal": "Kode & Nama Negara Asal Pembuatan Barang (misal: 'CN - CHINA', 'SG - SINGAPORE', 'DE - GERMANY', 'JP - JAPAN')",
+      "jumlahDanSatuanBarang": "Misal: 3,975 PCE",
+      "quantity": 3975, // WAJIB ANGKA MURNI kuantitas barang
+      "satuanBarang": "Kode satuan CEISA (PCE / KGM / SET / UNT / MTR / DZN / ROL)",
+      "kemasan": "Jumlah dan jenis kemasan (misal: '816 BOX' atau '22 PALLET')",
+      "kemasanQty": 816, // WAJIB ANGKA MURNI jumlah kemasan baris barang
+      "kemasanJenis": "BX - BOX / CT - CARTON / PK - PACKAGE / PX - PALLET",
+      "beratBersih": 1500.00, // WAJIB ANGKA MURNI berat bersih dalam KG
+      "beratKotor": 1650.00, // WAJIB ANGKA MURNI berat kotor dalam KG
+      "amount": 25000.00, // WAJIB ANGKA MURNI nilai harga barang (FOB)
+      "cifUsd": 25775.00, // WAJIB ANGKA MURNI nilai CIF barang (proporsional FOB + Freight + Insurance)
+      "tarifBm": 5.0 // Tarif Bea Masuk (%) jika tertera atau 5.0
+    }
+  ]
+}
+
+PENTING UNTUK IMPOR:
+- JANGAN TERTUKAR PERAN: Shipper/Vendor adalah Pengirim Luar Negeri, Consignee adalah Penerima Indonesia.
+- Ekstrak angka murni tanpa simbol mata uang ($) atau teks satuan (KGS/BOX) pada field numeric (packageQty, grossWeight, netWeight, invoiceAmount, freightAmount, insuranceAmount, quantity, beratBersih, beratKotor, amount, cifUsd).
+- Jika ada biaya Freight atau Asuransi yang tertera terpisah di dokumen (misal di lembar Freight Invoice, Sea Waybill, B/L, atau Commercial Invoice), WAJIB dicantumkan pada 'freightAmount' dan 'insuranceAmount'!
+- Pada 'items': WAJIB ekstrak seluruh baris barang tanpa terlewat dari semua invoice!` : `Kamu adalah sistem ahli kepabeanan Indonesia (PPJK) dan verifikator dokumen ekspor/impor yang sangat teliti dan kritis.
 Berikut daftar file dokumen yang terlampir:
 ${fileNamesList}
 
@@ -428,8 +578,180 @@ PENTING:
                 }
             }
         }
-        
-        // Log status safecheck di terminal & onProgress
+
+        // =======================================================
+        // HARMONISASI & NORMALISASI DUA ARAH (EKSPOR <-> IMPOR CEISA 4.0)
+        // =======================================================
+        const cleanNum = (v) => {
+            if (v === undefined || v === null || v === '' || v === 'null') return null;
+            if (typeof v === 'number') return isNaN(v) ? null : v;
+            const s = String(v).replace(/,/g, '').replace(/[^0-9.-]/g, '');
+            const n = parseFloat(s);
+            return isNaN(n) ? null : n;
+        };
+
+        const detectPackCode = (str) => {
+            const s = String(str || '').toLowerCase();
+            if (s.includes('pal')) return 'PX - PALLET';
+            if (s.includes('box') || s.includes('bx')) return 'BX - BOX';
+            if (s.includes('ctn') || s.includes('carton')) return 'CT - CARTON';
+            if (s.includes('pkg') || s.includes('pack')) return 'PK - PACKAGE';
+            if (s.includes('drum')) return 'DR - DRUM';
+            if (s.includes('bag')) return 'BG - BAG';
+            return 'BX - BOX';
+        };
+
+        // 1. Normalisasi Entitas CEISA 4.0
+        parsedData.entitas = parsedData.entitas || {};
+        parsedData.pengirim = parsedData.pengirim || parsedData.entitas.pengirim || {};
+        parsedData.penjual = parsedData.penjual || parsedData.entitas.penjual || {};
+        parsedData.penerima = parsedData.penerima || parsedData.entitas.penerima || {};
+        parsedData.pembeli = parsedData.pembeli || parsedData.entitas.pembeli || {};
+        parsedData.pemilikBarang = parsedData.pemilikBarang || parsedData.entitas.pemilikBarang || parsedData.entitas.pemilik || {};
+
+        if (isImporMode) {
+            // Pada IMPOR: Shipper dokumen = Pengirim & Penjual Luar Negeri
+            if (!parsedData.pengirim.nama && parsedData.shipperName) parsedData.pengirim.nama = parsedData.shipperName;
+            if (!parsedData.pengirim.alamat && parsedData.shipperAddress) parsedData.pengirim.alamat = parsedData.shipperAddress;
+            if (!parsedData.pengirim.negara) parsedData.pengirim.negara = 'CN - CHINA';
+            parsedData.pengirim.jenisIdentitas = parsedData.pengirim.jenisIdentitas || '4 - LAINNYA';
+            parsedData.pengirim.nomorIdentitas = parsedData.pengirim.nomorIdentitas || '-';
+
+            if (!parsedData.penjual.nama) parsedData.penjual.nama = parsedData.pengirim.nama;
+            if (!parsedData.penjual.alamat) parsedData.penjual.alamat = parsedData.pengirim.alamat;
+            if (!parsedData.penjual.negara) parsedData.penjual.negara = parsedData.pengirim.negara;
+            parsedData.penjual.jenisIdentitas = parsedData.penjual.jenisIdentitas || '4 - LAINNYA';
+            parsedData.penjual.nomorIdentitas = parsedData.penjual.nomorIdentitas || '-';
+
+            // Consignee dokumen = Penerima, Pembeli, Pemilik Barang di Indonesia
+            if (!parsedData.penerima.nama && parsedData.consigneeName) parsedData.penerima.nama = parsedData.consigneeName;
+            if (!parsedData.penerima.alamat && parsedData.consigneeAddress) parsedData.penerima.alamat = parsedData.consigneeAddress;
+            if (!parsedData.penerima.negara) parsedData.penerima.negara = 'ID - INDONESIA';
+            parsedData.penerima.jenisIdentitas = parsedData.penerima.jenisIdentitas || '6 - NPWP 16 DIGIT';
+            parsedData.penerima.status = parsedData.penerima.status || 'LAINNYA';
+
+            if (!parsedData.pembeli.nama) parsedData.pembeli.nama = parsedData.penerima.nama;
+            if (!parsedData.pembeli.alamat) parsedData.pembeli.alamat = parsedData.penerima.alamat;
+            if (!parsedData.pembeli.negara) parsedData.pembeli.negara = 'ID - INDONESIA';
+            parsedData.pembeli.jenisIdentitas = parsedData.pembeli.jenisIdentitas || parsedData.penerima.jenisIdentitas;
+            parsedData.pembeli.nomorIdentitas = parsedData.pembeli.nomorIdentitas || parsedData.penerima.nomorIdentitas;
+
+            if (!parsedData.pemilikBarang.nama) parsedData.pemilikBarang.nama = parsedData.penerima.nama;
+            if (!parsedData.pemilikBarang.alamat) parsedData.pemilikBarang.alamat = parsedData.penerima.alamat;
+            parsedData.pemilikBarang.jenisIdentitas = parsedData.pemilikBarang.jenisIdentitas || parsedData.penerima.jenisIdentitas;
+            parsedData.pemilikBarang.nomorIdentitas = parsedData.pemilikBarang.nomorIdentitas || parsedData.penerima.nomorIdentitas;
+            parsedData.pemilikBarang.afiliasi = parsedData.pemilikBarang.afiliasi || 'TAH - Tidak berhubungan';
+        } else {
+            // Pada EKSPOR: Shipper dokumen = Eksportir Indonesia, Consignee = Penerima Luar Negeri
+            if (!parsedData.pengirim.nama && parsedData.shipperName) parsedData.pengirim.nama = parsedData.shipperName;
+            if (!parsedData.pengirim.alamat && parsedData.shipperAddress) parsedData.pengirim.alamat = parsedData.shipperAddress;
+            if (!parsedData.penerima.nama && parsedData.consigneeName) parsedData.penerima.nama = parsedData.consigneeName;
+            if (!parsedData.penerima.alamat && parsedData.consigneeAddress) parsedData.penerima.alamat = parsedData.consigneeAddress;
+        }
+
+        // Sinkronisasi property flat/root
+        parsedData.pengirimName = parsedData.pengirim.nama || parsedData.shipperName || '';
+        parsedData.pengirimAddress = parsedData.pengirim.alamat || parsedData.shipperAddress || '';
+        parsedData.pengirimCountry = parsedData.pengirim.negara || 'CN - CHINA';
+        parsedData.pengirimId = parsedData.pengirim.nomorIdentitas || '-';
+        parsedData.pengirimIdType = parsedData.pengirim.jenisIdentitas || '4 - LAINNYA';
+
+        parsedData.penjualName = parsedData.penjual.nama || parsedData.pengirimName;
+        parsedData.penjualAddress = parsedData.penjual.alamat || parsedData.pengirimAddress;
+        parsedData.penjualCountry = parsedData.penjual.negara || parsedData.pengirimCountry;
+        parsedData.penjualId = parsedData.penjual.nomorIdentitas || '-';
+        parsedData.penjualIdType = parsedData.penjual.jenisIdentitas || '4 - LAINNYA';
+
+        parsedData.penerimaName = parsedData.penerima.nama || parsedData.consigneeName || '';
+        parsedData.penerimaAddress = parsedData.penerima.alamat || parsedData.consigneeAddress || '';
+        parsedData.penerimaCountry = parsedData.penerima.negara || 'ID - INDONESIA';
+        parsedData.penerimaId = parsedData.penerima.nomorIdentitas || '';
+        parsedData.penerimaNitku = parsedData.penerima.nitku || '';
+        parsedData.penerimaStatus = parsedData.penerima.status || 'LAINNYA';
+
+        parsedData.pembeliName = parsedData.pembeli.nama || parsedData.penerimaName;
+        parsedData.pembeliAddress = parsedData.pembeli.alamat || parsedData.penerimaAddress;
+        parsedData.pembeliCountry = parsedData.pembeli.negara || 'ID - INDONESIA';
+        parsedData.pembeliId = parsedData.pembeli.nomorIdentitas || parsedData.penerimaId;
+
+        parsedData.pemilikName = parsedData.pemilikBarang.nama || parsedData.penerimaName;
+        parsedData.pemilikAddress = parsedData.pemilikBarang.alamat || parsedData.penerimaAddress;
+        parsedData.pemilikId = parsedData.pemilikBarang.nomorIdentitas || parsedData.penerimaId;
+        parsedData.pemilikAfiliasi = parsedData.pemilikBarang.afiliasi || 'TAH - Tidak berhubungan';
+
+        // Dual-mapping untuk kompatibilitas PEB
+        parsedData.shipperName = isImporMode ? parsedData.pengirimName : (parsedData.shipperName || parsedData.pengirimName);
+        parsedData.shipperAddress = isImporMode ? parsedData.pengirimAddress : (parsedData.shipperAddress || parsedData.pengirimAddress);
+        parsedData.consigneeName = isImporMode ? parsedData.penerimaName : (parsedData.consigneeName || parsedData.penerimaName);
+        parsedData.consigneeAddress = isImporMode ? parsedData.penerimaAddress : (parsedData.consigneeAddress || parsedData.penerimaAddress);
+
+        // 2. Normalisasi Pengangkut
+        parsedData.portLoading = parsedData.portLoading || parsedData.loadingPort || '';
+        parsedData.portDischarge = parsedData.portDischarge || parsedData.dischargePort || '';
+        parsedData.loadingPort = parsedData.portLoading;
+        parsedData.dischargePort = parsedData.portDischarge;
+        parsedData.caraPengangkutan = parsedData.caraPengangkutan || '1 - LAUT';
+        parsedData.vesselName = parsedData.vesselName || parsedData.namaPengangkut || '';
+        parsedData.voyageNumber = parsedData.voyageNumber || '';
+        parsedData.vesselFlag = parsedData.vesselFlag || parsedData.benderaPengangkut || '';
+        parsedData.etaDate = parsedData.etaDate || parsedData.tglPerkiraanEkspor || parsedData.blDate || '';
+
+        // 3. Normalisasi Kemasan & Berat (Angka Murni & String CEISA)
+        const parsedGross = cleanNum(parsedData.grossWeight) ?? cleanNum(parsedData.totalGrossWeightKGM) ?? 0;
+        const parsedNet = cleanNum(parsedData.netWeight) ?? cleanNum(parsedData.totalNetWeightKGM) ?? 0;
+        const parsedPkgQty = cleanNum(parsedData.packageQty) ?? cleanNum(parsedData.totalKemasan) ?? 1;
+        const packCode = parsedData.packageType || detectPackCode(parsedData.totalKemasan);
+
+        parsedData.grossWeight = parsedGross;
+        parsedData.netWeight = (parsedNet > 0) ? parsedNet : parsedGross;
+        parsedData.packageQty = parsedPkgQty;
+        parsedData.packageType = packCode;
+        parsedData.totalGrossWeightKGM = `${parsedData.grossWeight} KGS`;
+        parsedData.totalNetWeightKGM = `${parsedData.netWeight} KGS`;
+        parsedData.totalKemasan = `${parsedData.packageQty} ${packCode.split(' ')[0]}`;
+
+        // 4. Normalisasi Transaksi & CIF
+        parsedData.currency = parsedData.currency || parsedData.invoices?.[0]?.currency || 'USD';
+        parsedData.incoterm = parsedData.incoterm || 'FOB';
+        parsedData.invoiceAmount = cleanNum(parsedData.invoiceAmount) ?? cleanNum(parsedData.invoices?.[0]?.amount) ?? 0;
+        parsedData.freightAmount = cleanNum(parsedData.freightAmount) ?? 0;
+        parsedData.insuranceAmount = cleanNum(parsedData.insuranceAmount) ?? 0;
+        parsedData.insuranceType = parsedData.insuranceType || 'LN - Luar Negeri';
+        parsedData.cifAmount = cleanNum(parsedData.cifAmount) ?? (parsedData.invoiceAmount + parsedData.freightAmount + parsedData.insuranceAmount);
+
+        // 5. Normalisasi Item/Barang
+        if (Array.isArray(parsedData.items) && parsedData.items.length > 0) {
+            parsedData.items.forEach((it, idx) => {
+                it.seri = idx + 1;
+                it.hsCode = String(it.hsCode || '').replace(/\D/g, '').padEnd(8, '0').slice(0, 10);
+                if (it.hsCode.length >= 8) {
+                    it.hsCode = `${it.hsCode.slice(0, 4)}.${it.hsCode.slice(4, 6)}.${it.hsCode.slice(6, 8)}`;
+                }
+                it.kodeBarang = it.kodeBarang || '-';
+                it.merek = it.merek || '-';
+                it.tipe = it.tipe || '-';
+                it.spesifikasi = it.spesifikasi || '-';
+                it.negaraAsal = it.negaraAsal || it.countryOfOrigin || parsedData.pengirimCountry || 'CN - CHINA';
+                it.countryOfOrigin = it.negaraAsal;
+
+                const qVal = cleanNum(it.quantity) ?? cleanNum(it.jumlahDanSatuanBarang) ?? 1;
+                it.quantity = qVal;
+                it.satuanBarang = it.satuanBarang || (it.jumlahDanSatuanBarang ? String(it.jumlahDanSatuanBarang).replace(/[0-9.,]/g, '').trim().toUpperCase() : 'PCE') || 'PCE';
+                it.packageUnit = it.satuanBarang;
+                it.jumlahDanSatuanBarang = `${it.quantity} ${it.satuanBarang}`;
+
+                it.kemasanQty = cleanNum(it.kemasanQty) ?? cleanNum(it.kemasan) ?? 1;
+                it.kemasanJenis = it.kemasanJenis || packCode;
+                it.beratBersih = cleanNum(it.beratBersih) ?? 0;
+                it.beratKotor = cleanNum(it.beratKotor) ?? 0;
+
+                const itAmt = cleanNum(it.amount) ?? cleanNum(it.cifUsd) ?? 0;
+                it.amount = itAmt;
+                it.fob = itAmt;
+                it.cifUsd = cleanNum(it.cifUsd) ?? itAmt;
+                it.tarifBm = cleanNum(it.tarifBm) !== null ? cleanNum(it.tarifBm) : 5.0;
+            });
+        }
         if (parsedData.safeCheck) {
             console.log("\n=======================================================");
             console.log("             HASIL SAFECHECK DOKUMEN                   ");

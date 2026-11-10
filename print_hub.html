@@ -573,112 +573,7 @@
             border: 1px solid rgba(239, 68, 68, 0.3);
         }
 
-        /* Mobile QR Banner */
-        .ph-qr-card {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            background: linear-gradient(135deg, rgba(2, 132, 199, 0.08), rgba(245, 158, 11, 0.08));
-            border: 1px solid rgba(2, 132, 199, 0.2);
-            border-radius: var(--radius-lg, 14px);
-            padding: 16px;
-            margin-bottom: 20px;
-        }
 
-        .ph-qr-thumb {
-            width: 88px;
-            height: 88px;
-            background: #ffffff;
-            padding: 4px;
-            border-radius: var(--radius-md, 10px);
-            border: 1px solid var(--border-color, #cbd5e1);
-            cursor: pointer;
-            transition: transform 0.2s ease;
-            flex-shrink: 0;
-        }
-
-        .ph-qr-thumb:hover {
-            transform: scale(1.04);
-        }
-
-        .ph-qr-info {
-            flex: 1;
-            min-width: 0;
-        }
-
-        .ph-qr-title {
-            font-size: 13.5px;
-            font-weight: 700;
-            color: var(--text-primary, #0f172a);
-            margin-bottom: 4px;
-        }
-
-        .ph-qr-sub {
-            font-size: 12px;
-            color: var(--text-muted, #64748b);
-            line-height: 1.4;
-            margin-bottom: 8px;
-        }
-
-        .ph-qr-link-box {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            font-family: var(--font-mono);
-            font-size: 11.5px;
-            padding: 4px 10px;
-            border-radius: 6px;
-            background: var(--bg-primary, #ffffff);
-            border: 1px solid var(--border-color, #cbd5e1);
-            color: var(--ceisa-blue, #0284c7);
-            font-weight: 600;
-            cursor: pointer;
-        }
-
-        /* Modal QR */
-        .ph-modal-overlay {
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(15, 23, 42, 0.65);
-            backdrop-filter: blur(4px);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 10000;
-            padding: 20px;
-        }
-
-        .ph-modal-overlay.active {
-            display: flex;
-        }
-
-        .ph-modal-card {
-            background: var(--surface-card, #ffffff);
-            border: 1px solid var(--border-color, #cbd5e1);
-            border-radius: var(--radius-xl, 18px);
-            padding: 24px;
-            width: 100%;
-            max-width: 380px;
-            text-align: center;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
-            animation: phPop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        @keyframes phPop {
-            from { transform: scale(0.92); opacity: 0; }
-            to { transform: scale(1); opacity: 1; }
-        }
-
-        .ph-qr-large {
-            width: 240px;
-            height: 240px;
-            margin: 16px auto;
-            border-radius: var(--radius-md, 10px);
-            background: #ffffff;
-            padding: 8px;
-            border: 1px solid var(--border-color, #e2e8f0);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-        }
 
         /* Toast notifications */
         .ph-toast-container {
@@ -757,21 +652,6 @@
             border-color: #1e293b;
         }
 
-        [data-theme="dark"] .ph-modal-card {
-            background: #0f172a;
-            border-color: #1e293b;
-        }
-
-        [data-theme="dark"] .ph-qr-card {
-            background: linear-gradient(135deg, rgba(2, 132, 199, 0.15), rgba(245, 158, 11, 0.1));
-            border-color: rgba(2, 132, 199, 0.3);
-        }
-
-        [data-theme="dark"] .ph-qr-link-box {
-            background: #090e17;
-            border-color: #1e293b;
-            color: #38bdf8;
-        }
 
         [data-theme="dark"] .ph-toast {
             background: #0f172a;
@@ -821,15 +701,6 @@
                     <span class="ph-pulse-dot"></span>
                     <span id="serverStatusText">Server Aktif</span>
                 </div>
-                <button type="button" class="btn btn-header-subtle" id="btnOpenQrHeader" title="Buka QR Code untuk HP">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect x="3" y="3" width="7" height="7"></rect>
-                        <rect x="14" y="3" width="7" height="7"></rect>
-                        <rect x="14" y="14" width="7" height="7"></rect>
-                        <rect x="3" y="14" width="7" height="7"></rect>
-                    </svg>
-                    Scan HP
-                </button>
             </div>
         </div>
     </header>
@@ -987,25 +858,6 @@
         <main class="ceisa-portal-content" role="main">
             <div class="ph-container">
 
-                <!-- Mobile Scan Banner -->
-                <div class="ph-qr-card">
-                    <div class="ph-qr-thumb-box" id="qrThumbBox" style="position: relative; width: 88px; height: 88px; flex-shrink: 0; cursor: pointer;">
-                        <div id="qrLoadingSkeleton" style="width: 88px; height: 88px; border-radius: var(--radius-md, 10px); background: rgba(2, 132, 199, 0.08); border: 1.5px dashed var(--border-color, #cbd5e1); display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 20px; color: var(--text-muted); gap: 4px;">
-                            <span>📱</span>
-                            <span style="font-size: 9px; font-weight: 700;">QR HP</span>
-                        </div>
-                        <img id="qrThumbImage" class="ph-qr-thumb" src="" alt="Scan QR HP" title="Klik untuk memperbesar QR code" style="display: none; position: absolute; top: 0; left: 0; width: 88px; height: 88px; margin: 0;">
-                    </div>
-                    <div class="ph-qr-info">
-                        <div class="ph-qr-title">📱 Cetak Langsung dari HP (Android / iOS)</div>
-                        <div class="ph-qr-sub">Scan QR Code dengan kamera HP untuk mencetak berkas PDF, foto dokumen, atau faktur tanpa perlu instal aplikasi printer.</div>
-                        <div class="ph-qr-link-box" id="btnCopyLanUrl" title="Klik untuk menyalin alamat IP LAN">
-                            <span>🔗</span>
-                            <span id="lanUrlDisplay">http://...</span>
-                            <span style="font-size: 10px; color: var(--text-muted);">(Salin)</span>
-                        </div>
-                    </div>
-                </div>
 
                 <!-- Two-Column Grid -->
                 <div class="ph-grid-layout">
@@ -1225,24 +1077,6 @@
         </main>
     </div>
 
-    <!-- QR Code Modal (Large View) -->
-    <div class="ph-modal-overlay" id="qrModal">
-        <div class="ph-modal-card">
-            <h3 style="font-size: 16px; font-weight: 700; color: var(--text-primary); margin-bottom: 4px;">
-                Scan QR Code dari Smartphone
-            </h3>
-            <p style="font-size: 12px; color: var(--text-muted); line-height: 1.45;">
-                Pastikan smartphone Anda terhubung ke Wi-Fi yang sama, lalu buka kamera dan arahkan ke kode berikut:
-            </p>
-            <img id="qrLargeImage" class="ph-qr-large" src="" alt="QR Code Fullsize">
-            <div class="ph-qr-link-box" id="modalUrlDisplay" style="width: 100%; justify-content: center; margin-bottom: 14px;">
-                http://...
-            </div>
-            <button type="button" class="btn btn-header-subtle" id="btnCloseQrModal" style="width: 100%; height: 38px; font-weight: 600;">
-                Tutup Jendela
-            </button>
-        </div>
-    </div>
 
     <!-- Toast Container -->
     <div class="ph-toast-container" id="toastContainer"></div>

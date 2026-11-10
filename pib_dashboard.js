@@ -68,8 +68,102 @@ const SAMPLE_PIB_DATA = {
     kategoriImpor: "001",
     caraBayar: "1 - BIASA / TUNAI",
     
-    // Importir & Entitas
-    importirIdType: "5 - NPWP 16 DIGIT",
+    // CEISA 4.0 Tab Entitas (6 Cards)
+    pengirimIdType: "4 - LAINNYA",
+    pengirimId: "-",
+    pengirimName: "SHANGHAI PRECISION MACHINERY CO., LTD.",
+    pengirimAddress: "No. 888 Songze Avenue, Qingpu District, Shanghai 201700, China",
+    pengirimCountry: "CN - CHINA",
+
+    pembeliIdType: "6 - NPWP 16 DIGIT",
+    pembeliId: "0123456780120000",
+    pembeliNitku: "0123456780120000000000",
+    pembeliName: "PT. INDONESIA MAKMUR IMPORTAMA",
+    pembeliAddress: "Kawasan Industri MM2100 Blok C-5, Cikarang Barat, Kab. Bekasi, Jawa Barat 17530",
+    pembeliCountry: "ID - INDONESIA",
+
+    pemilikIdType: "6 - NPWP 16 DIGIT",
+    pemilikId: "0123456780120000",
+    pemilikNitku: "0123456780120000000000",
+    pemilikName: "PT. INDONESIA MAKMUR IMPORTAMA",
+    pemilikAddress: "Kawasan Industri MM2100 Blok C-5, Cikarang Barat, Kab. Bekasi, Jawa Barat 17530",
+    pemilikAfiliasi: "TAH - Tidak berhubungan",
+
+    penerimaIdType: "6 - NPWP 16 DIGIT",
+    penerimaId: "0123456780120000",
+    penerimaNitku: "0123456780120000000000",
+    penerimaName: "PT. INDONESIA MAKMUR IMPORTAMA",
+    penerimaAddress: "Kawasan Industri MM2100 Blok C-5, Cikarang Barat, Kab. Bekasi, Jawa Barat 17530",
+    penerimaCountry: "ID - INDONESIA",
+    penerimaStatus: "API-U",
+    ijinBpNomor: "",
+    ijinBpTanggal: "",
+
+    penjualIdType: "4 - LAINNYA",
+    penjualId: "-",
+    penjualName: "SHANGHAI PRECISION MACHINERY CO., LTD.",
+    penjualAddress: "No. 888 Songze Avenue, Qingpu District, Shanghai 201700, China",
+    penjualCountry: "CN - CHINA",
+
+    ppjkIdType: "6 - NPWP 16 DIGIT",
+    ppjkId: "",
+    ppjkNitku: "",
+    ppjkName: "",
+    ppjkAddress: "",
+
+    entitas: {
+        pengirim: {
+            jenisIdentitas: "4 - LAINNYA",
+            nomorIdentitas: "-",
+            nama: "SHANGHAI PRECISION MACHINERY CO., LTD.",
+            alamat: "No. 888 Songze Avenue, Qingpu District, Shanghai 201700, China",
+            negara: "CN - CHINA"
+        },
+        pembeli: {
+            jenisIdentitas: "6 - NPWP 16 DIGIT",
+            nomorIdentitas: "0123456780120000",
+            nitku: "0123456780120000000000",
+            nama: "PT. INDONESIA MAKMUR IMPORTAMA",
+            alamat: "Kawasan Industri MM2100 Blok C-5, Cikarang Barat, Kab. Bekasi, Jawa Barat 17530",
+            negara: "ID - INDONESIA"
+        },
+        pemilikBarang: {
+            jenisIdentitas: "6 - NPWP 16 DIGIT",
+            nomorIdentitas: "0123456780120000",
+            nitku: "0123456780120000000000",
+            nama: "PT. INDONESIA MAKMUR IMPORTAMA",
+            alamat: "Kawasan Industri MM2100 Blok C-5, Cikarang Barat, Kab. Bekasi, Jawa Barat 17530",
+            afiliasi: "TAH - Tidak berhubungan"
+        },
+        penerima: {
+            jenisIdentitas: "6 - NPWP 16 DIGIT",
+            nomorIdentitas: "0123456780120000",
+            nitku: "0123456780120000000000",
+            nama: "PT. INDONESIA MAKMUR IMPORTAMA",
+            alamat: "Kawasan Industri MM2100 Blok C-5, Cikarang Barat, Kab. Bekasi, Jawa Barat 17530",
+            negara: "ID - INDONESIA",
+            status: "API-U",
+            ijinBpNo: "",
+            ijinBpTgl: ""
+        },
+        penjual: {
+            jenisIdentitas: "4 - LAINNYA",
+            nomorIdentitas: "-",
+            nama: "SHANGHAI PRECISION MACHINERY CO., LTD.",
+            alamat: "No. 888 Songze Avenue, Qingpu District, Shanghai 201700, China",
+            negara: "CN - CHINA"
+        },
+        ppjk: {
+            jenisIdentitas: "6 - NPWP 16 DIGIT",
+            nomorIdentitas: "",
+            nitku: "",
+            nama: "",
+            alamat: ""
+        }
+    },
+
+    // Importir & Entitas (Legacy Aliases)
+    importirIdType: "6 - NPWP 16 DIGIT",
     importirId: "01.234.567.8-012.000 / NIB 912000881234",
     importirNib: "912000881234",
     importirName: "PT. INDONESIA MAKMUR IMPORTAMA",
@@ -82,9 +176,9 @@ const SAMPLE_PIB_DATA = {
     ownerName: "PT. INDONESIA MAKMUR IMPORTAMA",
     ownerAddress: "Kawasan Industri MM2100 Blok C-5, Cikarang Barat, Kab. Bekasi, Jawa Barat 17530",
     
-    ppjkId: "0026923485215000",
-    ppjkName: "PT. SARANA PPJK LOGISTIK UTAMA",
-    ppjkAddress: "Jl. Sulawesi No. 12 Tanjung Priok, Jakarta Utara",
+    ppjkId: "",
+    ppjkName: "",
+    ppjkAddress: "",
 
     // Supplier / Pengirim Luar Negeri
     supplierName: "SHANGHAI PRECISION MACHINERY CO., LTD.",
@@ -263,7 +357,7 @@ function calculatePibPungutan() {
     const exchangeRate = parseFloat(document.getElementById('pibExchangeRate')?.value) || 15850;
     const incoterm = document.getElementById('pibIncoterm')?.value || 'FOB';
     const tarifBm = parseFloat(document.getElementById('pibTarifBm')?.value) || 0;
-    const importirStatus = document.getElementById('pibImportirStatus')?.value || 'API-U';
+    const importirStatus = document.getElementById('pibPenerimaStatus')?.value || document.getElementById('pibImportirStatus')?.value || 'API-U';
 
     // 1. Calculate CIF in Foreign Currency
     let cifValuta = invoiceAmt;
@@ -337,6 +431,49 @@ function collectPibFormData() {
         return el ? el.value : '';
     };
 
+    // CEISA 4.0 Tab Entitas (6 Cards) values
+    const pengirimIdType = getVal('pibPengirimIdType') || '4 - LAINNYA';
+    const pengirimId = getVal('pibPengirimId') || '-';
+    const pengirimName = getVal('pibPengirimName');
+    const pengirimAddress = getVal('pibPengirimAddress');
+    const pengirimCountry = getVal('pibPengirimCountry') || 'CN - CHINA';
+
+    const pembeliIdType = getVal('pibPembeliIdType') || '6 - NPWP 16 DIGIT';
+    const pembeliId = getVal('pibPembeliId');
+    const pembeliNitku = getVal('pibPembeliNitku');
+    const pembeliName = getVal('pibPembeliName');
+    const pembeliAddress = getVal('pibPembeliAddress');
+    const pembeliCountry = getVal('pibPembeliCountry') || 'ID - INDONESIA';
+
+    const pemilikIdType = getVal('pibPemilikIdType') || '6 - NPWP 16 DIGIT';
+    const pemilikId = getVal('pibPemilikId');
+    const pemilikNitku = getVal('pibPemilikNitku');
+    const pemilikName = getVal('pibPemilikName');
+    const pemilikAddress = getVal('pibPemilikAddress');
+    const pemilikAfiliasi = getVal('pibPemilikAfiliasi') || 'TAH - Tidak berhubungan';
+
+    const penerimaIdType = getVal('pibPenerimaIdType') || '6 - NPWP 16 DIGIT';
+    const penerimaId = getVal('pibPenerimaId');
+    const penerimaNitku = getVal('pibPenerimaNitku');
+    const penerimaName = getVal('pibPenerimaName');
+    const penerimaAddress = getVal('pibPenerimaAddress');
+    const penerimaCountry = getVal('pibPenerimaCountry') || 'ID - INDONESIA';
+    const penerimaStatus = getVal('pibPenerimaStatus') || 'LAINNYA';
+    const ijinBpNo = getVal('pibPenerimaIjinNo') || getVal('pibIjinBpNomor');
+    const ijinBpTgl = getVal('pibPenerimaIjinDate') || getVal('pibIjinBpTanggal');
+
+    const penjualIdType = getVal('pibPenjualIdType') || '4 - LAINNYA';
+    const penjualId = getVal('pibPenjualId') || '-';
+    const penjualName = getVal('pibPenjualName');
+    const penjualAddress = getVal('pibPenjualAddress');
+    const penjualCountry = getVal('pibPenjualCountry') || 'CN - CHINA';
+
+    const ppjkIdType = getVal('pibPpjkIdType') || '6 - NPWP 16 DIGIT';
+    const ppjkId = getVal('pibPpjkId');
+    const ppjkNitku = getVal('pibPpjkNitku');
+    const ppjkName = getVal('pibPpjkName');
+    const ppjkAddress = getVal('pibPpjkAddress');
+
     return {
         nomorAju: getVal('pibNoAju'),
         kantorPabean: getVal('pibKantorPabean'),
@@ -350,31 +487,159 @@ function collectPibFormData() {
         kategoriImpor: getVal('pibKategoriPemasukan') || getVal('pibKategoriImpor'),
         caraBayar: getVal('pibCaraBayar'),
 
-        importirIdType: getVal('pibImportirIdType'),
-        importirId: getVal('pibImportirId'),
-        importirNib: getVal('pibImportirNib'),
-        importirName: getVal('pibImportirName'),
-        importirAddress: getVal('pibImportirAddress'),
-        importirStatus: getVal('pibImportirStatus'),
-        importirCustomsStatus: getVal('pibImportirCustomsStatus'),
+        // Structured CEISA 4.0 Entitas Contract
+        entitas: {
+            pengirim: {
+                jenisIdentitas: pengirimIdType,
+                nomorIdentitas: pengirimId,
+                nama: pengirimName,
+                alamat: pengirimAddress,
+                negara: pengirimCountry
+            },
+            pembeli: {
+                jenisIdentitas: pembeliIdType,
+                nomorIdentitas: pembeliId,
+                nitku: pembeliNitku,
+                nama: pembeliName,
+                alamat: pembeliAddress,
+                negara: pembeliCountry
+            },
+            pemilikBarang: {
+                jenisIdentitas: pemilikIdType,
+                nomorIdentitas: pemilikId,
+                nitku: pemilikNitku,
+                nama: pemilikName,
+                alamat: pemilikAddress,
+                afiliasi: pemilikAfiliasi
+            },
+            penerima: {
+                jenisIdentitas: penerimaIdType,
+                nomorIdentitas: penerimaId,
+                nitku: penerimaNitku,
+                nama: penerimaName,
+                alamat: penerimaAddress,
+                negara: penerimaCountry,
+                status: penerimaStatus,
+                ijinBpNo: ijinBpNo,
+                ijinBpTgl: ijinBpTgl
+            },
+            penjual: {
+                jenisIdentitas: penjualIdType,
+                nomorIdentitas: penjualId,
+                nama: penjualName,
+                alamat: penjualAddress,
+                negara: penjualCountry
+            },
+            ppjk: {
+                jenisIdentitas: ppjkIdType,
+                nomorIdentitas: ppjkId,
+                nitku: ppjkNitku,
+                nama: ppjkName,
+                alamat: ppjkAddress
+            }
+        },
 
-        ownerSame: document.getElementById('pibCheckOwnerSame')?.checked ?? true,
-        ownerId: getVal('pibOwnerId'),
-        ownerName: getVal('pibOwnerName'),
-        ownerAddress: getVal('pibOwnerAddress'),
+        // 6 CEISA 4.0 Entity Card Root Fields
+        pengirimIdType,
+        pengirimJenisIdentitas: pengirimIdType,
+        pengirimId,
+        pengirimNomorIdentitas: pengirimId,
+        pengirimName,
+        pengirimNama: pengirimName,
+        pengirimAddress,
+        pengirimAlamat: pengirimAddress,
+        pengirimCountry,
+        pengirimNegara: pengirimCountry,
 
-        ppjkId: getVal('pibPpjkId'),
-        ppjkName: getVal('pibPpjkName'),
-        ppjkAddress: getVal('pibPpjkAddress'),
+        pembeliIdType,
+        pembeliJenisIdentitas: pembeliIdType,
+        pembeliId,
+        pembeliNomorIdentitas: pembeliId,
+        pembeliNitku,
+        pembeliName,
+        pembeliNama: pembeliName,
+        pembeliAddress,
+        pembeliAlamat: pembeliAddress,
+        pembeliCountry,
+        pembeliNegara: pembeliCountry,
 
-        supplierName: getVal('pibSupplierName'),
-        supplierAddress: getVal('pibSupplierAddress'),
-        supplierCountry: getVal('pibSupplierCountry'),
+        pemilikIdType,
+        pemilikJenisIdentitas: pemilikIdType,
+        pemilikId,
+        pemilikNomorIdentitas: pemilikId,
+        pemilikNitku,
+        pemilikName,
+        pemilikNama: pemilikName,
+        pemilikAddress,
+        pemilikAlamat: pemilikAddress,
+        pemilikAfiliasi,
 
-        sellerSame: document.getElementById('pibCheckSellerSame')?.checked ?? true,
-        sellerName: getVal('pibSellerName'),
-        sellerAddress: getVal('pibSellerAddress'),
-        sellerCountry: getVal('pibSellerCountry'),
+        penerimaIdType,
+        penerimaJenisIdentitas: penerimaIdType,
+        penerimaId,
+        penerimaNomorIdentitas: penerimaId,
+        penerimaNitku,
+        penerimaName,
+        penerimaNama: penerimaName,
+        penerimaAddress,
+        penerimaAlamat: penerimaAddress,
+        penerimaCountry,
+        penerimaNegara: penerimaCountry,
+        penerimaStatus,
+        ijinBpNo,
+        ijinBpNomor: ijinBpNo,
+        ijinBpTgl,
+        ijinBpTanggal: ijinBpTgl,
+
+        penjualIdType,
+        penjualJenisIdentitas: penjualIdType,
+        penjualId,
+        penjualNomorIdentitas: penjualId,
+        penjualName,
+        penjualNama: penjualName,
+        penjualAddress,
+        penjualAlamat: penjualAddress,
+        penjualCountry,
+        penjualNegara: penjualCountry,
+
+        ppjkIdType,
+        ppjkJenisIdentitas: ppjkIdType,
+        ppjkId,
+        ppjkNomorIdentitas: ppjkId,
+        ppjkNitku,
+        ppjkName,
+        ppjkNama: ppjkName,
+        ppjkAddress,
+        ppjkAlamat: ppjkAddress,
+
+        // Legacy Aliases (100% Backward-Compatibility)
+        importirIdType: penerimaIdType || getVal('pibImportirIdType'),
+        importirId: penerimaId || getVal('pibImportirId'),
+        importirNib: getVal('pibImportirNib') || '',
+        importirName: penerimaName || getVal('pibImportirName'),
+        importirAddress: penerimaAddress || getVal('pibImportirAddress'),
+        importirStatus: penerimaStatus || getVal('pibImportirStatus') || 'API-U',
+        importirCustomsStatus: getVal('pibImportirCustomsStatus') || 'Importir Umum',
+
+        consigneeName: penerimaName,
+        consigneeAddress: penerimaAddress,
+
+        ownerSame: true,
+        ownerId: pemilikId || getVal('pibOwnerId') || penerimaId,
+        ownerName: pemilikName || getVal('pibOwnerName') || penerimaName,
+        ownerAddress: pemilikAddress || getVal('pibOwnerAddress') || penerimaAddress,
+
+        supplierName: pengirimName || getVal('pibSupplierName'),
+        supplierAddress: pengirimAddress || getVal('pibSupplierAddress'),
+        supplierCountry: pengirimCountry || getVal('pibSupplierCountry'),
+
+        shipperName: pengirimName,
+        shipperAddress: pengirimAddress,
+
+        sellerSame: true,
+        sellerName: penjualName || getVal('pibSellerName') || pengirimName,
+        sellerAddress: penjualAddress || getVal('pibSellerAddress') || pengirimAddress,
+        sellerCountry: penjualCountry || getVal('pibSellerCountry') || pengirimCountry,
 
         blNumber: document.getElementById('pibBlNumber')?.value || document.querySelector('#pibDocTableBody input[id*="BlNumber"]')?.value || '',
         blDate: document.getElementById('pibBlDate')?.value || document.querySelector('#pibDocTableBody input[id*="BlDate"]')?.value || '',
@@ -471,7 +736,7 @@ function collectPibFormData() {
         pernyataanJabatan: getVal('pibPernyataanJabatan'),
 
         items: (() => {
-            if (typeof savePibActiveItemFromForm === 'function') {
+            if (window._pibViewMode === 'editor' && typeof savePibActiveItemFromForm === 'function') {
                 savePibActiveItemFromForm();
             }
             if (Array.isArray(window._pibItems) && window._pibItems.length > 0) {
@@ -559,33 +824,111 @@ function loadPibDraftData(data, shouldSave = true) {
     const setVal = (id, val) => {
         const el = document.getElementById(id);
         if (el && val !== undefined && val !== null) {
-            el.value = val;
+            if (el.type === 'number') {
+                const clean = String(val).replace(/,/g, '').replace(/[^0-9.-]/g, '');
+                el.value = clean || '';
+            } else {
+                el.value = String(val);
+            }
         }
     };
 
-    // Mapping: If data comes from AI Document Parser:
-    // - Consignee is Importir (Indonesian buyer)
-    // - Shipper is Supplier (Overseas seller)
-    let importirName = data.importirName || data.consigneeName || '';
-    let importirAddress = data.importirAddress || data.consigneeAddress || '';
-    let supplierName = data.supplierName || data.shipperName || '';
-    let supplierAddress = data.supplierAddress || data.shipperAddress || '';
-    let supplierCountry = data.supplierCountry || '';
+    const ent = (data && data.entitas) || {};
+    const pengirim = data.pengirim || ent.pengirim || {};
+    const pembeli = data.pembeli || ent.pembeli || {};
+    const pemilik = data.pemilikBarang || data.pemilik || ent.pemilikBarang || ent.pemilik || {};
+    const penerima = data.penerima || ent.penerima || {};
+    const penjual = data.penjual || ent.penjual || {};
+    const ppjk = data.ppjk || ent.ppjk || {};
+
+    let penerimaName = data.penerimaName ?? penerima.nama ?? data.importirName ?? data.consigneeName ?? '';
+    let penerimaAddress = data.penerimaAddress ?? penerima.alamat ?? data.importirAddress ?? data.consigneeAddress ?? '';
+    let penerimaId = data.penerimaId ?? penerima.nomorIdentitas ?? data.importirId ?? '';
+    let penerimaIdType = data.penerimaIdType ?? penerima.jenisIdentitas ?? data.importirIdType ?? '6 - NPWP 16 DIGIT';
+    let penerimaNitku = data.penerimaNitku ?? penerima.nitku ?? '';
+    let penerimaCountry = data.penerimaCountry ?? penerima.negara ?? 'ID - INDONESIA';
+    let penerimaStatus = data.penerimaStatus ?? penerima.status ?? data.importirStatus ?? 'LAINNYA';
+    let ijinBpNo = data.ijinBpNomor ?? data.ijinBpNo ?? penerima.ijinBpNo ?? penerima.ijinBpNomor ?? '';
+    let ijinBpTgl = data.ijinBpTanggal ?? data.ijinBpTgl ?? penerima.ijinBpTgl ?? penerima.ijinBpTanggal ?? '';
+
+    let pengirimName = data.pengirimName ?? pengirim.nama ?? data.supplierName ?? data.shipperName ?? '';
+    let pengirimAddress = data.pengirimAddress ?? pengirim.alamat ?? data.supplierAddress ?? data.shipperAddress ?? '';
+    let pengirimCountry = data.pengirimCountry ?? pengirim.negara ?? data.supplierCountry ?? 'CN - CHINA';
+    let pengirimId = data.pengirimId ?? pengirim.nomorIdentitas ?? data.supplierId ?? '-';
+    let pengirimIdType = data.pengirimIdType ?? pengirim.jenisIdentitas ?? data.supplierIdType ?? '4 - LAINNYA';
 
     // Aturan Khusus PT. Sinar Asia Pack pada Modul Impor (PIB):
     // Importir / Penerima di Indonesia: PT. Sinar Asia Pack
     // Supplier / Pengirim Luar Negeri: Golden Ben Printer Pte Ltd (atau pemasok LN tertera)
-    const isSinarAsiaImpor = /sinar\s*asia/i.test(importirName) ||
-                             /sinar\s*asia/i.test(supplierName) ||
-                             /golden\s*ben/i.test(importirName) ||
-                             /golden\s*ben/i.test(supplierName);
-
-    if (isSinarAsiaImpor) {
-        importirName = 'PT. SINAR ASIA PACK';
-        if (!supplierName || /sinar\s*asia/i.test(supplierName)) {
-            supplierName = 'GOLDEN BEN PRINTER PTE LTD';
-            supplierCountry = 'SG - SINGAPORE';
+    if (/sinar\s*asia/i.test(String(penerimaName || '')) ||
+        /sinar\s*asia/i.test(String(pengirimName || '')) ||
+        /golden\s*ben/i.test(String(penerimaName || '')) ||
+        /golden\s*ben/i.test(String(pengirimName || ''))) {
+        penerimaName = 'PT. SINAR ASIA PACK';
+        if (!pengirimName || /sinar\s*asia/i.test(String(pengirimName))) {
+            pengirimName = 'GOLDEN BEN PRINTER PTE LTD';
+            pengirimCountry = 'SG - SINGAPORE';
         }
+    }
+
+    // Auto-generate NITKU from 16-digit NPWP if NITKU is empty
+    const pDigits = String(penerimaId || '').replace(/\D/g, '');
+    if (!penerimaNitku && pDigits.length === 16) {
+        penerimaNitku = pDigits + '000000';
+    }
+
+    // Pembeli: defaults or falls back to Penerima if omitted
+    let pembeliName = data.pembeliName ?? pembeli.nama;
+    let pembeliAddress = data.pembeliAddress ?? pembeli.alamat;
+    let pembeliId = data.pembeliId ?? pembeli.nomorIdentitas;
+    let pembeliIdType = data.pembeliIdType ?? pembeli.jenisIdentitas;
+    let pembeliNitku = data.pembeliNitku ?? pembeli.nitku;
+    let pembeliCountry = data.pembeliCountry ?? pembeli.negara;
+
+    if (pembeliName === undefined && pembeli.nama === undefined) pembeliName = penerimaName;
+    if (pembeliAddress === undefined && pembeli.alamat === undefined) pembeliAddress = penerimaAddress;
+    if (pembeliId === undefined && pembeli.nomorIdentitas === undefined) pembeliId = penerimaId;
+    if (pembeliIdType === undefined && pembeli.jenisIdentitas === undefined) pembeliIdType = penerimaIdType;
+    if (pembeliNitku === undefined && pembeli.nitku === undefined) pembeliNitku = penerimaNitku;
+    if (pembeliCountry === undefined && pembeli.negara === undefined) pembeliCountry = penerimaCountry;
+
+    // Pemilik Barang: defaults or falls back to Penerima if omitted
+    let pemilikName = data.pemilikName ?? pemilik.nama ?? data.ownerName;
+    let pemilikAddress = data.pemilikAddress ?? pemilik.alamat ?? data.ownerAddress;
+    let pemilikId = data.pemilikId ?? pemilik.nomorIdentitas ?? data.ownerId;
+    let pemilikIdType = data.pemilikIdType ?? pemilik.jenisIdentitas;
+    let pemilikNitku = data.pemilikNitku ?? pemilik.nitku;
+    let pemilikAfiliasi = data.pemilikAfiliasi ?? pemilik.afiliasi ?? 'TAH - Tidak berhubungan';
+
+    if (pemilikName === undefined && pemilik.nama === undefined && data.ownerName === undefined) pemilikName = penerimaName;
+    if (pemilikAddress === undefined && pemilik.alamat === undefined && data.ownerAddress === undefined) pemilikAddress = penerimaAddress;
+    if (pemilikId === undefined && pemilik.nomorIdentitas === undefined && data.ownerId === undefined) pemilikId = penerimaId;
+    if (pemilikIdType === undefined && pemilik.jenisIdentitas === undefined) pemilikIdType = penerimaIdType;
+    if (pemilikNitku === undefined && pemilik.nitku === undefined) pemilikNitku = penerimaNitku;
+
+    // Penjual: defaults or falls back to Pengirim if omitted
+    let penjualName = data.penjualName ?? penjual.nama ?? data.sellerName;
+    let penjualAddress = data.penjualAddress ?? penjual.alamat ?? data.sellerAddress;
+    let penjualId = data.penjualId ?? penjual.nomorIdentitas;
+    let penjualIdType = data.penjualIdType ?? penjual.jenisIdentitas;
+    let penjualCountry = data.penjualCountry ?? penjual.negara ?? data.sellerCountry;
+
+    if (penjualName === undefined && penjual.nama === undefined && data.sellerName === undefined) penjualName = pengirimName;
+    if (penjualAddress === undefined && penjual.alamat === undefined && data.sellerAddress === undefined) penjualAddress = pengirimAddress;
+    if (penjualId === undefined && penjual.nomorIdentitas === undefined) penjualId = pengirimId;
+    if (penjualIdType === undefined && penjual.jenisIdentitas === undefined) penjualIdType = pengirimIdType;
+    if (penjualCountry === undefined && penjual.negara === undefined && data.sellerCountry === undefined) penjualCountry = pengirimCountry;
+
+    // PPJK
+    let ppjkId = data.ppjkId ?? ppjk.nomorIdentitas ?? '';
+    let ppjkIdType = data.ppjkIdType ?? ppjk.jenisIdentitas ?? '6 - NPWP 16 DIGIT';
+    let ppjkNitku = data.ppjkNitku ?? ppjk.nitku ?? '';
+    let ppjkName = data.ppjkName ?? ppjk.nama ?? '';
+    let ppjkAddress = data.ppjkAddress ?? ppjk.alamat ?? '';
+
+    const ppjkDigits = String(ppjkId || '').replace(/\D/g, '');
+    if (!ppjkNitku && ppjkDigits.length === 16) {
+        ppjkNitku = ppjkDigits + '000000';
     }
 
     // No Aju
@@ -602,30 +945,70 @@ function loadPibDraftData(data, shouldSave = true) {
     if (data.tujuanPemasukan) setVal('pibTujuanPemasukan', data.tujuanPemasukan);
     if (data.jenisTransaksiPajak || data.jenisTransaksiPerpajakan) setVal('pibJenisTransaksiPajak', data.jenisTransaksiPajak || data.jenisTransaksiPerpajakan);
 
-    // Entitas
-    if (data.importirIdType) setVal('pibImportirIdType', data.importirIdType);
-    if (data.importirId) setVal('pibImportirId', data.importirId);
+    // Populate Card 1: Pengirim
+    setVal('pibPengirimIdType', pengirimIdType || '4 - LAINNYA');
+    setVal('pibPengirimId', pengirimId || '-');
+    setVal('pibPengirimName', pengirimName);
+    setVal('pibPengirimAddress', pengirimAddress);
+    setVal('pibPengirimCountry', pengirimCountry || 'CN - CHINA');
+
+    // Populate Card 2: Pembeli
+    setVal('pibPembeliIdType', pembeliIdType || '6 - NPWP 16 DIGIT');
+    setVal('pibPembeliId', pembeliId);
+    setVal('pibPembeliNitku', pembeliNitku);
+    setVal('pibPembeliName', pembeliName);
+    setVal('pibPembeliAddress', pembeliAddress);
+    setVal('pibPembeliCountry', pembeliCountry || 'ID - INDONESIA');
+
+    // Populate Card 3: Pemilik Barang
+    setVal('pibPemilikIdType', pemilikIdType || '6 - NPWP 16 DIGIT');
+    setVal('pibPemilikId', pemilikId);
+    setVal('pibPemilikNitku', pemilikNitku);
+    setVal('pibPemilikName', pemilikName);
+    setVal('pibPemilikAddress', pemilikAddress);
+    setVal('pibPemilikAfiliasi', pemilikAfiliasi || 'TAH - Tidak berhubungan');
+
+    // Populate Card 4: Penerima
+    setVal('pibPenerimaIdType', penerimaIdType || '6 - NPWP 16 DIGIT');
+    setVal('pibPenerimaId', penerimaId);
+    setVal('pibPenerimaNitku', penerimaNitku);
+    setVal('pibPenerimaName', penerimaName);
+    setVal('pibPenerimaAddress', penerimaAddress);
+    setVal('pibPenerimaCountry', penerimaCountry || 'ID - INDONESIA');
+    setVal('pibPenerimaStatus', penerimaStatus || 'LAINNYA');
+    setVal('pibPenerimaIjinNo', ijinBpNo);
+    setVal('pibPenerimaIjinDate', ijinBpTgl);
+
+    // Populate Card 5: Penjual
+    setVal('pibPenjualIdType', penjualIdType || '4 - LAINNYA');
+    setVal('pibPenjualId', penjualId || '-');
+    setVal('pibPenjualName', penjualName);
+    setVal('pibPenjualAddress', penjualAddress);
+    setVal('pibPenjualCountry', penjualCountry || 'CN - CHINA');
+
+    // Populate Card 6: PPJK (Hanya diisi jika secara eksplisit ada di draft data, tanpa dummy default)
+    setVal('pibPpjkIdType', ppjkIdType || '6 - NPWP 16 DIGIT');
+    setVal('pibPpjkId', ppjkId || '');
+    setVal('pibPpjkNitku', ppjkNitku || '');
+    setVal('pibPpjkName', ppjkName || '');
+    setVal('pibPpjkAddress', ppjkAddress || '');
+
+    // Legacy DOM Elements (if present)
     if (data.importirNib) setVal('pibImportirNib', data.importirNib);
-    if (importirName) setVal('pibImportirName', importirName);
-    if (importirAddress) setVal('pibImportirAddress', importirAddress);
-    if (data.importirStatus) setVal('pibImportirStatus', data.importirStatus);
-    if (data.importirCustomsStatus) setVal('pibImportirCustomsStatus', data.importirCustomsStatus);
-
-    if (data.ownerName || importirName) setVal('pibOwnerName', data.ownerName || importirName);
-    if (data.ownerAddress || importirAddress) setVal('pibOwnerAddress', data.ownerAddress || importirAddress);
-    if (data.ownerId || data.importirId) setVal('pibOwnerId', data.ownerId || data.importirId);
-
-    if (data.ppjkId) setVal('pibPpjkId', data.ppjkId);
-    if (data.ppjkName) setVal('pibPpjkName', data.ppjkName);
-    if (data.ppjkAddress) setVal('pibPpjkAddress', data.ppjkAddress);
-
-    if (supplierName) setVal('pibSupplierName', supplierName);
-    if (supplierAddress) setVal('pibSupplierAddress', supplierAddress);
-    if (supplierCountry) setVal('pibSupplierCountry', supplierCountry);
-
-    if (data.sellerName || supplierName) setVal('pibSellerName', data.sellerName || supplierName);
-    if (data.sellerAddress || supplierAddress) setVal('pibSellerAddress', data.sellerAddress || supplierAddress);
-    if (data.sellerCountry || supplierCountry) setVal('pibSellerCountry', data.sellerCountry || supplierCountry);
+    setVal('pibImportirIdType', penerimaIdType);
+    setVal('pibImportirId', penerimaId);
+    setVal('pibImportirName', penerimaName);
+    setVal('pibImportirAddress', penerimaAddress);
+    setVal('pibImportirStatus', penerimaStatus);
+    setVal('pibSupplierName', pengirimName);
+    setVal('pibSupplierAddress', pengirimAddress);
+    setVal('pibSupplierCountry', pengirimCountry);
+    setVal('pibOwnerName', pemilikName);
+    setVal('pibOwnerAddress', pemilikAddress);
+    setVal('pibOwnerId', pemilikId);
+    setVal('pibSellerName', penjualName);
+    setVal('pibSellerAddress', penjualAddress);
+    setVal('pibSellerCountry', penjualCountry);
 
     // Dokumen (Render Dynamic Document Table)
     renderPibDocumentsTable(data);
@@ -642,28 +1025,43 @@ function loadPibDraftData(data, shouldSave = true) {
 
     // Pengangkut
     if (data.caraPengangkutan) setVal('pibCaraPengangkutan', data.caraPengangkutan);
-    if (data.vesselName) setVal('pibVesselName', data.vesselName);
+    if (data.vesselName || data.namaPengangkut) setVal('pibVesselName', data.vesselName || data.namaPengangkut);
     if (data.voyageNumber) setVal('pibVoyageNumber', data.voyageNumber);
-    if (data.vesselFlag) setVal('pibVesselFlag', data.vesselFlag);
-    if (data.etaDate) setVal('pibEtaDate', data.etaDate);
-    if (data.portLoading) setVal('pibPortLoading', data.portLoading);
+    if (data.vesselFlag || data.benderaPengangkut) setVal('pibVesselFlag', data.vesselFlag || data.benderaPengangkut);
+    if (data.etaDate || data.tglPerkiraanEkspor || data.blDate) setVal('pibEtaDate', data.etaDate || data.tglPerkiraanEkspor || data.blDate);
+    if (data.portLoading || data.loadingPort) setVal('pibPortLoading', data.portLoading || data.loadingPort);
     if (data.portTransit) setVal('pibPortTransit', data.portTransit);
-    if (data.portDischarge) setVal('pibPortDischarge', data.portDischarge);
+    if (data.portDischarge || data.dischargePort) setVal('pibPortDischarge', data.portDischarge || data.dischargePort);
     if (data.tpsLocation) setVal('pibTpsLocation', data.tpsLocation);
 
     // Kemasan & Peti Kemas
     if (data.packageType) setVal('pibPackageType', data.packageType);
-    if (data.packageQty !== undefined) setVal('pibPackageQty', data.packageQty);
-    if (data.grossWeight !== undefined) setVal('pibGrossWeight', data.grossWeight);
-    if (data.netWeight !== undefined) setVal('pibNetWeight', data.netWeight);
+    if (data.packageQty !== undefined) {
+        setVal('pibPackageQty', data.packageQty);
+    } else if (data.totalKemasan) {
+        const m = String(data.totalKemasan).match(/(\d+[\d.,]*)/);
+        if (m) setVal('pibPackageQty', parseFloat(m[1].replace(/,/g, '')));
+    }
+    if (data.grossWeight !== undefined) {
+        setVal('pibGrossWeight', data.grossWeight);
+    } else if (data.totalGrossWeightKGM) {
+        const m = String(data.totalGrossWeightKGM).match(/([\d.,]+)/);
+        if (m) setVal('pibGrossWeight', parseFloat(m[1].replace(/,/g, '')));
+    }
+    if (data.netWeight !== undefined) {
+        setVal('pibNetWeight', data.netWeight);
+    } else if (data.totalNetWeightKGM) {
+        const m = String(data.totalNetWeightKGM).match(/([\d.,]+)/);
+        if (m) setVal('pibNetWeight', parseFloat(m[1].replace(/,/g, '')));
+    }
     if (data.containerNumber) setVal('pibContainerNumber', data.containerNumber);
     if (data.containerSize) setVal('pibContainerSize', data.containerSize);
     if (data.containerType) setVal('pibContainerType', data.containerType);
 
     // Transaksi
-    if (data.currency) setVal('pibCurrency', data.currency);
-    if (data.exchangeRate) setVal('pibExchangeRate', data.exchangeRate);
-    if (data.incoterm) setVal('pibIncoterm', data.incoterm);
+    if (data.currency || (data.invoices && data.invoices[0]?.currency)) setVal('pibCurrency', data.currency || data.invoices[0]?.currency);
+    if (data.exchangeRate || data.kursPabean) setVal('pibExchangeRate', data.exchangeRate || data.kursPabean);
+    if (data.incoterm || data.incotermsTransaksi || data.caraDagang) setVal('pibIncoterm', data.incoterm || data.incotermsTransaksi || data.caraDagang);
     // Hitung invoiceAmount dari rincian barang jika belum tersedia
     if ((!data.invoiceAmount || data.invoiceAmount === 0) && Array.isArray(data.items) && data.items.length > 0) {
         let sumAmt = 0;
@@ -702,8 +1100,8 @@ function loadPibDraftData(data, shouldSave = true) {
     }) : [];
     showPibItemListView();
 
-    // Auto-calculate Pungutan
-    calculatePibPungutan();
+    // Pungutan tidak di-autofill sesuai instruksi (biarkan user mengisi/menghitung secara manual)
+    // calculatePibPungutan();
 
     // Sinkronisasi Tabel Dokumen Pelengkap Pabean Impor
     updatePibDocTable(data);
@@ -919,6 +1317,7 @@ function renderPibActiveItem(idx = 0) {
 
 // SIMPAN NILAI DARI FORM DETAIL ITEM AKTIF KEMBALI KE STATE
 function savePibActiveItemFromForm() {
+    if (window._pibViewMode !== 'editor') return;
     if (!Array.isArray(window._pibItems) || window._pibItems.length === 0) return;
     const idx = window._currentPibItemIdx;
     if (idx < 0 || idx >= window._pibItems.length) return;
@@ -927,6 +1326,12 @@ function savePibActiveItemFromForm() {
 
     const hsCode = getEl('pibItemHsCode');
     const desc = getEl('pibItemUraian');
+
+    // Safety check: jika form input di DOM kosong tetapi data item di memori sudah ada, jangan timpa dengan data kosong
+    if (!desc && !hsCode && window._pibItems[idx] && (window._pibItems[idx].uraianJenisBarang || window._pibItems[idx].description)) {
+        return;
+    }
+
     const country = getEl('pibItemNegara');
     
     // Bersihkan nilai kuantitas agar HANYA berupa angka dan titik/koma (bebas dari imbuhan satuan)
@@ -1725,41 +2130,157 @@ function submitPibCustoms() {
     }, 800);
 }
 
-// COPY / SYNC HANDLERS
+// COPY / SYNC HANDLERS (CEISA 4.0 TAB ENTITAS)
 function setupPibCopyHandlers() {
-    const checkOwner = document.getElementById('pibCheckOwnerSame');
-    if (checkOwner) {
-        checkOwner.addEventListener('change', () => {
-            if (checkOwner.checked) {
-                const name = document.getElementById('pibImportirName')?.value || '';
-                const addr = document.getElementById('pibImportirAddress')?.value || '';
-                const id = document.getElementById('pibImportirId')?.value || '';
-                const elName = document.getElementById('pibOwnerName');
-                const elAddr = document.getElementById('pibOwnerAddress');
-                const elId = document.getElementById('pibOwnerId');
-                if (elName) elName.value = name;
-                if (elAddr) elAddr.value = addr;
-                if (elId) elId.value = id;
+    const dispatchChange = (el) => {
+        if (!el) return;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+    };
+
+    const setField = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.value = (val === null || val === undefined) ? '' : String(val);
+            dispatchChange(el);
+        }
+    };
+
+    // 1. Salin data penerima -> Pembeli
+    const btnCopyPembeli = document.getElementById('btnCopyPenerimaToPembeli') ||
+                           document.getElementById('pibBtnSalinPenerima') ||
+                           document.getElementById('btnPibSalinPenerimaKePembeli');
+    if (btnCopyPembeli && !btnCopyPembeli._pibCopyBound) {
+        btnCopyPembeli._pibCopyBound = true;
+        btnCopyPembeli.addEventListener('click', () => {
+            const pIdType = document.getElementById('pibPenerimaIdType')?.value || '6 - NPWP 16 DIGIT';
+            const pId = document.getElementById('pibPenerimaId')?.value || '';
+            const pNitku = document.getElementById('pibPenerimaNitku')?.value || '';
+            const pName = document.getElementById('pibPenerimaName')?.value || '';
+            const pAddr = document.getElementById('pibPenerimaAddress')?.value || '';
+            const pCtry = document.getElementById('pibPenerimaCountry')?.value || 'ID - INDONESIA';
+
+            setField('pibPembeliIdType', pIdType);
+            setField('pibPembeliId', pId);
+            setField('pibPembeliNitku', pNitku);
+            setField('pibPembeliName', pName);
+            setField('pibPembeliAddress', pAddr);
+            setField('pibPembeliCountry', pCtry);
+
+            if (typeof showToast === 'function') {
+                showToast('Data penerima berhasil disalin ke Pembeli!', 'success');
             }
         });
     }
 
-    const checkSeller = document.getElementById('pibCheckSellerSame');
-    if (checkSeller) {
-        checkSeller.addEventListener('change', () => {
-            if (checkSeller.checked) {
-                const name = document.getElementById('pibSupplierName')?.value || '';
-                const addr = document.getElementById('pibSupplierAddress')?.value || '';
-                const country = document.getElementById('pibSupplierCountry')?.value || '';
-                const elName = document.getElementById('pibSellerName');
-                const elAddr = document.getElementById('pibSellerAddress');
-                const elCountry = document.getElementById('pibSellerCountry');
-                if (elName) elName.value = name;
-                if (elAddr) elAddr.value = addr;
-                if (elCountry) elCountry.value = country;
+    // 2. Hapus Pembeli
+    const btnHapusPembeli = document.getElementById('btnHapusPembeli') ||
+                            document.getElementById('pibBtnHapusPembeli') ||
+                            document.getElementById('btnPibHapusPembeli');
+    if (btnHapusPembeli && !btnHapusPembeli._pibCopyBound) {
+        btnHapusPembeli._pibCopyBound = true;
+        btnHapusPembeli.addEventListener('click', () => {
+            setField('pibPembeliIdType', '6 - NPWP 16 DIGIT');
+            setField('pibPembeliId', '');
+            setField('pibPembeliNitku', '');
+            setField('pibPembeliName', '');
+            setField('pibPembeliAddress', '');
+            setField('pibPembeliCountry', 'ID - INDONESIA');
+
+            if (typeof showToast === 'function') {
+                showToast('Data pembeli berhasil dikosongkan.', 'info');
             }
         });
     }
+
+    // 3. Salin data pengirim -> Penjual
+    const btnCopyPenjual = document.getElementById('btnCopyPengirimToPenjual') ||
+                          document.getElementById('pibBtnSalinPengirim') ||
+                          document.getElementById('btnPibSalinPengirimKePenjual');
+    if (btnCopyPenjual && !btnCopyPenjual._pibCopyBound) {
+        btnCopyPenjual._pibCopyBound = true;
+        btnCopyPenjual.addEventListener('click', () => {
+            const sIdType = document.getElementById('pibPengirimIdType')?.value || '4 - LAINNYA';
+            const sId = document.getElementById('pibPengirimId')?.value || '-';
+            const sName = document.getElementById('pibPengirimName')?.value || '';
+            const sAddr = document.getElementById('pibPengirimAddress')?.value || '';
+            const sCtry = document.getElementById('pibPengirimCountry')?.value || 'CN - CHINA';
+
+            setField('pibPenjualIdType', sIdType);
+            setField('pibPenjualId', sId);
+            setField('pibPenjualName', sName);
+            setField('pibPenjualAddress', sAddr);
+            setField('pibPenjualCountry', sCtry);
+
+            if (typeof showToast === 'function') {
+                showToast('Data pengirim berhasil disalin ke Penjual!', 'success');
+            }
+        });
+    }
+
+    // 4. Salin Penerima -> Pemilik Barang (preserves Afiliasi)
+    const btnCopyPemilik = document.getElementById('btnCopyPenerimaToPemilik') ||
+                           document.getElementById('pibBtnSalinPemilik') ||
+                           document.getElementById('btnPibSalinPenerimaKePemilik');
+    if (btnCopyPemilik && !btnCopyPemilik._pibCopyBound) {
+        btnCopyPemilik._pibCopyBound = true;
+        btnCopyPemilik.addEventListener('click', () => {
+            const pIdType = document.getElementById('pibPenerimaIdType')?.value || '6 - NPWP 16 DIGIT';
+            const pId = document.getElementById('pibPenerimaId')?.value || '';
+            const pNitku = document.getElementById('pibPenerimaNitku')?.value || '';
+            const pName = document.getElementById('pibPenerimaName')?.value || '';
+            const pAddr = document.getElementById('pibPenerimaAddress')?.value || '';
+
+            setField('pibPemilikIdType', pIdType);
+            setField('pibPemilikId', pId);
+            setField('pibPemilikNitku', pNitku);
+            setField('pibPemilikName', pName);
+            setField('pibPemilikAddress', pAddr);
+
+            if (typeof showToast === 'function') {
+                showToast('Data penerima berhasil disalin ke Pemilik Barang!', 'success');
+            }
+        });
+    }
+
+    // 5. Sinkronisasi NITKU PPJK
+    const btnSyncNitku = document.getElementById('btnSyncNitkuPpjk') ||
+                         document.getElementById('pibBtnSyncNitkuPpjk') ||
+                         document.getElementById('btnPibSyncNitkuPpjk');
+    if (btnSyncNitku && !btnSyncNitku._pibCopyBound) {
+        btnSyncNitku._pibCopyBound = true;
+        btnSyncNitku.addEventListener('click', () => {
+            const ppjkId = document.getElementById('pibPpjkId')?.value || '';
+            const digits = ppjkId.replace(/\D/g, '');
+            const nitkuEl = document.getElementById('pibPpjkNitku');
+            if (nitkuEl) {
+                if (digits.length >= 15 && digits.length <= 16) {
+                    nitkuEl.value = digits.padEnd(22, '0');
+                } else if (digits.length === 22) {
+                    nitkuEl.value = digits;
+                } else {
+                    nitkuEl.value = '';
+                }
+                dispatchChange(nitkuEl);
+                if (digits.length >= 15 && typeof showToast === 'function') {
+                    showToast('NITKU PPJK berhasil disinkronkan (22 digit)!', 'success');
+                }
+            }
+        });
+    }
+
+    // 6. Referensi button toasts (if clicked)
+    ['btnRefPengirim', 'btnRefPemilik', 'btnRefPenerima', 'btnPibPengirimRef', 'btnPibPemilikRef', 'btnPibPenerimaRef'].forEach(refId => {
+        const btnRef = document.getElementById(refId);
+        if (btnRef && !btnRef._pibCopyBound) {
+            btnRef._pibCopyBound = true;
+            btnRef.addEventListener('click', () => {
+                if (typeof showToast === 'function') {
+                    showToast('Lookup referensi entitas aktif.', 'info');
+                }
+            });
+        }
+    });
 }
 
 // INITIALIZATION ENTRYPOINT FOR PIB MODULE
@@ -1780,13 +2301,30 @@ function initPibDashboard() {
     if (btnPrev) btnPrev.addEventListener('click', handlePibTabPrev);
     if (btnNext) btnNext.addEventListener('click', handlePibTabNext);
 
-    // 2b. Header Tab Next Button & Topbar Buttons (FTZ01 1:1)
+    // 2b. Tab Stepper Navigation Handlers
     const btnNextHeader = document.getElementById('btnNextFromPibHeader');
     if (btnNextHeader) {
         btnNextHeader.addEventListener('click', () => {
             switchPibTab('pib-tab-entitas');
         });
     }
+
+    const btnPrevEntitas = document.getElementById('btnPrevFromPibEntitas');
+    if (btnPrevEntitas) {
+        btnPrevEntitas.addEventListener('click', () => {
+            switchPibTab('pib-tab-header');
+        });
+    }
+
+    const btnNextEntitas = document.getElementById('btnNextFromPibEntitas');
+    if (btnNextEntitas) {
+        btnNextEntitas.addEventListener('click', () => {
+            switchPibTab('pib-tab-dokumen');
+        });
+    }
+
+    // 2c. Setup Copy & Sync Handlers
+    setupPibCopyHandlers();
 
     const btnPibKembali = document.getElementById('btnPibKembali');
     if (btnPibKembali) {
@@ -1815,7 +2353,8 @@ function initPibDashboard() {
         'pibExchangeRate',
         'pibIncoterm',
         'pibTarifBm',
-        'pibImportirStatus'
+        'pibImportirStatus',
+        'pibPenerimaStatus'
     ];
     calcTriggers.forEach(id => {
         const el = document.getElementById(id);
@@ -2004,7 +2543,7 @@ function initPibDashboard() {
             if (window._pibViewMode === 'editor' && typeof savePibActiveItemFromForm === 'function') {
                 savePibActiveItemFromForm();
             }
-            const country = document.getElementById('pibSupplierCountry')?.value || 'CN - CHINA';
+            const country = document.getElementById('pibPengirimCountry')?.value || document.getElementById('pibPengirimNegara')?.value || document.getElementById('pibSupplierCountry')?.value || 'CN - CHINA';
             if (!Array.isArray(window._pibItems)) window._pibItems = [];
             window._pibItems.push({
                 hsCode: '',
@@ -2114,4 +2653,13 @@ if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initPibDashboard);
 } else {
     initPibDashboard();
+}
+
+// Expose functions globally for testing and portal integration
+if (typeof window !== 'undefined') {
+    window.collectPibFormData = collectPibFormData;
+    window.loadPibDraftData = loadPibDraftData;
+    window.populatePibForm = (data, shouldSave) => loadPibDraftData(data, shouldSave !== undefined ? shouldSave : false);
+    window.setupPibCopyHandlers = setupPibCopyHandlers;
+    window.calculatePibPungutan = calculatePibPungutan;
 }

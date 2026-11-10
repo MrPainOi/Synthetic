@@ -38,11 +38,6 @@
         return '/pib.html';
     }
 
-    // ─── QR Code helper ──────────────────────────────────────────────────────
-    function qrUrl(text) {
-        return `https://api.qrserver.com/v1/create-qr-code/?size=128x128&format=svg&data=${encodeURIComponent(text)}`;
-    }
-
     // ─── Bulletproof Copy to Clipboard (Secure & Non-Secure HTTP) ─────────────
     window._wfsCopy = function copyText(text, btn) {
         function showSuccess() {
@@ -353,12 +348,6 @@
 .wfs-page-copy-btn:hover{background:var(--surface-hover);border-color:var(--ceisa-blue,#2563eb);color:var(--ceisa-blue,#2563eb);}
 .wfs-page-copy-btn.copied{background:#10b981;border-color:#10b981;color:#fff;}
 
-/* QR */
-.wfs-qr{margin:8px 18px 0;padding:14px;border:1px solid var(--border-color,#e2e8f0);border-radius:10px;background:var(--surface-subtle,#f8fafc);text-align:center;}
-.wfs-qr-lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted,#64748b);margin-bottom:10px;}
-.wfs-qr img{width:128px;height:128px;border-radius:8px;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.12);}
-.wfs-qr-url{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-muted,#64748b);margin-top:8px;word-break:break-all;}
-
 /* Footer note */
 .wfs-footer{margin:12px 18px 16px;padding:10px 12px;background:rgba(5,150,105,.06);border:1px solid rgba(5,150,105,.2);border-radius:8px;font-size:11.5px;color:#047857;text-align:center;font-weight:500;}
 
@@ -424,7 +413,6 @@
 [data-theme="dark"] .wfs-page-row{background:#0b1220;border-color:#1e293b;}
 [data-theme="dark"] .wfs-page-copy-btn{background:#1e293b;border-color:#334155;color:#94a3b8;}
 [data-theme="dark"] .wfs-page-copy-btn:hover{background:#334155;color:#fff;}
-[data-theme="dark"] .wfs-qr{background:#0b1220;border-color:#1e293b;}
 [data-theme="dark"] .wfs-copy-btn{background:rgba(59,130,246,.15);border-color:#3b82f6;color:#93c5fd;}
 [data-theme="dark"] .wfs-copy-btn:hover{background:#3b82f6;color:#fff;}
 [data-theme="dark"] .wfs-status.online{background:rgba(16,185,129,.12);}
@@ -525,15 +513,6 @@
             `;
         }).join('') : '';
 
-        // QR code
-        const qrSection = (isOnline && primaryFull) ? `
-            <div class="wfs-qr">
-                <div class="wfs-qr-lbl">Scan QR untuk membuka di HP</div>
-                <img src="${qrUrl(primaryFull)}" alt="QR Code" loading="lazy">
-                <div class="wfs-qr-url">${primaryFull}</div>
-            </div>
-        ` : '';
-
         // Warning if server offline
         const warnBanner = (!isOnline && !isBooting) ? `
             <div class="wfs-warn-banner">
@@ -551,7 +530,7 @@
                     <circle cx="12" cy="12" r="10"/>
                     <line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
                 </svg>
-                Pastikan perangkat lain terhubung ke WiFi yang sama. Buka URL atau scan QR di browser HP/laptop rekan kerja.
+                Pastikan perangkat lain terhubung ke WiFi yang sama. Salin dan buka URL di browser HP atau laptop rekan kerja.
             </div>
         `;
 
@@ -614,7 +593,6 @@
             <!-- Direct page links -->
             <div class="wfs-sec">Akses Langsung Modul</div>
             <div class="wfs-pages">${pageLinks}</div>
-            ${qrSection}
             ` : ''}
 
             <div class="wfs-footer">

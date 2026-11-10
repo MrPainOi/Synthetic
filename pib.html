@@ -240,26 +240,6 @@
                 <!-- Main Workspace PIB (Standar Resmi 1:1 CEISA 4.0) -->
                 <main class="main-workspace" style="padding-top: 4px;">
 
-                    <!-- CEISA 4.0 Document Topbar (1:1 FTZ01 Portal Screen) -->
-                    <div class="ceisa-doc-topbar">
-                        <div class="ceisa-doc-topbar-left">
-                            <h2 class="ceisa-doc-type-title">FTZ01 - Pemasukan dari Luar Daerah Pabean</h2>
-                        </div>
-                        <div class="ceisa-doc-topbar-right">
-                            <button type="button" class="btn-topbar-action" id="btnPibKembali" title="Kembali ke Beranda">
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-                                <span>Kembali</span>
-                            </button>
-                            <button type="button" class="btn-topbar-action" id="btnPibUpdateData" title="Update Data Draft">
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-                                <span>Update Data</span>
-                            </button>
-                            <button type="button" class="btn-topbar-icon" id="btnPibMenuToggle" title="Menu Opsi">
-                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-                            </button>
-                        </div>
-                    </div>
-
                     <!-- CEISA 4.0 Tabs Strip (1:1 Standar CEISA) -->
                     <nav class="ceisa-tabs" role="tablist">
                         <button type="button" class="ceisa-tab-btn active" data-pib-tab="pib-tab-header">Header</button>
@@ -455,168 +435,306 @@
 
                     <!-- TAB 2: ENTITAS PIB -->
                     <section id="pib-tab-entitas" class="tab-content-panel">
-                        <div class="form-grid-2">
-                            <!-- Card 1: Importir (Penerima) -->
-                            <div class="ceisa-form-card">
-                                <div class="ceisa-card-header">
-                                    <span class="ceisa-card-title">Importir (Penerima di Indonesia)</span>
-                                </div>
-                                <div class="ceisa-card-body" style="display: flex; flex-direction: column; gap: 10px;">
-                                    <div class="form-group">
-                                        <label class="form-label">Nomor Identitas <span class="req">*</span></label>
-                                        <div class="ceisa-split-input">
-                                            <select class="form-control" id="pibImportirIdType" style="flex: 0 0 145px;">
-                                                <option value="5 - NPWP 16 DIGIT" selected>5 - NPWP 16 DIGIT</option>
-                                                <option value="1 - NPWP 15 DIGIT">1 - NPWP 15 DIGIT</option>
-                                                <option value="2 - NIK / PASPOR">2 - NIK / PASPOR</option>
+                        <!-- CEISA 4.0 2-Column Tab Entitas Grid -->
+                        <div class="ceisa-entitas-grid">
+                            <!-- ==================== KOLOM KIRI ==================== -->
+                            <div class="ceisa-entitas-column ceisa-entitas-col-left">
+                                <!-- Card 1: Pengirim -->
+                                <div class="ceisa-form-card">
+                                    <div class="ceisa-card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                                        <span class="ceisa-card-title">Pengirim</span>
+                                        <button type="button" class="btn-ceisa-blue" id="btnRefPengirim" title="Referensi Pengirim" style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; font-size: 12px; background: #0284c7; color: #fff; border: 1px solid #0284c7; border-radius: 4px; cursor: pointer;">
+                                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+                                            <span>Referensi</span>
+                                        </button>
+                                    </div>
+                                    <div class="ceisa-card-body" style="display: flex; flex-direction: column; gap: 10px;">
+                                        <div class="form-group">
+                                            <label class="form-label">Nomor Identitas <span class="req">*</span></label>
+                                            <div class="ceisa-split-input" style="display: flex; gap: 8px;">
+                                                <select class="form-control" id="pibPengirimIdType" style="flex: 0 0 155px;">
+                                                    <option value="4 - LAINNYA" selected>4 - LAINNYA</option>
+                                                    <option value="0 - NPWP 12 DIGIT">0 - NPWP 12 DIGIT</option>
+                                                    <option value="1 - NPWP 10 DIGIT">1 - NPWP 10 DIGIT</option>
+                                                    <option value="2 - PASPOR">2 - PASPOR</option>
+                                                    <option value="3 - KTP">3 - KTP</option>
+                                                    <option value="5 - NPWP 15 DIGIT">5 - NPWP 15 DIGIT</option>
+                                                    <option value="6 - NPWP 16 DIGIT">6 - NPWP 16 DIGIT</option>
+                                                </select>
+                                                <input type="text" id="pibPengirimId" class="form-control form-control-mono" value="-" placeholder="Nomor Identitas">
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label">Nama <span class="req">*</span></label>
+                                            <input type="text" id="pibPengirimName" class="form-control" placeholder="Nama Perusahaan Pengirim" value="SHANGHAI PRECISION MACHINERY CO., LTD.">
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label">Alamat <span class="req">*</span></label>
+                                            <textarea id="pibPengirimAddress" class="form-control" rows="3" placeholder="Alamat Lengkap Pengirim">No. 888 Songze Avenue, Qingpu District, Shanghai 201700, China</textarea>
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label">Negara <span class="req">*</span></label>
+                                            <select id="pibPengirimCountry" class="form-control">
+                                                <option value="CN - CHINA" selected>CN - CHINA</option>
+                                                <option value="SG - SINGAPORE">SG - SINGAPORE</option>
+                                                <option value="JP - JAPAN">JP - JAPAN</option>
+                                                <option value="KR - SOUTH KOREA">KR - SOUTH KOREA</option>
+                                                <option value="TH - THAILAND">TH - THAILAND</option>
+                                                <option value="US - UNITED STATES">US - UNITED STATES</option>
+                                                <option value="DE - GERMANY">DE - GERMANY</option>
+                                                <option value="HK - HONG KONG">HK - HONG KONG</option>
+                                                <option value="TW - TAIWAN">TW - TAIWAN</option>
+                                                <option value="MY - MALAYSIA">MY - MALAYSIA</option>
                                             </select>
-                                            <input type="text" id="pibImportirId" class="form-control form-control-mono"
-                                                value="01.234.567.8-012.000">
                                         </div>
                                     </div>
-                                    <div class="form-group">
-                                        <label class="form-label">NIB (Nomor Induk Berusaha) <span class="req">*</span></label>
-                                        <input type="text" id="pibImportirNib" class="form-control form-control-mono"
-                                            value="912000881234">
+                                </div>
+
+                                <!-- Card 2: Pembeli -->
+                                <div class="ceisa-form-card">
+                                    <div class="ceisa-card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                                        <span class="ceisa-card-title" style="display: flex; align-items: center; gap: 6px;">
+                                            Pembeli
+                                            <svg class="icon-info" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                                        </span>
+                                        <div style="display: flex; gap: 6px; align-items: center;">
+                                            <button type="button" class="btn-ceisa-sub" id="btnHapusPembeli" style="padding: 4px 10px; font-size: 12px; background: #ffffff; border: 1px solid #cbd5e1; color: #334155; border-radius: 4px; cursor: pointer;">Hapus Pembeli</button>
+                                            <button type="button" class="btn-ceisa-blue" id="btnCopyPenerimaToPembeli" style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; font-size: 12px; background: #0284c7; color: #fff; border: 1px solid #0284c7; border-radius: 4px; cursor: pointer;">Salin data penerima</button>
+                                        </div>
                                     </div>
-                                    <div class="form-group">
-                                        <label class="form-label">Nama Importir <span class="req">*</span></label>
-                                        <input type="text" id="pibImportirName" class="form-control"
-                                            value="PT. INDONESIA MAKMUR IMPORTAMA">
+                                    <div class="ceisa-card-body" style="display: flex; flex-direction: column; gap: 10px;">
+                                        <div class="form-group">
+                                            <label class="form-label">Nomor Identitas <span class="req">*</span></label>
+                                            <div class="ceisa-split-input" style="display: flex; gap: 8px;">
+                                                <select class="form-control" id="pibPembeliIdType" style="flex: 0 0 155px;">
+                                                    <option value="6 - NPWP 16 DIGIT" selected>6 - NPWP 16 DIGIT</option>
+                                                    <option value="5 - NPWP 15 DIGIT">5 - NPWP 15 DIGIT</option>
+                                                    <option value="3 - KTP">3 - KTP</option>
+                                                    <option value="2 - PASPOR">2 - PASPOR</option>
+                                                    <option value="4 - LAINNYA">4 - LAINNYA</option>
+                                                </select>
+                                                <input type="text" id="pibPembeliId" class="form-control form-control-mono" placeholder="Nomor NPWP 16 Digit" value="0123456780120000">
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label">NITKU</label>
+                                            <input type="text" id="pibPembeliNitku" class="form-control form-control-mono" placeholder="Nomor Induk Tempat Kegiatan Usaha (22 Digit)" maxlength="22" value="0123456780120000000000">
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label">Nama <span class="req">*</span></label>
+                                            <input type="text" id="pibPembeliName" class="form-control" placeholder="Nama Perusahaan Pembeli" value="PT. INDONESIA MAKMUR IMPORTAMA">
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label">Alamat <span class="req">*</span></label>
+                                            <textarea id="pibPembeliAddress" class="form-control" rows="3" placeholder="Alamat Lengkap Pembeli">Kawasan Industri MM2100 Blok C-5, Cikarang Barat, Kab. Bekasi, Jawa Barat 17530</textarea>
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label">Negara <span class="req">*</span></label>
+                                            <select id="pibPembeliCountry" class="form-control">
+                                                <option value="ID - INDONESIA" selected>ID - INDONESIA</option>
+                                            </select>
+                                        </div>
                                     </div>
-                                    <div class="form-group">
-                                        <label class="form-label">Alamat Lengkap <span class="req">*</span></label>
-                                        <textarea id="pibImportirAddress" class="form-control"
-                                            rows="3">Kawasan Industri MM2100 Blok C-5, Cikarang Barat, Kab. Bekasi, Jawa Barat 17530 - INDONESIA</textarea>
+                                </div>
+
+                                <!-- Card 3: Pemilik Barang -->
+                                <div class="ceisa-form-card">
+                                    <div class="ceisa-card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                                        <span class="ceisa-card-title">Pemilik Barang</span>
+                                        <div style="display: flex; gap: 6px; align-items: center;">
+                                            <button type="button" class="btn-ceisa-blue" id="btnCopyPenerimaToPemilik" style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; font-size: 12px; background: #0284c7; color: #fff; border: 1px solid #0284c7; border-radius: 4px; cursor: pointer;">Salin Penerima</button>
+                                            <button type="button" class="btn-ceisa-blue" id="btnRefPemilik" title="Referensi Pemilik" style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; font-size: 12px; background: #0284c7; color: #fff; border: 1px solid #0284c7; border-radius: 4px; cursor: pointer;">
+                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+                                                <span>Referensi</span>
+                                            </button>
+                                        </div>
                                     </div>
-                                    <div class="form-group">
-                                        <label class="form-label">Status Angka Pengenal Impor (API) <span class="req">*</span></label>
-                                        <select id="pibImportirStatus" class="form-control">
-                                            <option value="API-U" selected>API-U (Umum - Tarif PPh 22 2.5%)</option>
-                                            <option value="API-P">API-P (Produsen - Tarif PPh 22 2.5%)</option>
-                                            <option value="NON-API">NON-API (Non-API - Tarif PPh 22 7.5%)</option>
-                                        </select>
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="form-label">Status Kepabeanan</label>
-                                        <select id="pibImportirCustomsStatus" class="form-control">
-                                            <option value="Importir Umum" selected>Importir Umum</option>
-                                            <option value="MITA Kepabeanan">MITA Kepabeanan</option>
-                                            <option value="AEO (Authorized Economic Operator)">AEO (Authorized Economic Operator)</option>
-                                        </select>
+                                    <div class="ceisa-card-body" style="display: flex; flex-direction: column; gap: 10px;">
+                                        <div class="form-group">
+                                            <label class="form-label">Nomor Identitas</label>
+                                            <div class="ceisa-split-input" style="display: flex; gap: 8px;">
+                                                <select class="form-control" id="pibPemilikIdType" style="flex: 0 0 155px;">
+                                                    <option value="6 - NPWP 16 DIGIT" selected>6 - NPWP 16 DIGIT</option>
+                                                    <option value="5 - NPWP 15 DIGIT">5 - NPWP 15 DIGIT</option>
+                                                    <option value="3 - KTP">3 - KTP</option>
+                                                    <option value="2 - PASPOR">2 - PASPOR</option>
+                                                    <option value="4 - LAINNYA">4 - LAINNYA</option>
+                                                </select>
+                                                <input type="text" id="pibPemilikId" class="form-control form-control-mono" placeholder="Nomor Identitas" value="0123456780120000">
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label">NITKU</label>
+                                            <input type="text" id="pibPemilikNitku" class="form-control form-control-mono" placeholder="NITKU (22 Digit)" maxlength="22" value="0123456780120000000000">
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label">Nama</label>
+                                            <input type="text" id="pibPemilikName" class="form-control" placeholder="Nama Pemilik Barang" value="PT. INDONESIA MAKMUR IMPORTAMA">
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label">Alamat</label>
+                                            <textarea id="pibPemilikAddress" class="form-control" rows="3" placeholder="Alamat Pemilik Barang">Kawasan Industri MM2100 Blok C-5, Cikarang Barat, Kab. Bekasi, Jawa Barat 17530</textarea>
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label">Afiliasi</label>
+                                            <select id="pibPemilikAfiliasi" class="form-control">
+                                                <option value="TAH - Tidak berhubungan" selected>TAH - Tidak berhubungan</option>
+                                                <option value="HUB - Berhubungan">HUB - Berhubungan</option>
+                                            </select>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- Card 2: Pemilik Barang -->
-                            <div class="ceisa-form-card">
-                                <div class="ceisa-card-header">
-                                    <span class="ceisa-card-title">Pemilik Barang</span>
-                                    <label style="font-size: 12px; display: flex; align-items: center; gap: 5px; cursor: pointer; color: var(--ceisa-blue);">
-                                        <input type="checkbox" id="pibCheckOwnerSame" checked> Sama dengan Importir
-                                    </label>
+                            <!-- ==================== KOLOM KANAN ==================== -->
+                            <div class="ceisa-entitas-column ceisa-entitas-col-right">
+                                <!-- Card 4: Penerima -->
+                                <div class="ceisa-form-card">
+                                    <div class="ceisa-card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                                        <span class="ceisa-card-title" style="display: flex; align-items: center; gap: 6px;">
+                                            Penerima
+                                            <svg class="icon-info" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                                        </span>
+                                        <button type="button" class="btn-ceisa-blue" id="btnRefPenerima" title="Referensi Penerima" style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; font-size: 12px; background: #0284c7; color: #fff; border: 1px solid #0284c7; border-radius: 4px; cursor: pointer;">
+                                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+                                            <span>Referensi</span>
+                                        </button>
+                                    </div>
+                                    <div class="ceisa-card-body" style="display: flex; flex-direction: column; gap: 10px;">
+                                        <div class="form-group">
+                                            <label class="form-label">Nomor Identitas <span class="req">*</span></label>
+                                            <div class="ceisa-split-input" style="display: flex; gap: 8px;">
+                                                <select class="form-control" id="pibPenerimaIdType" style="flex: 0 0 155px;">
+                                                    <option value="6 - NPWP 16 DIGIT" selected>6 - NPWP 16 DIGIT</option>
+                                                    <option value="5 - NPWP 15 DIGIT">5 - NPWP 15 DIGIT</option>
+                                                    <option value="3 - KTP">3 - KTP</option>
+                                                    <option value="2 - PASPOR">2 - PASPOR</option>
+                                                    <option value="4 - LAINNYA">4 - LAINNYA</option>
+                                                </select>
+                                                <input type="text" id="pibPenerimaId" class="form-control form-control-mono" placeholder="Nomor NPWP 16 Digit" value="0123456780120000">
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label">NITKU</label>
+                                            <input type="text" id="pibPenerimaNitku" class="form-control form-control-mono" placeholder="NITKU (22 Digit)" maxlength="22" value="0123456780120000000000">
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label">Nama <span class="req">*</span></label>
+                                            <input type="text" id="pibPenerimaName" class="form-control" placeholder="Nama Penerima / Importir" value="PT. INDONESIA MAKMUR IMPORTAMA">
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label">Alamat <span class="req">*</span></label>
+                                            <textarea id="pibPenerimaAddress" class="form-control" rows="3" placeholder="Alamat Lengkap Penerima">Kawasan Industri MM2100 Blok C-5, Cikarang Barat, Kab. Bekasi, Jawa Barat 17530</textarea>
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label">Negara <span class="req">*</span></label>
+                                            <select id="pibPenerimaCountry" class="form-control">
+                                                <option value="ID - INDONESIA" selected>ID - INDONESIA</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label">Status</label>
+                                            <select id="pibPenerimaStatus" class="form-control">
+                                                <option value="LAINNYA" selected>LAINNYA</option>
+                                                <option value="API-U">API-U</option>
+                                                <option value="API-P">API-P</option>
+                                                <option value="NON-API">NON-API</option>
+                                                <option value="MITA">MITA</option>
+                                                <option value="AEO">AEO</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label">Ijin Badan Pengusahaan</label>
+                                            <div class="ceisa-split-input" style="display: flex; gap: 8px;">
+                                                <input type="text" id="pibPenerimaIjinNo" class="form-control" placeholder="Nomor Izin BP" style="flex: 1;">
+                                                <input type="date" id="pibPenerimaIjinDate" class="form-control" style="flex: 1;">
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="ceisa-card-body" style="display: flex; flex-direction: column; gap: 10px;">
-                                    <div class="form-group">
-                                        <label class="form-label">Nomor Identitas Pemilik</label>
-                                        <input type="text" id="pibOwnerId" class="form-control form-control-mono"
-                                            value="01.234.567.8-012.000">
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="form-label">Nama Pemilik</label>
-                                        <input type="text" id="pibOwnerName" class="form-control"
-                                            value="PT. INDONESIA MAKMUR IMPORTAMA">
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="form-label">Alamat Pemilik</label>
-                                        <textarea id="pibOwnerAddress" class="form-control"
-                                            rows="3">Kawasan Industri MM2100 Blok C-5, Cikarang Barat, Kab. Bekasi, Jawa Barat 17530 - INDONESIA</textarea>
-                                    </div>
-                                </div>
-                            </div>
 
-                            <!-- Card 3: Pemasok / Pengirim Luar Negeri -->
-                            <div class="ceisa-form-card">
-                                <div class="ceisa-card-header">
-                                    <span class="ceisa-card-title">Pemasok / Pengirim Luar Negeri (Supplier)</span>
+                                <!-- Card 5: Penjual -->
+                                <div class="ceisa-form-card">
+                                    <div class="ceisa-card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                                        <span class="ceisa-card-title">Penjual</span>
+                                        <button type="button" class="btn-ceisa-blue" id="btnCopyPengirimToPenjual" style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; font-size: 12px; background: #0284c7; color: #fff; border: 1px solid #0284c7; border-radius: 4px; cursor: pointer;">Salin data pengirim</button>
+                                    </div>
+                                    <div class="ceisa-card-body" style="display: flex; flex-direction: column; gap: 10px;">
+                                        <div class="form-group">
+                                            <label class="form-label">Nomor Identitas <span class="req">*</span></label>
+                                            <div class="ceisa-split-input" style="display: flex; gap: 8px;">
+                                                <select class="form-control" id="pibPenjualIdType" style="flex: 0 0 155px;">
+                                                    <option value="4 - LAINNYA" selected>4 - LAINNYA</option>
+                                                    <option value="0 - NPWP 12 DIGIT">0 - NPWP 12 DIGIT</option>
+                                                    <option value="1 - NPWP 10 DIGIT">1 - NPWP 10 DIGIT</option>
+                                                    <option value="2 - PASPOR">2 - PASPOR</option>
+                                                    <option value="3 - KTP">3 - KTP</option>
+                                                    <option value="5 - NPWP 15 DIGIT">5 - NPWP 15 DIGIT</option>
+                                                    <option value="6 - NPWP 16 DIGIT">6 - NPWP 16 DIGIT</option>
+                                                </select>
+                                                <input type="text" id="pibPenjualId" class="form-control form-control-mono" value="-" placeholder="Nomor Identitas">
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label">Nama <span class="req">*</span></label>
+                                            <input type="text" id="pibPenjualName" class="form-control" placeholder="Nama Penjual" value="SHANGHAI PRECISION MACHINERY CO., LTD.">
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label">Alamat <span class="req">*</span></label>
+                                            <textarea id="pibPenjualAddress" class="form-control" rows="3" placeholder="Alamat Penjual">No. 888 Songze Avenue, Qingpu District, Shanghai 201700, China</textarea>
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label">Negara <span class="req">*</span></label>
+                                            <select id="pibPenjualCountry" class="form-control">
+                                                <option value="CN - CHINA" selected>CN - CHINA</option>
+                                                <option value="SG - SINGAPORE">SG - SINGAPORE</option>
+                                                <option value="JP - JAPAN">JP - JAPAN</option>
+                                                <option value="KR - SOUTH KOREA">KR - SOUTH KOREA</option>
+                                                <option value="TH - THAILAND">TH - THAILAND</option>
+                                                <option value="US - UNITED STATES">US - UNITED STATES</option>
+                                                <option value="DE - GERMANY">DE - GERMANY</option>
+                                                <option value="HK - HONG KONG">HK - HONG KONG</option>
+                                                <option value="TW - TAIWAN">TW - TAIWAN</option>
+                                                <option value="MY - MALAYSIA">MY - MALAYSIA</option>
+                                            </select>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="ceisa-card-body" style="display: flex; flex-direction: column; gap: 10px;">
-                                    <div class="form-group">
-                                        <label class="form-label">Nama Pemasok LN <span class="req">*</span></label>
-                                        <input type="text" id="pibSupplierName" class="form-control"
-                                            value="SHANGHAI PRECISION MACHINERY CO., LTD.">
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="form-label">Alamat Pemasok LN <span class="req">*</span></label>
-                                        <textarea id="pibSupplierAddress" class="form-control"
-                                            rows="3">No. 888 Songze Avenue, Qingpu District, Shanghai 201700, China</textarea>
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="form-label">Negara Pemasok <span class="req">*</span></label>
-                                        <select id="pibSupplierCountry" class="form-control">
-                                            <option value="CN - CHINA" selected>CN - CHINA</option>
-                                            <option value="JP - JAPAN">JP - JAPAN</option>
-                                            <option value="KR - SOUTH KOREA">KR - SOUTH KOREA</option>
-                                            <option value="SG - SINGAPORE">SG - SINGAPORE</option>
-                                            <option value="TH - THAILAND">TH - THAILAND</option>
-                                            <option value="US - UNITED STATES">US - UNITED STATES</option>
-                                            <option value="DE - GERMANY">DE - GERMANY</option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
 
-                            <!-- Card 4: Penjual (Seller) -->
-                            <div class="ceisa-form-card">
-                                <div class="ceisa-card-header">
-                                    <span class="ceisa-card-title">Penjual (Seller)</span>
-                                    <label style="font-size: 12px; display: flex; align-items: center; gap: 5px; cursor: pointer; color: var(--ceisa-blue);">
-                                        <input type="checkbox" id="pibCheckSellerSame" checked> Sama dengan Pemasok
-                                    </label>
-                                </div>
-                                <div class="ceisa-card-body" style="display: flex; flex-direction: column; gap: 10px;">
-                                    <div class="form-group">
-                                        <label class="form-label">Nama Penjual</label>
-                                        <input type="text" id="pibSellerName" class="form-control"
-                                            value="SHANGHAI PRECISION MACHINERY CO., LTD.">
+                                <!-- Card 6: PPJK -->
+                                <div class="ceisa-form-card">
+                                    <div class="ceisa-card-header">
+                                        <span class="ceisa-card-title">PPJK</span>
                                     </div>
-                                    <div class="form-group">
-                                        <label class="form-label">Alamat Penjual</label>
-                                        <textarea id="pibSellerAddress" class="form-control"
-                                            rows="3">No. 888 Songze Avenue, Qingpu District, Shanghai 201700, China</textarea>
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="form-label">Negara Penjual</label>
-                                        <select id="pibSellerCountry" class="form-control">
-                                            <option value="CN - CHINA" selected>CN - CHINA</option>
-                                            <option value="SG - SINGAPORE">SG - SINGAPORE</option>
-                                            <option value="JP - JAPAN">JP - JAPAN</option>
-                                            <option value="US - UNITED STATES">US - UNITED STATES</option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Card 5: PPJK (Opsional) -->
-                            <div class="ceisa-form-card" style="grid-column: span 2;">
-                                <div class="ceisa-card-header">
-                                    <span class="ceisa-card-title">PPJK (Pengusaha Pengurusan Jasa Kepabeanan) - Opsional</span>
-                                </div>
-                                <div class="ceisa-card-body" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
-                                    <div class="form-group">
-                                        <label class="form-label">NPWP PPJK</label>
-                                        <input type="text" id="pibPpjkId" class="form-control form-control-mono"
-                                            value="0026923485215000">
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="form-label">Nama PPJK</label>
-                                        <input type="text" id="pibPpjkName" class="form-control"
-                                            value="PT. SARANA PPJK LOGISTIK UTAMA">
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="form-label">Alamat PPJK</label>
-                                        <input type="text" id="pibPpjkAddress" class="form-control"
-                                            value="Jl. Sulawesi No. 12 Tanjung Priok, Jakarta Utara">
+                                    <div class="ceisa-card-body" style="display: flex; flex-direction: column; gap: 10px;">
+                                        <div class="form-group">
+                                            <label class="form-label">Nomor Identitas</label>
+                                            <div class="ceisa-split-input" style="display: flex; gap: 8px;">
+                                                <select class="form-control" id="pibPpjkIdType" style="flex: 0 0 155px;">
+                                                    <option value="6 - NPWP 16 DIGIT" selected>6 - NPWP 16 DIGIT</option>
+                                                    <option value="5 - NPWP 15 DIGIT">5 - NPWP 15 DIGIT</option>
+                                                    <option value="4 - LAINNYA">4 - LAINNYA</option>
+                                                </select>
+                                                <input type="text" id="pibPpjkId" class="form-control form-control-mono" placeholder="Nomor Identitas PPJK" value="">
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label">NITKU</label>
+                                            <div style="display: flex; width: 100%;">
+                                                <input type="text" id="pibPpjkNitku" class="form-control form-control-mono" placeholder="NITKU PPJK (22 Digit)" maxlength="22" value="" style="border-top-right-radius: 0; border-bottom-right-radius: 0; flex: 1;">
+                                                <button type="button" class="btn-sync-nitku" id="btnSyncNitkuPpjk" title="Sinkronisasi NITKU" style="width: 34px; height: 32px; background: #0284c7; color: #fff; border: 1px solid #0284c7; border-top-right-radius: 4px; border-bottom-right-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label">Nama</label>
+                                            <input type="text" id="pibPpjkName" class="form-control" placeholder="Nama Perusahaan PPJK" value="">
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label">Alamat</label>
+                                            <textarea id="pibPpjkAddress" class="form-control" rows="3" placeholder="Alamat Kantor PPJK"></textarea>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -699,6 +817,18 @@
                                     </div>
                                 </div>
                             </div>
+                        </div>
+
+                        <!-- Stepper Navigation Footer -->
+                        <div class="ceisa-tab-nav-footer">
+                            <button type="button" class="btn btn-ceisa-primary btn-tab-prev" id="btnPrevFromPibEntitas" data-target-tab="pib-tab-header">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 8 8 12 12 16"/><line x1="16" y1="12" x2="8" y2="12"/></svg>
+                                <span>Sebelumnya</span>
+                            </button>
+                            <button type="button" class="btn btn-ceisa-primary btn-tab-next" id="btnNextFromPibEntitas" data-target-tab="pib-tab-dokumen">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 16 16 12 12 8"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                                <span>Selanjutnya</span>
+                            </button>
                         </div>
                     </section>
 
@@ -1871,41 +2001,41 @@
                                     <div class="ceisa-form-row">
                                         <div class="ceisa-form-row-label">Nilai Pabean (CIF Rupiah)</div>
                                         <div class="ceisa-form-row-control">
-                                            <input type="text" id="pibPungutanCifRp" class="form-control form-control-mono" value="Rp 1.128.397.163" readonly style="font-weight: 700; background: var(--surface-subtle);">
+                                            <input type="text" id="pibPungutanCifRp" class="form-control form-control-mono" value="" readonly style="font-weight: 700; background: var(--surface-subtle);" placeholder="Rp 0">
                                         </div>
                                     </div>
                                     <div class="ceisa-form-row">
                                         <div class="ceisa-form-row-label">Tarif Bea Masuk (BM) <span class="req">*</span></div>
                                         <div class="ceisa-form-row-control">
                                             <div class="ceisa-split-input">
-                                                <input type="number" step="0.5" id="pibTarifBm" class="form-control" value="5.0" style="flex: 0 0 100px; text-align: right;">
+                                                <input type="number" step="0.5" id="pibTarifBm" class="form-control" value="" style="flex: 0 0 100px; text-align: right;" placeholder="0">
                                                 <span style="display: flex; align-items: center; font-weight: 600;">% &nbsp; Nilai BM:</span>
-                                                <input type="text" id="pibPungutanNilaiBm" class="form-control form-control-mono" value="Rp 56.419.858" readonly style="font-weight: 600; background: var(--surface-subtle);">
+                                                <input type="text" id="pibPungutanNilaiBm" class="form-control form-control-mono" value="" readonly style="font-weight: 600; background: var(--surface-subtle);" placeholder="Rp 0">
                                             </div>
                                         </div>
                                     </div>
                                     <div class="ceisa-form-row">
                                         <div class="ceisa-form-row-label">Nilai Impor (CIF + BM)</div>
                                         <div class="ceisa-form-row-control">
-                                            <input type="text" id="pibPungutanNilaiImpor" class="form-control form-control-mono" value="Rp 1.184.817.021" readonly style="font-weight: 700; background: var(--surface-subtle);">
+                                            <input type="text" id="pibPungutanNilaiImpor" class="form-control form-control-mono" value="" readonly style="font-weight: 700; background: var(--surface-subtle);" placeholder="Rp 0">
                                         </div>
                                     </div>
                                     <div class="ceisa-form-row">
                                         <div class="ceisa-form-row-label">PPN Impor (11%)</div>
                                         <div class="ceisa-form-row-control">
-                                            <input type="text" id="pibPungutanNilaiPpn" class="form-control form-control-mono" value="Rp 130.329.872" readonly style="font-weight: 600; background: var(--surface-subtle);">
+                                            <input type="text" id="pibPungutanNilaiPpn" class="form-control form-control-mono" value="" readonly style="font-weight: 600; background: var(--surface-subtle);" placeholder="Rp 0">
                                         </div>
                                     </div>
                                     <div class="ceisa-form-row">
                                         <div class="ceisa-form-row-label">PPh Pasal 22 Impor (2.5% API)</div>
                                         <div class="ceisa-form-row-control">
-                                            <input type="text" id="pibPungutanNilaiPph" class="form-control form-control-mono" value="Rp 29.620.426" readonly style="font-weight: 600; background: var(--surface-subtle);">
+                                            <input type="text" id="pibPungutanNilaiPph" class="form-control form-control-mono" value="" readonly style="font-weight: 600; background: var(--surface-subtle);" placeholder="Rp 0">
                                         </div>
                                     </div>
                                     <div class="ceisa-form-row" style="border-top: 2px solid var(--border-color); padding-top: 14px; margin-top: 8px;">
                                         <div class="ceisa-form-row-label" style="font-size: 15px; font-weight: 800; color: var(--ceisa-blue);">TOTAL TAGIHAN BILLING DJBC</div>
                                         <div class="ceisa-form-row-control">
-                                            <input type="text" id="pibPungutanTotalBilling" class="form-control form-control-mono" value="Rp 216.370.156" readonly style="font-size: 16px; font-weight: 800; border: 2px solid #3b82f6;">
+                                            <input type="text" id="pibPungutanTotalBilling" class="form-control form-control-mono" value="" readonly style="font-size: 16px; font-weight: 800; border: 2px solid #3b82f6;" placeholder="Rp 0">
                                         </div>
                                     </div>
                                 </div>

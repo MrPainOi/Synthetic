@@ -858,10 +858,6 @@ if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onMessage)
             return Array.isArray(currentDraft.items) ? currentDraft.items : [];
         }
 
-        if (section === 'pungutan') {
-            return [currentDraft.pungutan || currentDraft];
-        }
-
         // Single object sections (entitas, pengangkut, kemasan, transaksi)
         return [currentDraft];
     }
@@ -908,7 +904,7 @@ if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onMessage)
             const shp = curr.shipperName || curr.supplierName || curr.eksportirNama || 'Pemasok Luar Negeri';
             const csg = curr.consigneeName || curr.importirName || curr.pembeliNama || 'Importir Indonesia';
             if (lblItemPreviewTitle) lblItemPreviewTitle.textContent = `2. Entitas: ${shp.slice(0, 20)} ➔ ${csg.slice(0, 20)}`;
-            if (lblItemPreviewDesc) lblItemPreviewDesc.textContent = `Importir: ${csg} • Pemasok: ${shp}`;
+            if (lblItemPreviewDesc) lblItemPreviewDesc.textContent = `Importir: ${csg} • Pemasok: ${shp} (PPJK Diisi Manual)`;
             if (lblBtnInjectText) lblBtnInjectText.textContent = `Masukkan Data Entitas ke CEISA ▶`;
         } else if (currentSection === 'dokumen') {
             if (lblItemPreviewTitle) lblItemPreviewTitle.textContent = `[${curr.code || '380'}] ${curr.name || 'Dokumen'} #${curr.number || '-'}`;
@@ -941,14 +937,6 @@ if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onMessage)
             if (lblItemPreviewTitle) lblItemPreviewTitle.textContent = `[HS ${hs}] ${desc}`;
             if (lblItemPreviewDesc) lblItemPreviewDesc.textContent = `Jumlah: ${curr.jumlahDanSatuanBarang || curr.quantity || '-'} • Kemasan: ${curr.kemasan || '-'} • Nilai: ${curr.amount || curr.cifUsd || curr.cifValue || '-'}`;
             if (lblBtnInjectText) lblBtnInjectText.textContent = `Input Barang #${currentItemIndex + 1} & Lanjut ▶`;
-        } else if (currentSection === 'pungutan') {
-            const cifRp = curr.cifRupiah || curr.cifRp || (curr.pungutan && curr.pungutan.cifRupiah) || curr.pibPungutanCifRp || 'Rp 0';
-            const bm = curr.tarifBm !== undefined ? `${curr.tarifBm}%` : '5.0%';
-            const ppn = curr.tarifPpn !== undefined ? `${curr.tarifPpn}%` : '11.0%';
-            const pph = curr.tarifPph !== undefined ? `${curr.tarifPph}%` : '2.5%';
-            if (lblItemPreviewTitle) lblItemPreviewTitle.textContent = `8. Pungutan: BM ${bm} • PPN ${ppn} • PPh ${pph}`;
-            if (lblItemPreviewDesc) lblItemPreviewDesc.textContent = `Nilai Pabean: ${cifRp} • Simulasi Pungutan Terlampir`;
-            if (lblBtnInjectText) lblBtnInjectText.textContent = `Masukkan Data Pungutan ke CEISA ▶`;
         } else {
             if (lblItemPreviewTitle) lblItemPreviewTitle.textContent = `Bagian: ${currentSection.toUpperCase()}`;
             if (lblItemPreviewDesc) lblItemPreviewDesc.textContent = `Data siap dimasukkan ke formulir CEISA.`;
@@ -1051,14 +1039,14 @@ if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onMessage)
                 return;
             }
 
-            const ALLOWED_SECTIONS = ['entitas', 'dokumen', 'pengangkut', 'kemasan', 'transaksi', 'barang', 'pungutan'];
+            const ALLOWED_SECTIONS = ['entitas', 'dokumen', 'pengangkut', 'kemasan', 'transaksi', 'barang'];
             const startSecIdx = ALLOWED_SECTIONS.indexOf(currentSection);
             const sectionsToProcess = startSecIdx !== -1 ? ALLOWED_SECTIONS.slice(startSecIdx) : ALLOWED_SECTIONS;
 
             isAutoLoopRunning = true;
             btnAutoInputAll.classList.add('running');
             btnAutoInputAll.textContent = "⏹ Hentikan";
-            appendLog(`Memulai Auto Input urut mulai tab '${currentSection}' hingga Tab 8 (Pungutan)...`, "log-info");
+            appendLog(`Memulai Auto Input urut mulai tab '${currentSection}' hingga Tab 7 (Barang)...`, "log-info");
 
             for (let s = 0; s < sectionsToProcess.length; s++) {
                 if (!isAutoLoopRunning) break;
@@ -1087,7 +1075,7 @@ if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onMessage)
             isAutoLoopRunning = false;
             btnAutoInputAll.classList.remove('running');
             btnAutoInputAll.textContent = "🚀 Auto Input Semua";
-            appendLog("🎉 Auto Input Selesai! Pengisian telah berhenti di Tab 8 (Pungutan). Tab 9 (Pernyataan) siap direview manual.", "log-success");
+            appendLog("🎉 Auto Input Selesai! Pengisian telah berhenti di Tab 7 (Barang). Tab 8 (Pungutan) & Tab 9 (Pernyataan) siap direview manual.", "log-success");
         });
     }
 

@@ -48,12 +48,6 @@
         // Status & Header
         serverStatusChip: document.getElementById('serverStatusChip'),
         serverStatusText: document.getElementById('serverStatusText'),
-        btnOpenQrHeader: document.getElementById('btnOpenQrHeader'),
-        qrThumbBox: document.getElementById('qrThumbBox'),
-        qrThumbImage: document.getElementById('qrThumbImage'),
-        qrLoadingSkeleton: document.getElementById('qrLoadingSkeleton'),
-        lanUrlDisplay: document.getElementById('lanUrlDisplay'),
-        btnCopyLanUrl: document.getElementById('btnCopyLanUrl'),
 
         // Printers
         printerSelect: document.getElementById('printerSelect'),
@@ -100,11 +94,6 @@
         btnRefreshQueue: document.getElementById('btnRefreshQueue'),
         btnClearHistory: document.getElementById('btnClearHistory'),
 
-        // Modal QR
-        qrModal: document.getElementById('qrModal'),
-        qrLargeImage: document.getElementById('qrLargeImage'),
-        modalUrlDisplay: document.getElementById('modalUrlDisplay'),
-        btnCloseQrModal: document.getElementById('btnCloseQrModal'),
 
         // Toast Container
         toastContainer: document.getElementById('toastContainer'),
@@ -176,35 +165,12 @@
             const res = await fetch(getBackendUrl('/api/print/status'));
             const data = await res.json();
             if (data.success) {
-                elements.serverStatusChip.className = 'ph-chip ph-chip-green';
-                elements.serverStatusText.textContent = `Server Aktif (Port ${data.port})`;
-                
-                const url = data.serverUrl || `http://${data.primaryIp}:${data.port}/print_hub.html`;
-                elements.lanUrlDisplay.textContent = url;
-                elements.modalUrlDisplay.textContent = url;
+                if (elements.serverStatusChip) elements.serverStatusChip.className = 'ph-chip ph-chip-green';
+                if (elements.serverStatusText) elements.serverStatusText.textContent = `Server Aktif (Port ${data.port})`;
             }
         } catch (err) {
-            elements.serverStatusChip.className = 'ph-chip ph-chip-orange';
-            elements.serverStatusText.textContent = 'Server Offline (Port 5005)';
-        }
-    }
-
-    async function fetchQrCode() {
-        try {
-            const res = await fetch(getBackendUrl('/api/print/qr'));
-            const data = await res.json();
-            if (data.success && data.qr) {
-                elements.qrThumbImage.src = data.qr;
-                elements.qrThumbImage.style.display = 'block';
-                if (elements.qrLoadingSkeleton) {
-                    elements.qrLoadingSkeleton.style.display = 'none';
-                }
-                elements.qrLargeImage.src = data.qr;
-                elements.lanUrlDisplay.textContent = data.url;
-                elements.modalUrlDisplay.textContent = data.url;
-            }
-        } catch (err) {
-            console.warn('Gagal memuat QR Code:', err.message);
+            if (elements.serverStatusChip) elements.serverStatusChip.className = 'ph-chip ph-chip-orange';
+            if (elements.serverStatusText) elements.serverStatusText.textContent = 'Server Offline (Port 5005)';
         }
     }
 
@@ -650,7 +616,6 @@ Diberikan izin untuk mengeluarkan barang impor dari Kawasan Pabean.
             elements.btnReloadPrinters.addEventListener('click', () => {
                 fetchPrinters();
                 fetchServerStatus();
-                fetchQrCode();
                 showToast('Memperbarui status printer & koneksi...', 'info');
             });
         }
@@ -719,27 +684,6 @@ Diberikan izin untuk mengeluarkan barang impor dari Kawasan Pabean.
             }
         });
 
-        // QR Modal
-        const openModal = () => elements.qrModal.classList.add('active');
-        const closeModal = () => elements.qrModal.classList.remove('active');
-
-        elements.btnOpenQrHeader.addEventListener('click', openModal);
-        if (elements.qrThumbBox) elements.qrThumbBox.addEventListener('click', openModal);
-        elements.btnCloseQrModal.addEventListener('click', closeModal);
-        elements.qrModal.addEventListener('click', (e) => {
-            if (e.target === elements.qrModal) closeModal();
-        });
-
-        // Copy URL
-        elements.btnCopyLanUrl.addEventListener('click', () => {
-            const url = elements.lanUrlDisplay.textContent.trim();
-            if (navigator.clipboard) {
-                navigator.clipboard.writeText(url).then(() => {
-                    showToast('Tautan portal cetak berhasil disalin ke clipboard!', 'success');
-                });
-            }
-        });
-
         // Sidebar expand / collapse
         if (elements.ceisaSidebar) {
             elements.ceisaSidebar.addEventListener('mouseenter', () => {
@@ -765,7 +709,6 @@ Diberikan izin untuk mengeluarkan barang impor dari Kawasan Pabean.
     document.addEventListener('DOMContentLoaded', () => {
         initListeners();
         fetchServerStatus();
-        fetchQrCode();
         fetchPrinters();
         fetchQueue();
 
