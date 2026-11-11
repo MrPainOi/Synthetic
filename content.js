@@ -1607,6 +1607,25 @@
                 return false;
             }
 
+            // ------------------------------------------------
+            // CEISA ACTIVE TAB QUERY & SWITCH
+            // ------------------------------------------------
+            if (message.type === "GET_CEISA_ACTIVE_TAB") {
+                const activeSec = detectCeisaActiveSection();
+                if (typeof sendResponse === "function") {
+                    sendResponse({ ok: true, activeSection: activeSec });
+                }
+                return false;
+            }
+
+            if (message.type === "CEISA_SWITCH_TAB") {
+                const switched = switchCeisaActiveTab(message.section);
+                if (typeof sendResponse === "function") {
+                    sendResponse({ ok: true, switched: switched, activeSection: message.section });
+                }
+                return false;
+            }
+
         }
     );
 
@@ -1882,19 +1901,80 @@
         return null;
     }
 
+    function detectCeisaActiveSection() {
+        const normalizeSectionName = (rawText) => {
+            if (!rawText || typeof rawText !== 'string') return null;
+            const text = rawText.toLowerCase().trim();
+            if (text.includes('header')) return 'header';
+            if (text.includes('entitas') || text.includes('entity')) return 'entitas';
+            if (text.includes('dokumen') || text.includes('lampiran') || text.includes('document')) return 'dokumen';
+            if (text.includes('pengangkut') || text.includes('sarana') || text.includes('carrier')) return 'pengangkut';
+            if (text.includes('kemasan') || text.includes('peti kemas') || text.includes('package') || text.includes('container')) return 'kemasan';
+            if (text.includes('transaksi') || text.includes('transaction')) return 'transaksi';
+            if (text.includes('barang') || text.includes('item') || text.includes('goods')) return 'barang';
+            if (text.includes('pungutan') || text.includes('levy') || text.includes('billing')) return 'pungutan';
+            if (text.includes('pernyataan') || text.includes('statement')) return 'pernyataan';
+            return null;
+        };
+
+        // 1. Check active tab element in Ant Design or standard tabbars
+        const activeTab = document.querySelector(
+            '.ant-tabs-tab-active, [role="tab"][aria-selected="true"], .nav-tabs .nav-link.active, .tab-item.active, .tab-button.active, .ceisa-tab-btn.active, .tab-btn.active'
+        );
+        if (activeTab) {
+            const sec = normalizeSectionName(activeTab.textContent);
+            if (sec) return sec;
+        }
+
+        // 2. Scan all tabs in case active state is indicated by aria-selected or class
+        const allTabs = document.querySelectorAll('.ant-tabs-tab, [role="tab"], .ceisa-tab-btn, .nav-tabs .nav-link');
+        for (const tab of allTabs) {
+            if (tab.classList.contains('ant-tabs-tab-active') || 
+                tab.getAttribute('aria-selected') === 'true' || 
+                tab.classList.contains('active')) {
+                const sec = normalizeSectionName(tab.textContent);
+                if (sec) return sec;
+            }
+        }
+
+        // 3. Check active tabpane container
+        const activePane = document.querySelector(
+            '.ant-tabs-tabpane-active, .tab-pane.active, .tab-content > .active, section.tab-content-panel.active'
+        );
+        if (activePane) {
+            const id = (activePane.id || '').toLowerCase();
+            const secFromId = normalizeSectionName(id);
+            if (secFromId) return secFromId;
+
+            if (activePane.querySelector('input[name*="posTarif"], input[id*="posTarif"], input[placeholder*="Pos Tarif"]')) return 'barang';
+            if (activePane.querySelector('input[name*="nilaiPabean"], input[name*="beaMasuk"]')) return 'pungutan';
+            if (activePane.querySelector('input[name*="kodeValuta"], input[name*="valuta"], input[name*="nilaiTransaksi"]')) return 'transaksi';
+            if (activePane.querySelector('input[name*="nomorDokumen"], input[name*="kodeDokumen"]')) return 'dokumen';
+            if (activePane.querySelector('input[name*="caraPengangkutan"], input[name*="namaSaranaPengangkut"]')) return 'pengangkut';
+            if (activePane.querySelector('input[name*="jenisKemasan"], input[name*="nomorKontainer"]')) return 'kemasan';
+            if (activePane.querySelector('input[name*="nomorAju"], input[name*="kantorPabean"]')) return 'header';
+            if (activePane.querySelector('input[name*="pemberitahu"], input[name*="kotaPernyataan"]')) return 'pernyataan';
+            if (activePane.querySelector('.card-pengirim, .card-penerima, input[name*="pemasok"], input[name*="importir"]')) return 'entitas';
+        }
+
+        return null;
+    }
+
     function switchCeisaActiveTab(section) {
         try {
             const tabKeywords = {
+                'header': ['header', 'data utama', 'pemberitahuan'],
                 'entitas': ['entitas', 'entity'],
                 'dokumen': ['dokumen', 'lampiran', 'document'],
                 'pengangkut': ['pengangkut', 'sarana', 'carrier'],
                 'kemasan': ['kemasan', 'peti kemas', 'package', 'container'],
                 'transaksi': ['transaksi', 'transaction'],
                 'barang': ['barang', 'item', 'goods'],
-                'pungutan': ['pungutan', 'levy', 'billing']
+                'pungutan': ['pungutan', 'levy', 'billing'],
+                'pernyataan': ['pernyataan', 'statement']
             };
             const kws = tabKeywords[section] || [section];
-            const allTabs = Array.from(document.querySelectorAll('.ant-tabs-tab, .nav-tabs .nav-link, [role="tab"], .tab-item'));
+            const allTabs = Array.from(document.querySelectorAll('.ant-tabs-tab, .nav-tabs .nav-link, [role="tab"], .tab-item, .ceisa-tab-btn'));
             for (const tab of allTabs) {
                 const text = (tab.textContent || '').toLowerCase().trim();
                 if (kws.some(kw => text.includes(kw))) {
@@ -1907,6 +1987,58 @@
             console.warn('[Auto-Switch Tab Error]', e);
         }
         return false;
+    }
+
+    // ========================================================
+    // REAL-TIME CEISA ACTIVE TAB TRACKER & SYNCHRONIZER
+    // ========================================================
+    let lastObservedCeisaSection = null;
+
+    function notifyCeisaActiveTabChange(forcedSection = null) {
+        const currentSec = forcedSection || detectCeisaActiveSection();
+        if (!currentSec || currentSec === lastObservedCeisaSection) return;
+
+        lastObservedCeisaSection = currentSec;
+
+        try {
+            if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.local) {
+                chrome.storage.local.set({ ceisa_current_active_tab: currentSec }).catch(() => {});
+            }
+            if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.sendMessage) {
+                chrome.runtime.sendMessage({
+                    type: "CEISA_ACTIVE_TAB_CHANGED",
+                    activeSection: currentSec
+                }, () => {
+                    if (chrome.runtime?.lastError) { /* ignore error when popup closed */ }
+                });
+            }
+        } catch (_) {}
+    }
+
+    if (typeof document !== 'undefined') {
+        document.addEventListener('click', (e) => {
+            const tabEl = e.target?.closest?.('.ant-tabs-tab, [role="tab"], .ceisa-tab-btn, .nav-tabs .nav-link, .tab-item');
+            if (tabEl) {
+                setTimeout(() => {
+                    notifyCeisaActiveTabChange();
+                }, 120);
+            }
+        }, true);
+
+        if (typeof MutationObserver !== 'undefined' && document.body) {
+            let tabObserverTimeout = null;
+            const tabObserver = new MutationObserver(() => {
+                if (tabObserverTimeout) clearTimeout(tabObserverTimeout);
+                tabObserverTimeout = setTimeout(() => {
+                    notifyCeisaActiveTabChange();
+                }, 250);
+            });
+            tabObserver.observe(document.body, {
+                subtree: true,
+                attributes: true,
+                attributeFilter: ['class', 'aria-selected', 'aria-hidden']
+            });
+        }
     }
 
     function findCeisaCard(target, container = document) {
@@ -2015,6 +2147,46 @@
         return null;
     }
 
+    // ========================================================
+    // AUTO-INPUT TOGGLE CONFIGURATION DEFAULTS
+    // ========================================================
+    const DEFAULT_CEISA_AUTOFILL_CONFIG = {
+        header: true,
+        entitas: {
+            enabled: true,
+            pengirim: true,
+            penerima: true,
+            pembeli: true,
+            penjual: true,
+            pemilik: true,
+            ppjk: false
+        },
+        dokumen: true,
+        pengangkut: true,
+        kemasan: true,
+        transaksi: true,
+        barang: true,
+        pungutan: false,
+        pernyataan: true
+    };
+
+    if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.local) {
+        try {
+            chrome.storage.local.get(["ceisa_autofill_config"], (res) => {
+                if (res && res.ceisa_autofill_config) {
+                    window._ceisaAutofillConfig = res.ceisa_autofill_config;
+                }
+            });
+            if (chrome.storage.onChanged) {
+                chrome.storage.onChanged.addListener((changes, area) => {
+                    if (area === "local" && changes.ceisa_autofill_config) {
+                        window._ceisaAutofillConfig = changes.ceisa_autofill_config.newValue;
+                    }
+                });
+            }
+        } catch (_) { }
+    }
+
     function handleCeisaAutoInputRow(arg1, arg2, arg3, arg4) {
         let item = null;
         let container = null;
@@ -2076,6 +2248,45 @@
 
         if (!item || typeof item !== "object") {
             item = {};
+        }
+
+        const config = (arg1 && arg1.autofillConfig) ||
+            (arg1 && arg1.item && arg1.item.autofillConfig) ||
+            (item && item.autofillConfig) ||
+            window._ceisaAutofillConfig ||
+            DEFAULT_CEISA_AUTOFILL_CONFIG;
+
+        // Check section toggle configuration
+        const isSectionAllowed = (sec) => {
+            if (!config) return true;
+            if (sec === "entitas") {
+                if (config.entitas === false) return false;
+                if (typeof config.entitas === "object" && config.entitas !== null && config.entitas.enabled === false) return false;
+                return true;
+            }
+            if (sec === "pungutan") {
+                return config.pungutan === true;
+            }
+            return config[sec] !== false;
+        };
+
+        if (section === "pungutan" && config.pungutan !== true) {
+            showCeisaAutoInputToast('Auto Input Section: PUNGUTAN', 'Bagian pungutan dilewati dari auto-fill (diisi manual oleh pengguna)', 'info');
+            return {
+                ok: true,
+                skipped: true,
+                message: 'Bagian pungutan dilewati dari auto-fill sesuai preferensi pengguna.'
+            };
+        }
+
+        if (!isSectionAllowed(section)) {
+            const skipMsg = `Bagian ${section.toUpperCase()} dilewati dari auto-fill sesuai preferensi pengguna.`;
+            showCeisaAutoInputToast('Auto Input Dilewati', skipMsg, 'info');
+            return {
+                ok: true,
+                skipped: true,
+                message: skipMsg
+            };
         }
 
         if (forceTab && typeof switchCeisaActiveTab === "function") {
@@ -2238,6 +2449,9 @@
 
         if (section === "entitas") {
             const ent = item.entitas || {};
+            const entConfig = (typeof config.entitas === 'object' && config.entitas !== null)
+                ? config.entitas
+                : { enabled: config.entitas !== false, pengirim: true, penerima: true, pembeli: true, penjual: true, pemilik: true, ppjk: false };
 
             const fillCardField = (card, keywords, value, fieldDesc) => {
                 if (!card) return;
@@ -2256,7 +2470,7 @@
             };
 
             // 1. CARD PENGIRIM (Shipper / Supplier)
-            const cardPengirim = findCeisaCard('pengirim', container);
+            const cardPengirim = (entConfig.pengirim !== false) ? findCeisaCard('pengirim', container) : null;
             const pengirimIdType = ent.pengirim?.jenisIdentitas ?? item.pengirimIdType ?? item.pengirimJenisIdentitas ?? item.supplierIdType;
             const pengirimId = ent.pengirim?.nomorIdentitas ?? item.pengirimId ?? item.pengirimNomorIdentitas ?? item.supplierId ?? item.shipperId;
             const pengirimName = ent.pengirim?.nama ?? item.pengirimName ?? item.pengirimNama ?? item.supplierName ?? item.shipperName ?? item.eksportirNama;
@@ -2272,7 +2486,7 @@
             }
 
             // 2. CARD PENERIMA (Importer / Consignee)
-            const cardPenerima = findCeisaCard('penerima', container);
+            const cardPenerima = (entConfig.penerima !== false) ? findCeisaCard('penerima', container) : null;
             const penerimaIdType = ent.penerima?.jenisIdentitas ?? item.penerimaIdType ?? item.penerimaJenisIdentitas ?? item.importirIdType;
             const penerimaId = ent.penerima?.nomorIdentitas ?? item.penerimaId ?? item.penerimaNomorIdentitas ?? item.importirId ?? item.npwpImportir;
             const penerimaNitku = ent.penerima?.nitku ?? item.penerimaNitku;
@@ -2296,7 +2510,7 @@
             }
 
             // 3. CARD PEMBELI (Buyer)
-            const cardPembeli = findCeisaCard('pembeli', container);
+            const cardPembeli = (entConfig.pembeli !== false) ? findCeisaCard('pembeli', container) : null;
             const pembeliIdType = ent.pembeli?.jenisIdentitas ?? item.pembeliIdType ?? item.pembeliJenisIdentitas;
             const pembeliId = ent.pembeli?.nomorIdentitas ?? item.pembeliId ?? item.pembeliNomorIdentitas;
             const pembeliNitku = ent.pembeli?.nitku ?? item.pembeliNitku;
@@ -2314,7 +2528,7 @@
             }
 
             // 4. CARD PENJUAL (Seller)
-            const cardPenjual = findCeisaCard('penjual', container);
+            const cardPenjual = (entConfig.penjual !== false) ? findCeisaCard('penjual', container) : null;
             const penjualIdType = ent.penjual?.jenisIdentitas ?? item.penjualIdType ?? item.penjualJenisIdentitas;
             const penjualId = ent.penjual?.nomorIdentitas ?? item.penjualId ?? item.penjualNomorIdentitas;
             const penjualName = ent.penjual?.nama ?? item.penjualName ?? item.penjualNama ?? item.sellerName;
@@ -2330,7 +2544,7 @@
             }
 
             // 5. CARD PEMILIK BARANG (Cargo Owner)
-            const cardPemilik = findCeisaCard('pemilik', container);
+            const cardPemilik = (entConfig.pemilik !== false) ? findCeisaCard('pemilik', container) : null;
             const pemilikIdType = ent.pemilikBarang?.jenisIdentitas ?? ent.pemilik?.jenisIdentitas ?? item.pemilikIdType ?? item.pemilikJenisIdentitas;
             const pemilikId = ent.pemilikBarang?.nomorIdentitas ?? ent.pemilik?.nomorIdentitas ?? item.pemilikId ?? item.pemilikNomorIdentitas ?? item.ownerId;
             const pemilikNitku = ent.pemilikBarang?.nitku ?? ent.pemilik?.nitku ?? item.pemilikNitku;
@@ -2347,9 +2561,21 @@
                 fillCardField(cardPemilik, ['afiliasi', 'hubungan'], pemilikAfiliasi, 'Pemilik Afiliasi');
             }
 
-            // 6. CARD PPJK (Customs Broker) - Dikecualikan dari Auto Fill
-            // Kolom PPJK sengaja tidak diisi otomatis agar pengguna dapat mengisinya secara manual di CEISA
-            const cardPpjk = null;
+            // 6. CARD PPJK (Customs Broker) - Diisi jika toggle diaktifkan pengguna
+            const cardPpjk = (entConfig.ppjk === true) ? findCeisaCard('ppjk', container) : null;
+            if (cardPpjk) {
+                const ppjkIdType = ent.ppjk?.jenisIdentitas ?? item.ppjkIdType ?? item.ppjkJenisIdentitas;
+                const ppjkId = ent.ppjk?.nomorIdentitas ?? item.ppjkId ?? item.ppjkNomorIdentitas ?? item.ppjkNpwp ?? item.npwpPpjk;
+                const ppjkNitku = ent.ppjk?.nitku ?? item.ppjkNitku;
+                const ppjkName = ent.ppjk?.nama ?? item.ppjkName ?? item.ppjkNama;
+                const ppjkAddr = ent.ppjk?.alamat ?? item.ppjkAddress ?? item.ppjkAlamat;
+
+                fillCardField(cardPpjk, ['jenisIdentitas', 'jenis_identitas', 'jenisId', 'jenis_id', 'jenisDokumen'], ppjkIdType, 'PPJK Jenis ID');
+                fillCardField(cardPpjk, ['nomorIdentitas', 'nomor_identitas', 'noIdentitas', 'no_identitas', 'nomorId', 'npwp', 'nomor identitas', 'no identitas'], ppjkId, 'PPJK ID');
+                fillCardField(cardPpjk, ['nitku'], ppjkNitku, 'PPJK NITKU');
+                fillCardField(cardPpjk, ['nama', 'name'], ppjkName, 'PPJK Nama');
+                fillCardField(cardPpjk, ['alamat', 'address'], ppjkAddr, 'PPJK Alamat');
+            }
 
             // Fallback for legacy CEISA portals without card containers
             if (!cardPengirim && !cardPenerima && !cardPembeli && !cardPenjual && !cardPemilik && !cardPpjk) {
@@ -2547,11 +2773,100 @@
         }
 
         if (section === "pungutan") {
-            // Bagian pungutan sengaja dikecualikan dari auto-fill sesuai permintaan pengguna (user mengisi/menghitung manual)
-            showCeisaAutoInputToast('Auto Input Section: PUNGUTAN', 'Bagian pungutan dilewati dari auto-fill (diisi manual oleh pengguna)', 'info');
+            if (config.pungutan !== true) {
+                // Bagian pungutan sengaja dikecualikan dari auto-fill jika toggle dimatikan
+                showCeisaAutoInputToast('Auto Input Section: PUNGUTAN', 'Bagian pungutan dilewati dari auto-fill (diisi manual oleh pengguna)', 'info');
+                return {
+                    ok: true,
+                    skipped: true,
+                    message: 'Bagian pungutan dilewati dari auto-fill sesuai preferensi pengguna.'
+                };
+            }
+
+            const pgt = item.pungutan || {};
+            const nilaiPabean = pgt.nilaiPabeanIdr ?? pgt.cifRupiah ?? item.nilaiPabeanIdr ?? item.cifValueIdr ?? item.cifRupiah ?? item.nilaiPabean ?? "";
+            const bm = pgt.nilaiBm ?? pgt.bm ?? item.nilaiBm ?? item.bm ?? item.tarifBm ?? "";
+            const ppn = pgt.nilaiPpn ?? pgt.ppn ?? item.nilaiPpn ?? item.ppn ?? item.tarifPpn ?? "";
+            const pph = pgt.nilaiPph ?? pgt.pph ?? item.nilaiPph ?? item.pph ?? item.tarifPph ?? "";
+            const totalBilling = pgt.totalBilling ?? pgt.billing ?? item.totalBilling ?? item.totalPungutan ?? item.billing ?? "";
+
+            const pabeanInp = findFieldByKeywords(["nilaiPabean", "nilai_pabean", "cifRupiah", "cif_rupiah", "pabean"], container);
+            if (pabeanInp && nilaiPabean) {
+                setNativeInputValue(pabeanInp, nilaiPabean);
+                filledFields.push('Nilai Pabean: ' + nilaiPabean);
+            }
+            const bmInp = findFieldByKeywords(["beaMasuk", "nilaiBm", "tarifBm", "bm"], container);
+            if (bmInp && bm) {
+                setNativeInputValue(bmInp, bm);
+                filledFields.push('BM: ' + bm);
+            }
+            const ppnInp = findFieldByKeywords(["ppn", "nilaiPpn", "tarifPpn"], container);
+            if (ppnInp && ppn) {
+                setNativeInputValue(ppnInp, ppn);
+                filledFields.push('PPN: ' + ppn);
+            }
+            const pphInp = findFieldByKeywords(["pph", "nilaiPph", "tarifPph"], container);
+            if (pphInp && pph) {
+                setNativeInputValue(pphInp, pph);
+                filledFields.push('PPh: ' + pph);
+            }
+            const totalInp = findFieldByKeywords(["totalBilling", "totalPungutan", "billing", "total"], container);
+            if (totalInp && totalBilling) {
+                setNativeInputValue(totalInp, totalBilling);
+                filledFields.push('Total Billing: ' + totalBilling);
+            }
+
+            const successMsg = 'Pungutan berhasil diinput ke CEISA.';
+            showCeisaAutoInputToast('Auto Input Pungutan', filledFields.slice(0, 3).join(', '), filledFields.length > 0 ? 'success' : 'warn');
             return {
                 ok: true,
-                message: 'Bagian pungutan dilewati dari auto-fill sesuai preferensi pengguna.'
+                message: filledFields.length > 0
+                    ? successMsg + ' (' + filledFields.join(', ') + ')'
+                    : successMsg + ' (Field pungutan terdeteksi).'
+            };
+        }
+
+        if (section === "pernyataan") {
+            const kota = item.pernyataanKota || item.kota || "Jakarta Utara";
+            const tgl = item.pernyataanTanggal || item.tanggalPernyataan || new Date().toISOString().slice(0, 10);
+            const nama = item.pernyataanNama || item.namaPemberitahu || item.namaPernyataan || "";
+            const jabatan = item.pernyataanJabatan || item.jabatanPemberitahu || item.jabatanPernyataan || "";
+
+            const kotaInp = findFieldByKeywords(["kotaPernyataan", "kota", "tempatPernyataan", "tempat"], container);
+            if (kotaInp && kota) {
+                setNativeInputValue(kotaInp, kota);
+                filledFields.push('Kota: ' + kota);
+            }
+            const tglInp = findFieldByKeywords(["tanggalPernyataan", "tglPernyataan", "tanggal", "date"], container);
+            if (tglInp && tgl) {
+                setNativeInputValue(tglInp, tgl);
+                filledFields.push('Tanggal: ' + tgl);
+            }
+            const namaInp = findFieldByKeywords(["namaPemberitahu", "namaPernyataan", "namaTTD", "nama"], container);
+            if (namaInp && nama) {
+                setNativeInputValue(namaInp, nama);
+                filledFields.push('Nama: ' + nama);
+            }
+            const jabInp = findFieldByKeywords(["jabatanPemberitahu", "jabatanPernyataan", "jabatan"], container);
+            if (jabInp && jabatan) {
+                setNativeInputValue(jabInp, jabatan);
+                filledFields.push('Jabatan: ' + jabatan);
+            }
+
+            const agreeCheck = container?.querySelector('input[type="checkbox"][id*="pernyataan"], input[type="checkbox"][name*="setuju"], input[type="checkbox"][name*="agree"]');
+            if (agreeCheck && !agreeCheck.checked) {
+                agreeCheck.checked = true;
+                agreeCheck.dispatchEvent(new Event('change', { bubbles: true }));
+                filledFields.push('Pernyataan Disetujui');
+            }
+
+            const successMsg = 'Pernyataan berhasil diinput ke CEISA.';
+            showCeisaAutoInputToast('Auto Input Pernyataan', filledFields.join(', '), filledFields.length > 0 ? 'success' : 'warn');
+            return {
+                ok: true,
+                message: filledFields.length > 0
+                    ? successMsg + ' (' + filledFields.join(', ') + ')'
+                    : successMsg + ' (Field pernyataan terdeteksi).'
             };
         }
 

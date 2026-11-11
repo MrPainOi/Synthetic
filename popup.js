@@ -668,6 +668,7 @@ if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onMessage)
                     btnFocusCeisaTab.textContent = "Buka Tab";
                 }
                 appendLog("Terhubung ke tab CEISA 4.0 (ID: " + activeCeisaTab.id + ").", "log-success");
+                queryActiveCeisaSection();
             } else {
                 activeCeisaTab = null;
                 if (portalDot) {
@@ -819,6 +820,234 @@ if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onMessage)
         updateSectionUI();
     }
 
+    // --------------------------------------------------------
+    // AUTO-FILL TOGGLE CONFIGURATION MODULE
+    // --------------------------------------------------------
+    const DEFAULT_AUTOFILL_CONFIG = {
+        header: true,
+        entitas: {
+            enabled: true,
+            pengirim: true,
+            penerima: true,
+            pembeli: true,
+            penjual: true,
+            pemilik: true,
+            ppjk: false
+        },
+        dokumen: true,
+        pengangkut: true,
+        kemasan: true,
+        transaksi: true,
+        barang: true,
+        pungutan: false,
+        pernyataan: true
+    };
+
+    let currentAutofillConfig = JSON.parse(JSON.stringify(DEFAULT_AUTOFILL_CONFIG));
+
+    const btnToggleAfCollapse = document.getElementById("btnToggleAfCollapse");
+    const afConfigBody = document.getElementById("afConfigBody");
+    const iconAfChevron = document.getElementById("iconAfChevron");
+    const lblAfActiveCount = document.getElementById("lblAfActiveCount");
+    const btnAfSelectAll = document.getElementById("btnAfSelectAll");
+    const btnAfResetDefault = document.getElementById("btnAfResetDefault");
+    const afSubGroupEntitas = document.getElementById("afSubGroupEntitas");
+
+    const afToggles = {
+        header: document.getElementById("afToggle_header"),
+        entitas: document.getElementById("afToggle_entitas"),
+        entitas_pengirim: document.getElementById("afToggle_entitas_pengirim"),
+        entitas_penerima: document.getElementById("afToggle_entitas_penerima"),
+        entitas_pembeli: document.getElementById("afToggle_entitas_pembeli"),
+        entitas_penjual: document.getElementById("afToggle_entitas_penjual"),
+        entitas_pemilik: document.getElementById("afToggle_entitas_pemilik"),
+        entitas_ppjk: document.getElementById("afToggle_entitas_ppjk"),
+        dokumen: document.getElementById("afToggle_dokumen"),
+        pengangkut: document.getElementById("afToggle_pengangkut"),
+        kemasan: document.getElementById("afToggle_kemasan"),
+        transaksi: document.getElementById("afToggle_transaksi"),
+        barang: document.getElementById("afToggle_barang"),
+        pungutan: document.getElementById("afToggle_pungutan"),
+        pernyataan: document.getElementById("afToggle_pernyataan")
+    };
+
+    function updateAutofillConfigUI() {
+        if (!afToggles.header) return;
+
+        afToggles.header.checked = currentAutofillConfig.header !== false;
+
+        const ent = currentAutofillConfig.entitas || {};
+        const isEntEnabled = typeof currentAutofillConfig.entitas === 'object' ? currentAutofillConfig.entitas.enabled !== false : currentAutofillConfig.entitas !== false;
+        if (afToggles.entitas) afToggles.entitas.checked = isEntEnabled;
+
+        if (afSubGroupEntitas) {
+            if (isEntEnabled) {
+                afSubGroupEntitas.classList.remove('is-disabled');
+            } else {
+                afSubGroupEntitas.classList.add('is-disabled');
+            }
+        }
+
+        if (afToggles.entitas_pengirim) afToggles.entitas_pengirim.checked = ent.pengirim !== false;
+        if (afToggles.entitas_penerima) afToggles.entitas_penerima.checked = ent.penerima !== false;
+        if (afToggles.entitas_pembeli) afToggles.entitas_pembeli.checked = ent.pembeli !== false;
+        if (afToggles.entitas_penjual) afToggles.entitas_penjual.checked = ent.penjual !== false;
+        if (afToggles.entitas_pemilik) afToggles.entitas_pemilik.checked = ent.pemilik !== false;
+        if (afToggles.entitas_ppjk) afToggles.entitas_ppjk.checked = ent.ppjk === true;
+
+        if (afToggles.dokumen) afToggles.dokumen.checked = currentAutofillConfig.dokumen !== false;
+        if (afToggles.pengangkut) afToggles.pengangkut.checked = currentAutofillConfig.pengangkut !== false;
+        if (afToggles.kemasan) afToggles.kemasan.checked = currentAutofillConfig.kemasan !== false;
+        if (afToggles.transaksi) afToggles.transaksi.checked = currentAutofillConfig.transaksi !== false;
+        if (afToggles.barang) afToggles.barang.checked = currentAutofillConfig.barang !== false;
+        if (afToggles.pungutan) afToggles.pungutan.checked = currentAutofillConfig.pungutan === true;
+        if (afToggles.pernyataan) afToggles.pernyataan.checked = currentAutofillConfig.pernyataan !== false;
+
+        const mainSections = ['header', 'entitas', 'dokumen', 'pengangkut', 'kemasan', 'transaksi', 'barang', 'pungutan', 'pernyataan'];
+        let activeCount = 0;
+        mainSections.forEach(sec => {
+            if (sec === 'entitas') {
+                if (isEntEnabled) activeCount++;
+            } else if (sec === 'pungutan') {
+                if (currentAutofillConfig.pungutan === true) activeCount++;
+            } else {
+                if (currentAutofillConfig[sec] !== false) activeCount++;
+            }
+        });
+
+        if (lblAfActiveCount) {
+            lblAfActiveCount.textContent = `${activeCount} / 9 Aktif`;
+        }
+    }
+
+    function readAutofillConfigFromUI() {
+        currentAutofillConfig = {
+            header: afToggles.header ? afToggles.header.checked : true,
+            entitas: {
+                enabled: afToggles.entitas ? afToggles.entitas.checked : true,
+                pengirim: afToggles.entitas_pengirim ? afToggles.entitas_pengirim.checked : true,
+                penerima: afToggles.entitas_penerima ? afToggles.entitas_penerima.checked : true,
+                pembeli: afToggles.entitas_pembeli ? afToggles.entitas_pembeli.checked : true,
+                penjual: afToggles.entitas_penjual ? afToggles.entitas_penjual.checked : true,
+                pemilik: afToggles.entitas_pemilik ? afToggles.entitas_pemilik.checked : true,
+                ppjk: afToggles.entitas_ppjk ? afToggles.entitas_ppjk.checked : false
+            },
+            dokumen: afToggles.dokumen ? afToggles.dokumen.checked : true,
+            pengangkut: afToggles.pengangkut ? afToggles.pengangkut.checked : true,
+            kemasan: afToggles.kemasan ? afToggles.kemasan.checked : true,
+            transaksi: afToggles.transaksi ? afToggles.transaksi.checked : true,
+            barang: afToggles.barang ? afToggles.barang.checked : true,
+            pungutan: afToggles.pungutan ? afToggles.pungutan.checked : false,
+            pernyataan: afToggles.pernyataan ? afToggles.pernyataan.checked : true
+        };
+        saveAutofillConfig();
+        updateAutofillConfigUI();
+    }
+
+    function saveAutofillConfig() {
+        try {
+            if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.local) {
+                chrome.storage.local.set({ ceisa_autofill_config: currentAutofillConfig }).catch(() => {});
+            }
+            localStorage.setItem("ceisa_autofill_config", JSON.stringify(currentAutofillConfig));
+        } catch (e) {
+            console.warn("Gagal menyimpan preferensi auto-fill:", e);
+        }
+    }
+
+    function loadAutofillConfig() {
+        try {
+            if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.local) {
+                chrome.storage.local.get("ceisa_autofill_config", (res) => {
+                    if (res && res.ceisa_autofill_config) {
+                        currentAutofillConfig = Object.assign({}, DEFAULT_AUTOFILL_CONFIG, res.ceisa_autofill_config);
+                        if (res.ceisa_autofill_config.entitas) {
+                            currentAutofillConfig.entitas = Object.assign({}, DEFAULT_AUTOFILL_CONFIG.entitas, res.ceisa_autofill_config.entitas);
+                        }
+                    } else {
+                        const localSaved = localStorage.getItem("ceisa_autofill_config");
+                        if (localSaved) {
+                            const parsed = JSON.parse(localSaved);
+                            currentAutofillConfig = Object.assign({}, DEFAULT_AUTOFILL_CONFIG, parsed);
+                            if (parsed.entitas) {
+                                currentAutofillConfig.entitas = Object.assign({}, DEFAULT_AUTOFILL_CONFIG.entitas, parsed.entitas);
+                            }
+                        }
+                    }
+                    updateAutofillConfigUI();
+                });
+            } else {
+                const localSaved = localStorage.getItem("ceisa_autofill_config");
+                if (localSaved) {
+                    const parsed = JSON.parse(localSaved);
+                    currentAutofillConfig = Object.assign({}, DEFAULT_AUTOFILL_CONFIG, parsed);
+                    if (parsed.entitas) {
+                        currentAutofillConfig.entitas = Object.assign({}, DEFAULT_AUTOFILL_CONFIG.entitas, parsed.entitas);
+                    }
+                }
+                updateAutofillConfigUI();
+            }
+        } catch (e) {
+            updateAutofillConfigUI();
+        }
+    }
+
+    if (btnToggleAfCollapse && afConfigBody) {
+        btnToggleAfCollapse.addEventListener('click', () => {
+            const isHidden = afConfigBody.style.display === 'none';
+            afConfigBody.style.display = isHidden ? 'flex' : 'none';
+            if (iconAfChevron) {
+                iconAfChevron.textContent = isHidden ? '▴' : '▾';
+            }
+        });
+    }
+
+    Object.values(afToggles).forEach(input => {
+        if (input) {
+            input.addEventListener('change', () => {
+                readAutofillConfigFromUI();
+            });
+        }
+    });
+
+    if (btnAfSelectAll) {
+        btnAfSelectAll.addEventListener('click', () => {
+            currentAutofillConfig = {
+                header: true,
+                entitas: {
+                    enabled: true,
+                    pengirim: true,
+                    penerima: true,
+                    pembeli: true,
+                    penjual: true,
+                    pemilik: true,
+                    ppjk: true
+                },
+                dokumen: true,
+                pengangkut: true,
+                kemasan: true,
+                transaksi: true,
+                barang: true,
+                pungutan: true,
+                pernyataan: true
+            };
+            saveAutofillConfig();
+            updateAutofillConfigUI();
+            appendLog("Semua opsi auto-fill diaktifkan (Termasuk PPJK & Pungutan).", "log-info");
+        });
+    }
+
+    if (btnAfResetDefault) {
+        btnAfResetDefault.addEventListener('click', () => {
+            currentAutofillConfig = JSON.parse(JSON.stringify(DEFAULT_AUTOFILL_CONFIG));
+            saveAutofillConfig();
+            updateAutofillConfigUI();
+            appendLog("Opsi auto-fill dikembalikan ke default (PPJK & Pungutan Manual).", "log-info");
+        });
+    }
+
+    loadAutofillConfig();
+
     // Extract Items for Section
     function getSectionItems(section) {
         if (!currentDraft) return [];
@@ -858,17 +1087,99 @@ if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onMessage)
             return Array.isArray(currentDraft.items) ? currentDraft.items : [];
         }
 
-        // Single object sections (entitas, pengangkut, kemasan, transaksi)
+        // Single object sections (header, entitas, pengangkut, kemasan, transaksi, pungutan, pernyataan)
         return [currentDraft];
     }
 
-    // Section Selector Listener
+    // --------------------------------------------------------
+    // REAL-TIME CEISA ACTIVE TAB AUTO-SYNC
+    // --------------------------------------------------------
+    function applyActiveSectionFromCeisa(newSec) {
+        if (!newSec || isAutoLoopRunning) return;
+        const validSections = ['header', 'entitas', 'dokumen', 'pengangkut', 'kemasan', 'transaksi', 'barang', 'pungutan', 'pernyataan'];
+        if (!validSections.includes(newSec)) return;
+
+        if (newSec === currentSection && sectionSelect && sectionSelect.value === newSec) return;
+
+        currentSection = newSec;
+        if (sectionSelect) {
+            sectionSelect.value = newSec;
+        }
+        currentItemIndex = 0;
+        updateSectionUI();
+
+        const syncBadge = document.getElementById("lblCeisaAutoSyncBadge");
+        if (syncBadge) {
+            syncBadge.classList.add("synced-active");
+            setTimeout(() => {
+                if (syncBadge) syncBadge.classList.remove("synced-active");
+            }, 1000);
+        }
+    }
+
+    function queryActiveCeisaSection() {
+        if (!activeCeisaTab?.id) return;
+        try {
+            chrome.tabs.sendMessage(activeCeisaTab.id, { type: "GET_CEISA_ACTIVE_TAB" }, (res) => {
+                if (chrome.runtime?.lastError) return;
+                if (res && res.ok && res.activeSection) {
+                    applyActiveSectionFromCeisa(res.activeSection);
+                }
+            });
+        } catch (_) {}
+    }
+
+    if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onMessage) {
+        chrome.runtime.onMessage.addListener((msg) => {
+            if (msg && msg.type === "CEISA_ACTIVE_TAB_CHANGED" && msg.activeSection) {
+                applyActiveSectionFromCeisa(msg.activeSection);
+            }
+        });
+    }
+
+    if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.local) {
+        chrome.storage.local.get("ceisa_current_active_tab", (res) => {
+            if (res && res.ceisa_current_active_tab) {
+                applyActiveSectionFromCeisa(res.ceisa_current_active_tab);
+            }
+        });
+        if (chrome.storage.onChanged) {
+            chrome.storage.onChanged.addListener((changes, area) => {
+                if (area === "local" && changes.ceisa_current_active_tab?.newValue) {
+                    applyActiveSectionFromCeisa(changes.ceisa_current_active_tab.newValue);
+                }
+            });
+        }
+    }
+
+    // Auto-polling interval to keep popup in sync with CEISA portal tab state
+    setInterval(() => {
+        if (!isAutoLoopRunning && viewAutoInput && viewAutoInput.style.display !== 'none') {
+            if (activeCeisaTab?.id) {
+                queryActiveCeisaSection();
+            } else {
+                checkCeisaPortalTab();
+            }
+        }
+    }, 1500);
+
+    // Section Selector Listener (Manual Selection + Bidirectional Tab Switch)
     const sectionSelect = document.getElementById("autoInputSectionSelect");
     if (sectionSelect) {
         sectionSelect.addEventListener('change', () => {
             currentSection = sectionSelect.value;
             currentItemIndex = 0;
             updateSectionUI();
+
+            // Bidirectional: also switch tab on portal CEISA if connected
+            if (activeCeisaTab?.id) {
+                chrome.tabs.sendMessage(activeCeisaTab.id, {
+                    type: "CEISA_SWITCH_TAB",
+                    section: currentSection
+                }, () => {
+                    if (chrome.runtime?.lastError) {}
+                });
+            }
         });
     }
 
@@ -900,11 +1211,18 @@ if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onMessage)
 
         const curr = items[currentItemIndex];
 
-        if (currentSection === 'entitas') {
+        if (currentSection === 'header') {
+            const noAju = curr.nomorAju || curr.noAju || '-';
+            const kantor = curr.kantorPabean || curr.kodeKantor || 'KPU BATAM';
+            if (lblItemPreviewTitle) lblItemPreviewTitle.textContent = `1. Header: ${noAju}`;
+            if (lblItemPreviewDesc) lblItemPreviewDesc.textContent = `Kantor: ${kantor} • Jenis: ${curr.jenisPemasukan || '01 - DARI LDP'}`;
+            if (lblBtnInjectText) lblBtnInjectText.textContent = `Masukkan Data Header ke CEISA ▶`;
+        } else if (currentSection === 'entitas') {
             const shp = curr.shipperName || curr.supplierName || curr.eksportirNama || 'Pemasok Luar Negeri';
             const csg = curr.consigneeName || curr.importirName || curr.pembeliNama || 'Importir Indonesia';
+            const ppjkNotice = currentAutofillConfig.entitas?.ppjk ? '(PPJK Auto-Fill ON)' : '(PPJK Manual)';
             if (lblItemPreviewTitle) lblItemPreviewTitle.textContent = `2. Entitas: ${shp.slice(0, 20)} ➔ ${csg.slice(0, 20)}`;
-            if (lblItemPreviewDesc) lblItemPreviewDesc.textContent = `Importir: ${csg} • Pemasok: ${shp} (PPJK Diisi Manual)`;
+            if (lblItemPreviewDesc) lblItemPreviewDesc.textContent = `Importir: ${csg} • Pemasok: ${shp} ${ppjkNotice}`;
             if (lblBtnInjectText) lblBtnInjectText.textContent = `Masukkan Data Entitas ke CEISA ▶`;
         } else if (currentSection === 'dokumen') {
             if (lblItemPreviewTitle) lblItemPreviewTitle.textContent = `[${curr.code || '380'}] ${curr.name || 'Dokumen'} #${curr.number || '-'}`;
@@ -937,6 +1255,19 @@ if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onMessage)
             if (lblItemPreviewTitle) lblItemPreviewTitle.textContent = `[HS ${hs}] ${desc}`;
             if (lblItemPreviewDesc) lblItemPreviewDesc.textContent = `Jumlah: ${curr.jumlahDanSatuanBarang || curr.quantity || '-'} • Kemasan: ${curr.kemasan || '-'} • Nilai: ${curr.amount || curr.cifUsd || curr.cifValue || '-'}`;
             if (lblBtnInjectText) lblBtnInjectText.textContent = `Input Barang #${currentItemIndex + 1} & Lanjut ▶`;
+        } else if (currentSection === 'pungutan') {
+            const cifIdr = curr.nilaiPabeanIdr || curr.cifValueIdr || curr.cifRupiah || '-';
+            const billing = curr.totalBilling || curr.totalPungutan || '-';
+            const pgtNotice = currentAutofillConfig.pungutan ? '(Pungutan Auto-Fill ON)' : '(Pungutan Manual)';
+            if (lblItemPreviewTitle) lblItemPreviewTitle.textContent = `8. Pungutan: Billing Rp ${billing}`;
+            if (lblItemPreviewDesc) lblItemPreviewDesc.textContent = `Nilai Pabean: Rp ${cifIdr} • ${pgtNotice}`;
+            if (lblBtnInjectText) lblBtnInjectText.textContent = `Masukkan Data Pungutan ke CEISA ▶`;
+        } else if (currentSection === 'pernyataan') {
+            const nama = curr.pernyataanNama || 'HENDRA WIJAYA';
+            const kota = curr.pernyataanKota || 'Jakarta Utara';
+            if (lblItemPreviewTitle) lblItemPreviewTitle.textContent = `9. Pernyataan: ${nama} (${kota})`;
+            if (lblItemPreviewDesc) lblItemPreviewDesc.textContent = `Pernyataan kebenaran data & kesanggupan kepabeanan`;
+            if (lblBtnInjectText) lblBtnInjectText.textContent = `Masukkan Data Pernyataan ke CEISA ▶`;
         } else {
             if (lblItemPreviewTitle) lblItemPreviewTitle.textContent = `Bagian: ${currentSection.toUpperCase()}`;
             if (lblItemPreviewDesc) lblItemPreviewDesc.textContent = `Data siap dimasukkan ke formulir CEISA.`;
@@ -982,10 +1313,15 @@ if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onMessage)
                 draftType: currentDraftType,
                 item: currItem,
                 index: currentItemIndex,
-                total: items.length
+                total: items.length,
+                autofillConfig: currentAutofillConfig
             }, (res) => {
                 if (chrome.runtime.lastError) {
                     appendLog(`Error: ${chrome.runtime.lastError.message}`, "log-err");
+                    return;
+                }
+                if (res && res.skipped) {
+                    appendLog(`[LEWATI] ${res.message || 'Bagian dilewati sesuai toggle.'}`, "log-info");
                     return;
                 }
                 if (res && res.ok) {
@@ -1011,6 +1347,21 @@ if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onMessage)
     const btnFillActiveSection = document.getElementById("btnFillActiveSection");
     if (btnFillActiveSection) {
         btnFillActiveSection.addEventListener('click', async () => {
+            const isSecEnabled = (sec) => {
+                if (sec === 'entitas') {
+                    return currentAutofillConfig.entitas && (typeof currentAutofillConfig.entitas === 'object' ? currentAutofillConfig.entitas.enabled !== false : currentAutofillConfig.entitas !== false);
+                }
+                if (sec === 'pungutan') {
+                    return currentAutofillConfig.pungutan === true;
+                }
+                return currentAutofillConfig[sec] !== false;
+            };
+
+            if (!isSecEnabled(currentSection)) {
+                appendLog(`Bagian '${currentSection.toUpperCase()}' sedang dinonaktifkan di toggle. Aktifkan toggle jika ingin mengisinya.`, "log-warn");
+                return;
+            }
+
             const items = getSectionItems(currentSection);
             if (!items || items.length === 0) {
                 appendLog("Tidak ada data untuk diinput.", "log-warn");
@@ -1027,26 +1378,43 @@ if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onMessage)
         });
     }
 
-    // Auto Input All (Continuous Loop across Sections 2 to 8)
+    // Auto Input All (Continuous Loop across Active Sections)
     const btnAutoInputAll = document.getElementById("btnAutoInputAll");
     if (btnAutoInputAll) {
         btnAutoInputAll.addEventListener('click', async () => {
             if (isAutoLoopRunning) {
                 isAutoLoopRunning = false;
                 btnAutoInputAll.classList.remove('running');
-                btnAutoInputAll.textContent = "🚀 Auto Input Semua";
+                btnAutoInputAll.textContent = "🚀 Auto Input Berurutan";
                 appendLog("Proses auto input dihentikan oleh pengguna.", "log-warn");
                 return;
             }
 
-            const ALLOWED_SECTIONS = ['entitas', 'dokumen', 'pengangkut', 'kemasan', 'transaksi', 'barang'];
-            const startSecIdx = ALLOWED_SECTIONS.indexOf(currentSection);
-            const sectionsToProcess = startSecIdx !== -1 ? ALLOWED_SECTIONS.slice(startSecIdx) : ALLOWED_SECTIONS;
+            const ALL_SECTIONS = ['header', 'entitas', 'dokumen', 'pengangkut', 'kemasan', 'transaksi', 'barang', 'pungutan', 'pernyataan'];
+            const isSecEnabled = (sec) => {
+                if (sec === 'entitas') {
+                    return currentAutofillConfig.entitas && (typeof currentAutofillConfig.entitas === 'object' ? currentAutofillConfig.entitas.enabled !== false : currentAutofillConfig.entitas !== false);
+                }
+                if (sec === 'pungutan') {
+                    return currentAutofillConfig.pungutan === true;
+                }
+                return currentAutofillConfig[sec] !== false;
+            };
+
+            const activeSections = ALL_SECTIONS.filter(isSecEnabled);
+
+            if (activeSections.length === 0) {
+                appendLog("Semua opsi auto-fill dinonaktifkan dalam toggle. Aktifkan minimal satu bagian untuk memulai auto input.", "log-warn");
+                return;
+            }
+
+            const startSecIdx = activeSections.indexOf(currentSection);
+            const sectionsToProcess = startSecIdx !== -1 ? activeSections.slice(startSecIdx) : activeSections;
 
             isAutoLoopRunning = true;
             btnAutoInputAll.classList.add('running');
             btnAutoInputAll.textContent = "⏹ Hentikan";
-            appendLog(`Memulai Auto Input urut mulai tab '${currentSection}' hingga Tab 7 (Barang)...`, "log-info");
+            appendLog(`Memulai Auto Input berurutan (${sectionsToProcess.join(' ➔ ')})...`, "log-info");
 
             for (let s = 0; s < sectionsToProcess.length; s++) {
                 if (!isAutoLoopRunning) break;
@@ -1074,8 +1442,8 @@ if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onMessage)
 
             isAutoLoopRunning = false;
             btnAutoInputAll.classList.remove('running');
-            btnAutoInputAll.textContent = "🚀 Auto Input Semua";
-            appendLog("🎉 Auto Input Selesai! Pengisian telah berhenti di Tab 7 (Barang). Tab 8 (Pungutan) & Tab 9 (Pernyataan) siap direview manual.", "log-success");
+            btnAutoInputAll.textContent = "🚀 Auto Input Berurutan";
+            appendLog("🎉 Auto Input Selesai! Seluruh bagian terpilih berhasil diproses.", "log-success");
         });
     }
 

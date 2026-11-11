@@ -7475,5 +7475,159 @@ select.form-control {
     }
 }
 
+/* ====================================================================
+   CEISA 4.0 AUTHENTIC MULTI-COLUMN GRIDS & COMPONENTS
+   1:1 Pixel-Accurate Parity with Portal CEISA 4.0 Form Screens
+   ==================================================================== */
+
+.ceisa-3col-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px 20px;
+    align-items: start;
+}
+
+@media (max-width: 1100px) {
+    .ceisa-3col-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.ceisa-2col-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px 20px;
+    align-items: start;
+}
+
+@media (max-width: 900px) {
+    .ceisa-2col-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* CEISA Table Filter Sub-Header Inputs */
+.ceisa-table-filter-input {
+    width: 100%;
+    height: 28px;
+    padding: 3px 6px;
+    font-size: 11.5px;
+    border: 1px solid var(--border-color, #cbd5e1);
+    border-radius: 4px;
+    background: var(--surface-card, #ffffff);
+    color: var(--text-primary, #0f172a);
+    box-sizing: border-box;
+}
+
+[data-theme="dark"] .ceisa-table-filter-input {
+    background: #0f172a;
+    border-color: #334155;
+    color: #f8fafc;
+}
+
+/* Empty State Illustration for CEISA Peti Kemas & Tables */
+.ceisa-empty-state-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 36px 16px;
+    color: var(--text-muted, #94a3b8);
+    gap: 8px;
+}
+
+.ceisa-empty-state-icon {
+    width: 44px;
+    height: 44px;
+    opacity: 0.45;
+}
+
+.ceisa-empty-state-text {
+    font-size: 13px;
+    font-weight: 500;
+}
+
+/* CEISA Table Action Icons (Edit Pencil & Delete Trash) */
+.btn-table-action-edit,
+.btn-table-action-del {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.15s ease;
+}
+
+.btn-table-action-edit {
+    color: #0284c7;
+}
+
+.btn-table-action-edit:hover {
+    background: rgba(2, 132, 199, 0.12);
+}
+
+.btn-table-action-del {
+    color: #ef4444;
+}
+
+.btn-table-action-del:hover {
+    background: rgba(239, 68, 68, 0.12);
+}
+
+/* CEISA Sync Netto Barang Button */
+.btn-sync-netto {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 14px;
+    margin-top: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #0284c7;
+    background: #f0f9ff;
+    border: 1px solid #bae6fd;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-sync-netto:hover {
+    background: #e0f2fe;
+    border-color: #7dd3fc;
+    color: #0369a1;
+}
+
+[data-theme="dark"] .btn-sync-netto {
+    background: rgba(2, 132, 199, 0.15);
+    border-color: rgba(2, 132, 199, 0.3);
+    color: #38bdf8;
+}
+
+/* Detail Barang Button in Transaksi Header */
+.btn-detail-barang {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 16px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #ffffff;
+    background: #0284c7;
+    border: 1px solid #0284c7;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-detail-barang:hover {
+    background: #0369a1;
+    border-color: #0369a1;
+}
+
+
 
 

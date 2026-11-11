@@ -395,7 +395,10 @@ function calculatePibPungutan() {
     if (elCifValuta) elCifValuta.value = formatUsd(cifValuta);
 
     const elCifIdr = document.getElementById('pibCifIdr');
-    if (elCifIdr) elCifIdr.value = formatIdr(cifIdr);
+    if (elCifIdr) elCifIdr.value = Number(cifIdr).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    const elFob = document.getElementById('pibFobTransaksi');
+    if (elFob) elFob.value = formatUsd(invoiceAmt);
 
     // Update UI Fields in Pungutan tab
     const setElemText = (id, text) => {
@@ -692,6 +695,16 @@ function collectPibFormData() {
         portTransit: getVal('pibPortTransit'),
         portDischarge: getVal('pibPortDischarge'),
         tpsLocation: getVal('pibTpsLocation'),
+        lokasiPemeriksaan: getVal('pibLokasiPemeriksaan'),
+
+        // BC 1.1 fields
+        tutupPuType: getVal('pibTutupPuType'),
+        nomorTutupPu: getVal('pibNomorTutupPu'),
+        tanggalTutupPu: getVal('pibTanggalTutupPu'),
+        tanggalBc11: getVal('pibTanggalBc11'),
+        nomorPos1: getVal('pibNomorPos1'),
+        nomorPos2: getVal('pibNomorPos2'),
+        nomorPos3: getVal('pibNomorPos3'),
 
         packageType: getVal('pibPackageType'),
         packageQty: parseFloat(getVal('pibPackageQty')) || 0,
@@ -708,6 +721,14 @@ function collectPibFormData() {
         freightAmount: parseFloat(getVal('pibFreightAmount')) || 0,
         insuranceAmount: parseFloat(getVal('pibInsuranceAmount')) || 0,
         insuranceType: getVal('pibInsuranceType'),
+        jenisTransaksi: getVal('pibJenisTransaksi'),
+        jenisTransaksiLainnya: getVal('pibJenisTransaksiLainnya'),
+        biayaPenambah: parseFloat(getVal('pibBiayaPenambah')) || 0,
+        biayaPengurang: parseFloat(getVal('pibBiayaPengurang')) || 0,
+        voluntaryDeclaration: parseFloat(getVal('pibVoluntaryDeclaration')) || 0,
+        volume: parseFloat(getVal('pibVolume')) || 0,
+        kemasan: window._pibKemasanList || [],
+        petiKemas: window._pibPetiKemasList || [],
 
         tarifBm: parseFloat(getVal('pibTarifBm')) || 0,
         tarifPpn: 11,
@@ -1023,7 +1044,14 @@ function loadPibDraftData(data, shouldSave = true) {
     if (data.lartasNumber) setVal('pibLartasNumber', data.lartasNumber);
     if (data.lartasDate) setVal('pibLartasDate', data.lartasDate);
 
-    // Pengangkut
+    // Pengangkut & BC 1.1 (1:1 CEISA 4.0 Portal)
+    if (data.tutupPuType) setVal('pibTutupPuType', data.tutupPuType);
+    if (data.nomorTutupPu) setVal('pibNomorTutupPu', data.nomorTutupPu);
+    if (data.tanggalTutupPu) setVal('pibTanggalTutupPu', data.tanggalTutupPu);
+    if (data.tanggalBc11) setVal('pibTanggalBc11', data.tanggalBc11);
+    if (data.nomorPos1) setVal('pibNomorPos1', data.nomorPos1);
+    if (data.nomorPos2) setVal('pibNomorPos2', data.nomorPos2);
+    if (data.nomorPos3) setVal('pibNomorPos3', data.nomorPos3);
     if (data.caraPengangkutan) setVal('pibCaraPengangkutan', data.caraPengangkutan);
     if (data.vesselName || data.namaPengangkut) setVal('pibVesselName', data.vesselName || data.namaPengangkut);
     if (data.voyageNumber) setVal('pibVoyageNumber', data.voyageNumber);
@@ -1033,8 +1061,9 @@ function loadPibDraftData(data, shouldSave = true) {
     if (data.portTransit) setVal('pibPortTransit', data.portTransit);
     if (data.portDischarge || data.dischargePort) setVal('pibPortDischarge', data.portDischarge || data.dischargePort);
     if (data.tpsLocation) setVal('pibTpsLocation', data.tpsLocation);
+    if (data.lokasiPemeriksaan) setVal('pibLokasiPemeriksaan', data.lokasiPemeriksaan);
 
-    // Kemasan & Peti Kemas
+    // Kemasan & Peti Kemas (1:1 CEISA 4.0 Portal)
     if (data.packageType) setVal('pibPackageType', data.packageType);
     if (data.packageQty !== undefined) {
         setVal('pibPackageQty', data.packageQty);
@@ -1042,25 +1071,17 @@ function loadPibDraftData(data, shouldSave = true) {
         const m = String(data.totalKemasan).match(/(\d+[\d.,]*)/);
         if (m) setVal('pibPackageQty', parseFloat(m[1].replace(/,/g, '')));
     }
-    if (data.grossWeight !== undefined) {
-        setVal('pibGrossWeight', data.grossWeight);
-    } else if (data.totalGrossWeightKGM) {
-        const m = String(data.totalGrossWeightKGM).match(/([\d.,]+)/);
-        if (m) setVal('pibGrossWeight', parseFloat(m[1].replace(/,/g, '')));
-    }
-    if (data.netWeight !== undefined) {
-        setVal('pibNetWeight', data.netWeight);
-    } else if (data.totalNetWeightKGM) {
-        const m = String(data.totalNetWeightKGM).match(/([\d.,]+)/);
-        if (m) setVal('pibNetWeight', parseFloat(m[1].replace(/,/g, '')));
-    }
     if (data.containerNumber) setVal('pibContainerNumber', data.containerNumber);
     if (data.containerSize) setVal('pibContainerSize', data.containerSize);
     if (data.containerType) setVal('pibContainerType', data.containerType);
+    renderPibKemasanTable(data);
+    renderPibPetiKemasTable(data);
 
-    // Transaksi
+    // Transaksi (1:1 CEISA 4.0 Portal)
     if (data.currency || (data.invoices && data.invoices[0]?.currency)) setVal('pibCurrency', data.currency || data.invoices[0]?.currency);
     if (data.exchangeRate || data.kursPabean) setVal('pibExchangeRate', data.exchangeRate || data.kursPabean);
+    if (data.jenisTransaksi) setVal('pibJenisTransaksi', data.jenisTransaksi);
+    if (data.jenisTransaksiLainnya) setVal('pibJenisTransaksiLainnya', data.jenisTransaksiLainnya);
     if (data.incoterm || data.incotermsTransaksi || data.caraDagang) setVal('pibIncoterm', data.incoterm || data.incotermsTransaksi || data.caraDagang);
     // Hitung invoiceAmount dari rincian barang jika belum tersedia
     if ((!data.invoiceAmount || data.invoiceAmount === 0) && Array.isArray(data.items) && data.items.length > 0) {
@@ -1077,10 +1098,30 @@ function loadPibDraftData(data, shouldSave = true) {
         }
     }
     if (data.invoiceAmount !== undefined) setVal('pibInvoiceAmount', data.invoiceAmount);
+    if (data.biayaPenambah !== undefined) setVal('pibBiayaPenambah', data.biayaPenambah);
+    if (data.biayaPengurang !== undefined) setVal('pibBiayaPengurang', data.biayaPengurang);
     if (data.freightAmount !== undefined) setVal('pibFreightAmount', data.freightAmount);
     if (data.insuranceAmount !== undefined) setVal('pibInsuranceAmount', data.insuranceAmount);
     if (data.insuranceType) setVal('pibInsuranceType', data.insuranceType);
+    if (data.voluntaryDeclaration !== undefined) setVal('pibVoluntaryDeclaration', data.voluntaryDeclaration);
+    if (data.fob !== undefined) setVal('pibFobTransaksi', data.fob);
     if (data.tarifBm !== undefined) setVal('pibTarifBm', data.tarifBm);
+
+    // Berat (KGM) & Volume (M3)
+    if (data.grossWeight !== undefined) {
+        setVal('pibGrossWeight', data.grossWeight);
+    } else if (data.totalGrossWeightKGM) {
+        const m = String(data.totalGrossWeightKGM).match(/([\d.,]+)/);
+        if (m) setVal('pibGrossWeight', parseFloat(m[1].replace(/,/g, '')));
+    }
+    if (data.netWeight !== undefined) {
+        setVal('pibNetWeight', data.netWeight);
+    } else if (data.totalNetWeightKGM) {
+        const m = String(data.totalNetWeightKGM).match(/([\d.,]+)/);
+        if (m) setVal('pibNetWeight', parseFloat(m[1].replace(/,/g, '')));
+    }
+    if (data.volume !== undefined) setVal('pibVolume', data.volume);
+    calculatePibPungutan();
 
     // Pernyataan
     if (data.pernyataanKota) setVal('pibPernyataanKota', data.pernyataanKota);
@@ -1940,6 +1981,196 @@ function sortPibDocRows() {
 // SYNC & RENDER ATTACHED DOCUMENTS IN PIB TAB DOKUMEN (BACKWARD COMPATIBLE WRAPPER)
 
 
+// ====================================================================
+// CEISA 4.0 KEMASAN & PETI KEMAS TAB FUNCTIONS (1:1 PARITY)
+// ====================================================================
+window._pibKemasanList = [];
+window._pibPetiKemasList = [];
+
+function renderPibKemasanTable(data = {}) {
+    const tbody = document.getElementById('pibKemasanTableBody');
+    if (!tbody) return;
+
+    if (Array.isArray(data.kemasan) && data.kemasan.length > 0) {
+        window._pibKemasanList = [...data.kemasan];
+    } else if (Array.isArray(data.packages) && data.packages.length > 0) {
+        window._pibKemasanList = [...data.packages];
+    } else if (!window._pibKemasanList || window._pibKemasanList.length === 0) {
+        const q = data.packageQty || parseFloat(document.getElementById('pibPackageQty')?.value) || 4;
+        const t = data.packageType || document.getElementById('pibPackageType')?.value || 'PK - Package';
+        window._pibKemasanList = [{
+            seri: 1,
+            jumlah: q,
+            jenis: t,
+            merek: data.packageBrand || '-'
+        }];
+    }
+
+    tbody.innerHTML = '';
+    window._pibKemasanList.forEach((item, idx) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td style="text-align: center; font-weight: 600;">${idx + 1}</td>
+            <td style="text-align: center;">${escapePibHtml(item.jumlah || item.qty || 1)}</td>
+            <td>${escapePibHtml(item.jenis || item.type || 'PK - Package')}</td>
+            <td>${escapePibHtml(item.merek || item.brand || '-')}</td>
+            <td style="text-align: center;">
+                <button type="button" class="btn-table-action-edit" data-idx="${idx}" title="Ubah">&#9998;</button>
+                <button type="button" class="btn-table-action-del" data-idx="${idx}" title="Hapus">&#128465;</button>
+            </td>
+        `;
+
+        tr.querySelector('.btn-table-action-del')?.addEventListener('click', () => {
+            window._pibKemasanList.splice(idx, 1);
+            renderPibKemasanTable();
+            triggerPibAutoSave();
+        });
+
+        tr.querySelector('.btn-table-action-edit')?.addEventListener('click', () => {
+            const newJumlah = prompt('Ubah Jumlah Kemasan:', item.jumlah || 1);
+            if (newJumlah !== null) {
+                item.jumlah = parseFloat(newJumlah) || 1;
+                renderPibKemasanTable();
+                triggerPibAutoSave();
+            }
+        });
+
+        tbody.appendChild(tr);
+    });
+
+    const totalEl = document.getElementById('pibKemasanTotal');
+    if (totalEl) totalEl.textContent = `Total ${window._pibKemasanList.length}`;
+}
+
+function addNewPibKemasanRow() {
+    if (!Array.isArray(window._pibKemasanList)) window._pibKemasanList = [];
+    const nextSeri = window._pibKemasanList.length + 1;
+    window._pibKemasanList.push({
+        seri: nextSeri,
+        jumlah: 1,
+        jenis: 'PK - Package',
+        merek: '-'
+    });
+    renderPibKemasanTable();
+    triggerPibAutoSave();
+    if (typeof showToast === 'function') {
+        showToast(`Kemasan Seri ${nextSeri} ditambahkan.`, 'info');
+    }
+}
+
+function sortPibKemasanRows() {
+    if (Array.isArray(window._pibKemasanList)) {
+        window._pibKemasanList.sort((a, b) => (parseFloat(b.jumlah) || 0) - (parseFloat(a.jumlah) || 0));
+        renderPibKemasanTable();
+        triggerPibAutoSave();
+        if (typeof showToast === 'function') {
+            showToast('Tabel kemasan telah diurutkan.', 'info');
+        }
+    }
+}
+
+function renderPibPetiKemasTable(data = {}) {
+    const tbody = document.getElementById('pibPetiKemasTableBody');
+    if (!tbody) return;
+
+    if (Array.isArray(data.petiKemas) && data.petiKemas.length > 0) {
+        window._pibPetiKemasList = [...data.petiKemas];
+    } else if (Array.isArray(data.containers) && data.containers.length > 0) {
+        window._pibPetiKemasList = [...data.containers];
+    } else if (data.containerNumber && data.containerNumber !== '-') {
+        window._pibPetiKemasList = [{
+            seri: 1,
+            nomor: data.containerNumber,
+            ukuran: data.containerSize || '40',
+            jenisMuatan: data.containerType || 'FCL',
+            tipe: 'General Cargo'
+        }];
+    }
+
+    tbody.innerHTML = '';
+    if (!window._pibPetiKemasList || window._pibPetiKemasList.length === 0) {
+        tbody.innerHTML = `
+            <tr id="rowPetiKemasNoData">
+                <td colspan="6" style="text-align: center; padding: 32px 10px;">
+                    <div class="ceisa-empty-state-box">
+                        <svg class="ceisa-empty-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                        <span class="ceisa-empty-state-text">No Data</span>
+                    </div>
+                </td>
+            </tr>
+        `;
+        const totalEl = document.getElementById('pibPetiKemasTotal');
+        if (totalEl) totalEl.textContent = 'Total 0';
+        return;
+    }
+
+    window._pibPetiKemasList.forEach((item, idx) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td style="text-align: center; font-weight: 600;">${idx + 1}</td>
+            <td class="font-mono">${escapePibHtml(item.nomor || item.containerNo || '-')}</td>
+            <td style="text-align: center;">${escapePibHtml(item.ukuran || item.size || '40')}</td>
+            <td style="text-align: center;">${escapePibHtml(item.jenisMuatan || item.loadType || 'FCL')}</td>
+            <td>${escapePibHtml(item.tipe || item.type || 'General Cargo')}</td>
+            <td style="text-align: center;">
+                <button type="button" class="btn-table-action-edit" data-idx="${idx}" title="Ubah">&#9998;</button>
+                <button type="button" class="btn-table-action-del" data-idx="${idx}" title="Hapus">&#128465;</button>
+            </td>
+        `;
+
+        tr.querySelector('.btn-table-action-del')?.addEventListener('click', () => {
+            window._pibPetiKemasList.splice(idx, 1);
+            renderPibPetiKemasTable();
+            triggerPibAutoSave();
+        });
+
+        tr.querySelector('.btn-table-action-edit')?.addEventListener('click', () => {
+            const newNomor = prompt('Ubah Nomor Peti Kemas:', item.nomor || '');
+            if (newNomor !== null) {
+                item.nomor = newNomor;
+                renderPibPetiKemasTable();
+                triggerPibAutoSave();
+            }
+        });
+
+        tbody.appendChild(tr);
+    });
+
+    const totalEl = document.getElementById('pibPetiKemasTotal');
+    if (totalEl) totalEl.textContent = `Total ${window._pibPetiKemasList.length}`;
+}
+
+function addNewPibPetiKemasRow() {
+    if (!Array.isArray(window._pibPetiKemasList)) window._pibPetiKemasList = [];
+    const nextSeri = window._pibPetiKemasList.length + 1;
+    const nomor = prompt('Masukkan Nomor Kontainer (cth: TGHU1234567):', '');
+    if (nomor) {
+        window._pibPetiKemasList.push({
+            seri: nextSeri,
+            nomor: nomor.trim().toUpperCase(),
+            ukuran: '40',
+            jenisMuatan: 'FCL',
+            tipe: 'General Cargo'
+        });
+        renderPibPetiKemasTable();
+        triggerPibAutoSave();
+        if (typeof showToast === 'function') {
+            showToast(`Peti Kemas ${nomor} ditambahkan.`, 'info');
+        }
+    }
+}
+
+function sortPibPetiKemasRows() {
+    if (Array.isArray(window._pibPetiKemasList)) {
+        window._pibPetiKemasList.sort((a, b) => String(a.nomor).localeCompare(String(b.nomor)));
+        renderPibPetiKemasTable();
+        triggerPibAutoSave();
+        if (typeof showToast === 'function') {
+            showToast('Tabel peti kemas telah diurutkan.', 'info');
+        }
+    }
+}
+
 // RENDER PIB SAFETY CHECK AUDIT CARD
 function renderPibSafeCheck(safeCheck) {
     const container = document.getElementById('pibSafeCheckSection');
@@ -2323,6 +2554,104 @@ function initPibDashboard() {
         });
     }
 
+    // Tab Dokumen Stepper
+    const btnPrevDokumen = document.getElementById('btnPrevFromPibDokumen');
+    if (btnPrevDokumen) {
+        btnPrevDokumen.addEventListener('click', () => {
+            switchPibTab('pib-tab-entitas');
+        });
+    }
+    const btnNextDokumen = document.getElementById('btnNextFromPibDokumen');
+    if (btnNextDokumen) {
+        btnNextDokumen.addEventListener('click', () => {
+            switchPibTab('pib-tab-pengangkut');
+        });
+    }
+
+    // Tab Pengangkut Stepper
+    const btnPrevPengangkut = document.getElementById('btnPrevFromPibPengangkut');
+    if (btnPrevPengangkut) {
+        btnPrevPengangkut.addEventListener('click', () => {
+            switchPibTab('pib-tab-dokumen');
+        });
+    }
+    const btnNextPengangkut = document.getElementById('btnNextFromPibPengangkut');
+    if (btnNextPengangkut) {
+        btnNextPengangkut.addEventListener('click', () => {
+            switchPibTab('pib-tab-kemasan');
+        });
+    }
+
+    // Tab Kemasan & Peti Kemas Stepper & Table Actions
+    const btnPrevKemasan = document.getElementById('btnPrevFromPibKemasan');
+    if (btnPrevKemasan) {
+        btnPrevKemasan.addEventListener('click', () => {
+            switchPibTab('pib-tab-pengangkut');
+        });
+    }
+    const btnNextKemasan = document.getElementById('btnNextFromPibKemasan');
+    if (btnNextKemasan) {
+        btnNextKemasan.addEventListener('click', () => {
+            switchPibTab('pib-tab-transaksi');
+        });
+    }
+    const btnAddKemasan = document.getElementById('btnAddPibKemasan');
+    if (btnAddKemasan) {
+        btnAddKemasan.addEventListener('click', addNewPibKemasanRow);
+    }
+    const btnSortKemasan = document.getElementById('btnSortPibKemasan');
+    if (btnSortKemasan) {
+        btnSortKemasan.addEventListener('click', sortPibKemasanRows);
+    }
+    const btnAddPetiKemas = document.getElementById('btnAddPibPetiKemas');
+    if (btnAddPetiKemas) {
+        btnAddPetiKemas.addEventListener('click', addNewPibPetiKemasRow);
+    }
+    const btnSortPetiKemas = document.getElementById('btnSortPibPetiKemas');
+    if (btnSortPetiKemas) {
+        btnSortPetiKemas.addEventListener('click', sortPibPetiKemasRows);
+    }
+
+    // Tab Transaksi Stepper & Actions
+    const btnPrevTransaksi = document.getElementById('btnPrevFromPibTransaksi');
+    if (btnPrevTransaksi) {
+        btnPrevTransaksi.addEventListener('click', () => {
+            switchPibTab('pib-tab-kemasan');
+        });
+    }
+    const btnNextTransaksi = document.getElementById('btnNextFromPibTransaksi');
+    if (btnNextTransaksi) {
+        btnNextTransaksi.addEventListener('click', () => {
+            switchPibTab('pib-tab-barang');
+        });
+    }
+    const btnDetailBarang = document.getElementById('btnPibDetailBarang');
+    if (btnDetailBarang) {
+        btnDetailBarang.addEventListener('click', () => {
+            switchPibTab('pib-tab-barang');
+        });
+    }
+    const btnSyncNetto = document.getElementById('btnSyncNettoBarang');
+    if (btnSyncNetto) {
+        btnSyncNetto.addEventListener('click', () => {
+            let totalNetto = 0;
+            if (Array.isArray(window._pibItems) && window._pibItems.length > 0) {
+                window._pibItems.forEach(it => {
+                    const n = parseFloat(String(it.netto || it.netWeight || it.beratBersih || 0).replace(/,/g, ''));
+                    if (!isNaN(n)) totalNetto += n;
+                });
+            }
+            const elNetto = document.getElementById('pibNetWeight');
+            if (elNetto) {
+                elNetto.value = totalNetto.toFixed(4);
+                triggerPibAutoSave();
+                if (typeof showToast === 'function') {
+                    showToast(`Netto berhasil disinkronkan dari rincian barang: ${totalNetto.toFixed(4)} KGM`, 'success');
+                }
+            }
+        });
+    }
+
     // 2c. Setup Copy & Sync Handlers
     setupPibCopyHandlers();
 
@@ -2354,7 +2683,10 @@ function initPibDashboard() {
         'pibIncoterm',
         'pibTarifBm',
         'pibImportirStatus',
-        'pibPenerimaStatus'
+        'pibPenerimaStatus',
+        'pibBiayaPenambah',
+        'pibBiayaPengurang',
+        'pibVoluntaryDeclaration'
     ];
     calcTriggers.forEach(id => {
         const el = document.getElementById(id);
@@ -2417,6 +2749,157 @@ function initPibDashboard() {
     const btnPrintPib = document.getElementById('btnPibHeaderPrint');
     if (btnPrintPib) {
         btnPrintPib.addEventListener('click', () => window.print());
+    }
+
+    // 7.1 Header Action: Opsi Toggle Auto Fill
+    const btnPibAutofillSettings = document.getElementById('btnPibAutofillSettings');
+    const modalAutofillSettings = document.getElementById('modalAutofillSettings');
+    const btnCloseModalAutofill = document.getElementById('btnCloseModalAutofill');
+    const btnModalAfSave = document.getElementById('btnModalAfSave');
+    const btnPibModalAfSelectAll = document.getElementById('btnPibModalAfSelectAll');
+    const btnPibModalAfResetDefault = document.getElementById('btnPibModalAfResetDefault');
+    const modalSubGroupEntitas = document.getElementById('modalSubGroupEntitas');
+
+    const modalAfToggles = {
+        header: document.getElementById('modalToggle_header'),
+        entitas: document.getElementById('modalToggle_entitas'),
+        entitas_pengirim: document.getElementById('modalToggle_entitas_pengirim'),
+        entitas_penerima: document.getElementById('modalToggle_entitas_penerima'),
+        entitas_pembeli: document.getElementById('modalToggle_entitas_pembeli'),
+        entitas_penjual: document.getElementById('modalToggle_entitas_penjual'),
+        entitas_pemilik: document.getElementById('modalToggle_entitas_pemilik'),
+        entitas_ppjk: document.getElementById('modalToggle_entitas_ppjk'),
+        dokumen: document.getElementById('modalToggle_dokumen'),
+        pengangkut: document.getElementById('modalToggle_pengangkut'),
+        kemasan: document.getElementById('modalToggle_kemasan'),
+        transaksi: document.getElementById('modalToggle_transaksi'),
+        barang: document.getElementById('modalToggle_barang'),
+        pungutan: document.getElementById('modalToggle_pungutan'),
+        pernyataan: document.getElementById('modalToggle_pernyataan')
+    };
+
+    function populateModalAfUI(cfg) {
+        if (!modalAfToggles.header) return;
+        modalAfToggles.header.checked = cfg.header !== false;
+
+        const ent = cfg.entitas || {};
+        const isEntEnabled = typeof cfg.entitas === 'object' ? cfg.entitas.enabled !== false : cfg.entitas !== false;
+        if (modalAfToggles.entitas) modalAfToggles.entitas.checked = isEntEnabled;
+
+        if (modalSubGroupEntitas) {
+            modalSubGroupEntitas.style.opacity = isEntEnabled ? '1' : '0.45';
+            modalSubGroupEntitas.style.pointerEvents = isEntEnabled ? 'auto' : 'none';
+        }
+
+        if (modalAfToggles.entitas_pengirim) modalAfToggles.entitas_pengirim.checked = ent.pengirim !== false;
+        if (modalAfToggles.entitas_penerima) modalAfToggles.entitas_penerima.checked = ent.penerima !== false;
+        if (modalAfToggles.entitas_pembeli) modalAfToggles.entitas_pembeli.checked = ent.pembeli !== false;
+        if (modalAfToggles.entitas_penjual) modalAfToggles.entitas_penjual.checked = ent.penjual !== false;
+        if (modalAfToggles.entitas_pemilik) modalAfToggles.entitas_pemilik.checked = ent.pemilik !== false;
+        if (modalAfToggles.entitas_ppjk) modalAfToggles.entitas_ppjk.checked = ent.ppjk === true;
+
+        if (modalAfToggles.dokumen) modalAfToggles.dokumen.checked = cfg.dokumen !== false;
+        if (modalAfToggles.pengangkut) modalAfToggles.pengangkut.checked = cfg.pengangkut !== false;
+        if (modalAfToggles.kemasan) modalAfToggles.kemasan.checked = cfg.kemasan !== false;
+        if (modalAfToggles.transaksi) modalAfToggles.transaksi.checked = cfg.transaksi !== false;
+        if (modalAfToggles.barang) modalAfToggles.barang.checked = cfg.barang !== false;
+        if (modalAfToggles.pungutan) modalAfToggles.pungutan.checked = cfg.pungutan === true;
+        if (modalAfToggles.pernyataan) modalAfToggles.pernyataan.checked = cfg.pernyataan !== false;
+    }
+
+    function readModalAfConfig() {
+        return {
+            header: modalAfToggles.header ? modalAfToggles.header.checked : true,
+            entitas: {
+                enabled: modalAfToggles.entitas ? modalAfToggles.entitas.checked : true,
+                pengirim: modalAfToggles.entitas_pengirim ? modalAfToggles.entitas_pengirim.checked : true,
+                penerima: modalAfToggles.entitas_penerima ? modalAfToggles.entitas_penerima.checked : true,
+                pembeli: modalAfToggles.entitas_pembeli ? modalAfToggles.entitas_pembeli.checked : true,
+                penjual: modalAfToggles.entitas_penjual ? modalAfToggles.entitas_penjual.checked : true,
+                pemilik: modalAfToggles.entitas_pemilik ? modalAfToggles.entitas_pemilik.checked : true,
+                ppjk: modalAfToggles.entitas_ppjk ? modalAfToggles.entitas_ppjk.checked : false
+            },
+            dokumen: modalAfToggles.dokumen ? modalAfToggles.dokumen.checked : true,
+            pengangkut: modalAfToggles.pengangkut ? modalAfToggles.pengangkut.checked : true,
+            kemasan: modalAfToggles.kemasan ? modalAfToggles.kemasan.checked : true,
+            transaksi: modalAfToggles.transaksi ? modalAfToggles.transaksi.checked : true,
+            barang: modalAfToggles.barang ? modalAfToggles.barang.checked : true,
+            pungutan: modalAfToggles.pungutan ? modalAfToggles.pungutan.checked : false,
+            pernyataan: modalAfToggles.pernyataan ? modalAfToggles.pernyataan.checked : true
+        };
+    }
+
+    function saveModalAfConfig(cfg) {
+        try {
+            if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.local) {
+                chrome.storage.local.set({ ceisa_autofill_config: cfg }).catch(() => {});
+            }
+            localStorage.setItem("ceisa_autofill_config", JSON.stringify(cfg));
+        } catch (_) {}
+    }
+
+    if (btnPibAutofillSettings && modalAutofillSettings) {
+        btnPibAutofillSettings.addEventListener('click', () => {
+            if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.local) {
+                chrome.storage.local.get("ceisa_autofill_config", (res) => {
+                    const cfg = res?.ceisa_autofill_config || JSON.parse(localStorage.getItem("ceisa_autofill_config") || "{}");
+                    populateModalAfUI(cfg);
+                    modalAutofillSettings.style.display = 'flex';
+                });
+            } else {
+                const cfg = JSON.parse(localStorage.getItem("ceisa_autofill_config") || "{}");
+                populateModalAfUI(cfg);
+                modalAutofillSettings.style.display = 'flex';
+            }
+        });
+    }
+
+    if (modalAfToggles.entitas && modalSubGroupEntitas) {
+        modalAfToggles.entitas.addEventListener('change', () => {
+            const isChecked = modalAfToggles.entitas.checked;
+            modalSubGroupEntitas.style.opacity = isChecked ? '1' : '0.45';
+            modalSubGroupEntitas.style.pointerEvents = isChecked ? 'auto' : 'none';
+        });
+    }
+
+    if (btnPibModalAfSelectAll) {
+        btnPibModalAfSelectAll.addEventListener('click', () => {
+            populateModalAfUI({
+                header: true,
+                entitas: { enabled: true, pengirim: true, penerima: true, pembeli: true, penjual: true, pemilik: true, ppjk: true },
+                dokumen: true, pengangkut: true, kemasan: true, transaksi: true, barang: true, pungutan: true, pernyataan: true
+            });
+            saveModalAfConfig(readModalAfConfig());
+            if (typeof showToast === 'function') showToast('Semua opsi auto-fill diaktifkan');
+        });
+    }
+
+    if (btnPibModalAfResetDefault) {
+        btnPibModalAfResetDefault.addEventListener('click', () => {
+            populateModalAfUI({
+                header: true,
+                entitas: { enabled: true, pengirim: true, penerima: true, pembeli: true, penjual: true, pemilik: true, ppjk: false },
+                dokumen: true, pengangkut: true, kemasan: true, transaksi: true, barang: true, pungutan: false, pernyataan: true
+            });
+            saveModalAfConfig(readModalAfConfig());
+            if (typeof showToast === 'function') showToast('Opsi auto-fill dikembalikan ke default (PPJK & Pungutan Manual)');
+        });
+    }
+
+    const closeModalAf = () => {
+        if (modalAutofillSettings) {
+            saveModalAfConfig(readModalAfConfig());
+            modalAutofillSettings.style.display = 'none';
+            if (typeof showToast === 'function') showToast('Pengaturan auto-fill tersimpan');
+        }
+    };
+
+    if (btnCloseModalAutofill) btnCloseModalAutofill.addEventListener('click', closeModalAf);
+    if (btnModalAfSave) btnModalAfSave.addEventListener('click', closeModalAf);
+    if (modalAutofillSettings) {
+        modalAutofillSettings.addEventListener('click', (e) => {
+            if (e.target === modalAutofillSettings) closeModalAf();
+        });
     }
 
     // 8. Bottom Dock Buttons
@@ -2662,4 +3145,6 @@ if (typeof window !== 'undefined') {
     window.populatePibForm = (data, shouldSave) => loadPibDraftData(data, shouldSave !== undefined ? shouldSave : false);
     window.setupPibCopyHandlers = setupPibCopyHandlers;
     window.calculatePibPungutan = calculatePibPungutan;
+    window.renderPibKemasanTable = renderPibKemasanTable;
+    window.renderPibPetiKemasTable = renderPibPetiKemasTable;
 }

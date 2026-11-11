@@ -196,20 +196,221 @@
                 </div>
             </div>
 
+            <!-- CARD 2.5: PENGATURAN TOGGLE AUTO FILL -->
+            <div class="ai-config-card" id="cardAutofillConfig">
+                <div class="ai-config-header" id="btnToggleAfCollapse" role="button" tabindex="0" title="Klik untuk membuka/menutup pengaturan bagian auto-fill">
+                    <div class="ai-config-title-wrap">
+                        <span class="ai-config-icon">⚙️</span>
+                        <div class="ai-config-titles">
+                            <span class="ai-config-title">Pengaturan Bagian Auto Fill</span>
+                            <span class="ai-config-subtitle">Atur tab mana saja yang diisi otomatis ke CEISA</span>
+                        </div>
+                    </div>
+                    <div class="ai-config-header-right">
+                        <span class="af-active-badge" id="lblAfActiveCount">7 / 9 Aktif</span>
+                        <span class="af-chevron" id="iconAfChevron">▾</span>
+                    </div>
+                </div>
+
+                <div class="ai-config-body" id="afConfigBody" style="display: none;">
+                    <div class="af-quick-actions">
+                        <button type="button" class="af-btn-quick" id="btnAfSelectAll" title="Aktifkan semua bagian">Semua ON</button>
+                        <button type="button" class="af-btn-quick" id="btnAfResetDefault" title="Kembalikan ke setelan awal (PPJK & Pungutan Manual)">Reset Default</button>
+                    </div>
+
+                    <div class="af-toggle-list">
+                        <!-- 1. Header -->
+                        <div class="af-toggle-row">
+                            <div class="af-toggle-info">
+                                <span class="af-toggle-label">1. Header</span>
+                                <span class="af-toggle-desc">Nomor Aju, Kantor Pabean, Jenis &amp; Kategori</span>
+                            </div>
+                            <label class="af-switch" title="Toggle Auto-fill Header">
+                                <input type="checkbox" id="afToggle_header" checked>
+                                <span class="af-slider"></span>
+                            </label>
+                        </div>
+
+                        <!-- 2. Entitas Master -->
+                        <div class="af-toggle-row af-master-row">
+                            <div class="af-toggle-info">
+                                <span class="af-toggle-label">2. Entitas</span>
+                                <span class="af-toggle-desc">Pemasok, Importir, Pembeli, Penjual, Pemilik, PPJK</span>
+                            </div>
+                            <label class="af-switch" title="Toggle Auto-fill Entitas">
+                                <input type="checkbox" id="afToggle_entitas" checked>
+                                <span class="af-slider"></span>
+                            </label>
+                        </div>
+
+                        <!-- Entitas Sub-Items -->
+                        <div class="af-sub-group" id="afSubGroupEntitas">
+                            <div class="af-toggle-row af-sub-row">
+                                <div class="af-toggle-info">
+                                    <span class="af-toggle-label">Pengirim / Pemasok LN</span>
+                                </div>
+                                <label class="af-switch">
+                                    <input type="checkbox" id="afToggle_entitas_pengirim" checked>
+                                    <span class="af-slider"></span>
+                                </label>
+                            </div>
+                            <div class="af-toggle-row af-sub-row">
+                                <div class="af-toggle-info">
+                                    <span class="af-toggle-label">Penerima / Importir</span>
+                                </div>
+                                <label class="af-switch">
+                                    <input type="checkbox" id="afToggle_entitas_penerima" checked>
+                                    <span class="af-slider"></span>
+                                </label>
+                            </div>
+                            <div class="af-toggle-row af-sub-row">
+                                <div class="af-toggle-info">
+                                    <span class="af-toggle-label">Pembeli (Buyer)</span>
+                                </div>
+                                <label class="af-switch">
+                                    <input type="checkbox" id="afToggle_entitas_pembeli" checked>
+                                    <span class="af-slider"></span>
+                                </label>
+                            </div>
+                            <div class="af-toggle-row af-sub-row">
+                                <div class="af-toggle-info">
+                                    <span class="af-toggle-label">Penjual (Seller)</span>
+                                </div>
+                                <label class="af-switch">
+                                    <input type="checkbox" id="afToggle_entitas_penjual" checked>
+                                    <span class="af-slider"></span>
+                                </label>
+                            </div>
+                            <div class="af-toggle-row af-sub-row">
+                                <div class="af-toggle-info">
+                                    <span class="af-toggle-label">Pemilik Barang</span>
+                                </div>
+                                <label class="af-switch">
+                                    <input type="checkbox" id="afToggle_entitas_pemilik" checked>
+                                    <span class="af-slider"></span>
+                                </label>
+                            </div>
+                            <div class="af-toggle-row af-sub-row">
+                                <div class="af-toggle-info">
+                                    <span class="af-toggle-label">PPJK <span class="af-sub-badge">Manual Default</span></span>
+                                    <span class="af-toggle-desc">Nyalakan untuk auto-fill PPJK</span>
+                                </div>
+                                <label class="af-switch" title="Nyalakan jika ingin PPJK diisi otomatis">
+                                    <input type="checkbox" id="afToggle_entitas_ppjk">
+                                    <span class="af-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- 3. Dokumen Lampiran -->
+                        <div class="af-toggle-row">
+                            <div class="af-toggle-info">
+                                <span class="af-toggle-label">3. Dokumen Lampiran</span>
+                                <span class="af-toggle-desc">Invoice, Packing List, BL, COO</span>
+                            </div>
+                            <label class="af-switch" title="Toggle Auto-fill Dokumen">
+                                <input type="checkbox" id="afToggle_dokumen" checked>
+                                <span class="af-slider"></span>
+                            </label>
+                        </div>
+
+                        <!-- 4. Pengangkut -->
+                        <div class="af-toggle-row">
+                            <div class="af-toggle-info">
+                                <span class="af-toggle-label">4. Pengangkut</span>
+                                <span class="af-toggle-desc">Sarana Pengangkut, Pelabuhan, TPS</span>
+                            </div>
+                            <label class="af-switch" title="Toggle Auto-fill Pengangkut">
+                                <input type="checkbox" id="afToggle_pengangkut" checked>
+                                <span class="af-slider"></span>
+                            </label>
+                        </div>
+
+                        <!-- 5. Kemasan & Peti Kemas -->
+                        <div class="af-toggle-row">
+                            <div class="af-toggle-info">
+                                <span class="af-toggle-label">5. Kemasan &amp; Peti Kemas</span>
+                                <span class="af-toggle-desc">Jumlah/Jenis Kemasan, Kontainer, Berat</span>
+                            </div>
+                            <label class="af-switch" title="Toggle Auto-fill Kemasan">
+                                <input type="checkbox" id="afToggle_kemasan" checked>
+                                <span class="af-slider"></span>
+                            </label>
+                        </div>
+
+                        <!-- 6. Transaksi -->
+                        <div class="af-toggle-row">
+                            <div class="af-toggle-info">
+                                <span class="af-toggle-label">6. Transaksi</span>
+                                <span class="af-toggle-desc">Valuta, Incoterm, Nilai Pabean, Kurs</span>
+                            </div>
+                            <label class="af-switch" title="Toggle Auto-fill Transaksi">
+                                <input type="checkbox" id="afToggle_transaksi" checked>
+                                <span class="af-slider"></span>
+                            </label>
+                        </div>
+
+                        <!-- 7. Data Barang -->
+                        <div class="af-toggle-row">
+                            <div class="af-toggle-info">
+                                <span class="af-toggle-label">7. Data Barang</span>
+                                <span class="af-toggle-desc">Pos Tarif HS, Uraian, Qty, Satuan, Nilai</span>
+                            </div>
+                            <label class="af-switch" title="Toggle Auto-fill Barang">
+                                <input type="checkbox" id="afToggle_barang" checked>
+                                <span class="af-slider"></span>
+                            </label>
+                        </div>
+
+                        <!-- 8. Pungutan -->
+                        <div class="af-toggle-row">
+                            <div class="af-toggle-info">
+                                <span class="af-toggle-label">8. Pungutan <span class="af-sub-badge">Manual Default</span></span>
+                                <span class="af-toggle-desc">Tarif BM, PPN, PPh, Total Billing</span>
+                            </div>
+                            <label class="af-switch" title="Nyalakan jika ingin Pungutan diisi otomatis">
+                                <input type="checkbox" id="afToggle_pungutan">
+                                <span class="af-slider"></span>
+                            </label>
+                        </div>
+
+                        <!-- 9. Pernyataan -->
+                        <div class="af-toggle-row">
+                            <div class="af-toggle-info">
+                                <span class="af-toggle-label">9. Pernyataan</span>
+                                <span class="af-toggle-desc">Nama &amp; Jabatan Pemberitahu</span>
+                            </div>
+                            <label class="af-switch" title="Toggle Auto-fill Pernyataan">
+                                <input type="checkbox" id="afToggle_pernyataan" checked>
+                                <span class="af-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- CARD 3: STUDIO PENGISIAN FORMULIR CEISA (CORE WORKSPACE) -->
             <div class="ai-workspace-card">
                 
                 <!-- Section Picker -->
                 <div class="ai-field-group">
-                    <label for="autoInputSectionSelect" class="ai-label">Pilih Bagian / Tab CEISA:</label>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+                        <label for="autoInputSectionSelect" class="ai-label">Pilih Bagian / Tab CEISA:</label>
+                        <span class="ai-sync-indicator" id="lblCeisaAutoSyncBadge" title="Otomatis mengikuti tab yang aktif di portal CEISA">
+                            <span class="ai-sync-dot"></span> Otomatis Ikuti Tab CEISA
+                        </span>
+                    </div>
                     <div class="ai-select-wrapper">
                         <select id="autoInputSectionSelect" class="ai-select section-select">
+                            <option value="header">1. Header (Kantor, Jenis/Kategori, No Aju)</option>
                             <option value="entitas" selected>2. Entitas (Pengirim, Penerima, Pembeli, Penjual)</option>
                             <option value="dokumen">3. Dokumen Lampiran (Invoice, PL, BL, COO)</option>
                             <option value="pengangkut">4. Pengangkut (Sarana, Pelabuhan)</option>
                             <option value="kemasan">5. Kemasan &amp; Peti Kemas</option>
                             <option value="transaksi">6. Transaksi (Valuta, Nilai Pabean)</option>
                             <option value="barang">7. Data Barang (Pos Tarif, Uraian, Qty, Nilai)</option>
+                            <option value="pungutan">8. Pungutan (Tarif BM, PPN, PPh, Billing)</option>
+                            <option value="pernyataan">9. Pernyataan (Kebenaran Data Kepabeanan)</option>
                         </select>
                         <span class="ai-select-arrow">▾</span>
                     </div>

@@ -377,6 +377,8 @@ function loadContentScriptFunctions(window) {
         window.findFieldByKeywords = typeof findFieldByKeywords !== 'undefined' ? findFieldByKeywords : null;
         window.setNativeInputValue = typeof setNativeInputValue !== 'undefined' ? setNativeInputValue : null;
         window.findCeisaCard = typeof findCeisaCard !== 'undefined' ? findCeisaCard : null;
+        window.detectCeisaActiveSection = typeof detectCeisaActiveSection !== 'undefined' ? detectCeisaActiveSection : null;
+        window.switchCeisaActiveTab = typeof switchCeisaActiveTab !== 'undefined' ? switchCeisaActiveTab : null;
         })();
         `
     );
