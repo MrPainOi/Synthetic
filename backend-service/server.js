@@ -595,6 +595,28 @@ app.post('/api/print/clear-history', (req, res) => {
     res.json({ success: true, message: 'Riwayat cetak berhasil dibersihkan.' });
 });
 
+// POST /mobile-share & /api/mobile-share (Android PWA Web Share Target)
+app.post(['/mobile-share', '/api/mobile-share'], uploadPrint.single('share_file'), (req, res) => {
+    if (req.file) {
+        console.log(`[MOBILE SHARE] Diterima berkas: ${req.file.originalname} (${req.file.size} bytes)`);
+        const origEnc = encodeURIComponent(req.file.originalname);
+        const tempNameEnc = encodeURIComponent(path.basename(req.file.path));
+        return res.redirect(`/print_hub.html?sharedTempName=${tempNameEnc}&sharedOrigName=${origEnc}`);
+    }
+    res.redirect('/print_hub.html');
+});
+
+// GET /api/print/temp-file/:tempName (Mengambil berkas hasil share sheet untuk preview/print)
+app.get('/api/print/temp-file/:tempName', (req, res) => {
+    const safeName = path.basename(req.params.tempName);
+    const filePath = path.join(printService.uploadsDir, safeName);
+    if (fs.existsSync(filePath)) {
+        res.sendFile(filePath);
+    } else {
+        res.status(404).send('Berkas sementara tidak ditemukan');
+    }
+});
+
 // POST /api/shutdown - Matikan server secara graceful (dari UI toggle)
 app.post('/api/shutdown', (req, res) => {
     res.json({ success: true, message: 'Server dimatikan. Jalankan START_SERVER.bat untuk menghidupkan kembali.' });

@@ -717,6 +717,29 @@ Diberikan izin untuk mengeluarkan barang impor dari Kawasan Pabean.
             fetchQueue();
             fetchServerStatus();
         }, 5000);
+
+        // Check for incoming shared file from Android Web Share Target
+        const urlParams = new URLSearchParams(window.location.search);
+        const sharedTempName = urlParams.get('sharedTempName');
+        const sharedOrigName = urlParams.get('sharedOrigName') || 'dokumen_share.pdf';
+        if (sharedTempName) {
+            showToast('Memuat berkas dari share sheet Android...', 'loading');
+            fetch(getBackendUrl(`/api/print/temp-file/${encodeURIComponent(sharedTempName)}`))
+                .then(res => {
+                    if (!res.ok) throw new Error('File tidak ditemukan di server');
+                    return res.blob();
+                })
+                .then(blob => {
+                    const file = new File([blob], sharedOrigName, { type: blob.type || 'application/pdf' });
+                    handleSelectedFile(file);
+                    showToast(`Berkas "${sharedOrigName}" berhasil diterima & siap dicetak!`, 'success');
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                })
+                .catch(err => {
+                    console.error('Shared file load error:', err);
+                    showToast('Gagal memuat berkas share.', 'error');
+                });
+        }
     });
 
 })();

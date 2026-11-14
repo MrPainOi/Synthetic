@@ -14,17 +14,17 @@ function getAiClient(customKey) {
     return new GoogleGenAI({ apiKey: key.trim() });
 }
 
-async function parseDocuments(pdfInputs, onProgress = () => {}, customApiKey = null, mode = 'ekspor') {
+async function parseDocuments(pdfInputs, onProgress = () => { }, customApiKey = null, mode = 'ekspor') {
     const pdfPaths = pdfInputs;
     console.log(`Memproses ${pdfInputs.length} dokumen sekaligus [Mode: ${mode.toUpperCase()}]...`);
     onProgress({ step: 'init', message: `Memproses ${pdfInputs.length} dokumen sekaligus [Mode: ${mode.toUpperCase()}]...`, totalFiles: pdfInputs.length });
-    
+
     try {
         const ai = getAiClient(customApiKey);
         const fileManager = ai.files;
         const uploadResults = [];
         const uploadedMeta = [];
-        
+
         // Upload semua file ke Gemini
         for (let i = 0; i < pdfInputs.length; i++) {
             const inputItem = pdfInputs[i];
@@ -81,11 +81,31 @@ TUGAS UTAMA:
 
 2. EKSTRAKSI DATA LENGKAP CEISA 4.0 PIB (BC 2.0 / FTZ01):
    PENTING - ATURAN PERAN PABEAN IMPOR (JANGAN TERTUKAR!):
-   - Pengirim / Shipper / Supplier: Pihak pabrik / eksportir luar negeri yang mengirimkan barang.
-   - Penjual / Seller: Pihak penjual di Invoice komersial luar negeri (biasanya sama dengan Pengirim).
-   - Penerima / Consignee / Importer: Pihak importir berbadan hukum di Indonesia yang menerima barang.
-   - Pembeli / Buyer: Pihak pembeli di Indonesia (tertera pada "Sold to" atau "Bill to" di invoice; biasanya sama dengan Penerima).
+   - Pengirim / Shipper / Supplier: Pihak pabrik / eksportir luar negeri yang mengirimkan barang (misal dari Jepang, China, Singapura, Jerman, dsb).
+   - Penjual / Seller: Pihak penjual di Invoice komersial luar negeri (biasanya sama dengan Pengirim, atau perusahaan perantara/trader LN).
+   - Penerima / Consignee / Importer: Pihak importir berbadan hukum di Indonesia yang menerima barang (misal di Batam, Jakarta, Surabaya, dll).
+   - Pembeli / Buyer: Pihak pembeli di dokumen (tertera pada "Sold to" atau "Bill to" di invoice; jika Sold To perusahaan luar negeri/trader seperti Singapura, catat nama dan negara aslinya).
    - Pemilik Barang: Pihak pemilik barang di Indonesia (biasanya sama dengan Penerima).
+
+PENTING - ATURAN MULTI-HALAMAN & MULTI-INVOICE:
+* WAJIB periksa SETIAP HALAMAN dokumen dari awal sampai akhir secara seksama!
+* Pengiriman impor seringkali memuat lembar Delivery Order / DG Local Export Order / Delivery Instruction di halaman awal, lalu Air Waybill, Invoice, Packing List, Cargo Clearance Permit, hingga MSDS.
+* JANGAN PERNAH menyaring, mengabaikan, atau memotong baris barang!
+* Pada 'items': WAJIB ekstrak SELURUH baris barang dari SEMUA halaman/invoice tanpa terlewat! Jika dokumen memiliki 2 atau lebih barang, WAJIB ekstrak semuanya lengkap satu per satu!
+
+PENTING - ATURAN SUMBER UTAMA NAMA & URAIAN BARANG (DOKUMEN INVOICE & PACKING LIST):
+* Sumber utama nama barang ('uraianJenisBarang'), Merek ('merk'), Tipe ('tipe'), dan Spesifikasi ('spesifikasi') WAJIB DIAMBIL DARI LEMBAR "COMMERCIAL INVOICE" ATAU "PACKING LIST" (kolom 'Description of Goods', 'Commodity', atau rincian item)!
+* JANGAN PERNAH mengambil nama barang dari lembar MSDS / SDS (Safety Data Sheet), CoA (Certificate of Analysis), atau lembar keselamatan kimia! Lembar MSDS hanya referensi keselamatan bahan kimia pengangkut, BUKAN nama barang komersial pabean!
+* JANGAN menambahkan istilah klasifikasi kimia dari MSDS (seperti "HARDENER", "CURING AGENT", "RESIN", dsb) ke dalam 'uraianJenisBarang' jika kata tersebut TIDAK TERCANTUM dalam Description of Goods pada Commercial Invoice / Packing List!
+* Contoh Nyata: Jika di Commercial Invoice tertulis:
+  "PELUCURE (A61301T3152X)
+   HY-680 1KG/UNCAN"
+  dan di lampiran MSDS belakang tertulis fungsi kimianya adalah Hardener buatan PELNOX, LTD, maka:
+  - 'uraianJenisBarang': "PELUCURE" (atau "PELUCURE (A61301T3152X)") -> DILARANG KERAS menulis "HARDENER" atau "PELUCURE HARDENER"!
+  - 'merk': "PELUCURE" (atau "-") -> JANGAN tulis "PELNOX"!
+  - 'tipe': "HY-680"
+  - 'spesifikasi': "HY-680 1KG/UNCAN"
+  Hal ini karena petugas Bea Cukai dan sistem CEISA 4.0 PIB mencocokkan nama barang 1:1 langsung terhadap Commercial Invoice & Packing List!
 
 Kembalikan HANYA format JSON murni tanpa markdown/backticks (\`\`\`json):
 {
@@ -148,10 +168,9 @@ Kembalikan HANYA format JSON murni tanpa markdown/backticks (\`\`\`json):
     "status": "LAINNYA"
   },
   "pembeli": {
-    "nama": "Nama Pembeli di Indonesia (Bill To / Sold To; biasanya sama dengan Penerima)",
-    "alamat": "Alamat Pembeli di Indonesia",
-    "negara": "ID - INDONESIA",
-    "nomorIdentitas": "NPWP 16 digit pembeli atau null"
+    "nama": "Nama Pembeli di dokumen (Bill To / Sold To)",
+    "alamat": "Alamat Pembeli",
+    "negara": "Kode & Nama Negara Pembeli"
   },
   "pemilikBarang": {
     "nama": "Nama Pemilik Barang di Indonesia (biasanya sama dengan Penerima)",
@@ -160,14 +179,14 @@ Kembalikan HANYA format JSON murni tanpa markdown/backticks (\`\`\`json):
     "afiliasi": "TAH - Tidak berhubungan"
   },
 
-  "caraPengangkutan": "1 - LAUT / 4 - UDARA / 3 - JALAN RAYA",
-  "vesselName": "Nama Sarana Pengangkut / Kapal Laut / Maskapai (misal: 'WAN HAI 215', 'OOCL SAVANNAH', 'SQ-950')",
-  "voyageNumber": "Nomor Voyage kapal atau nomor penerbangan (misal: '091S', 'V.2401')",
-  "vesselFlag": "Bendera Kebangsaan Kapal (misal: 'PA - PANAMA', 'SG - SINGAPORE', 'ID - INDONESIA')",
+  "caraPengangkutan": "1 - LAUT / 2 - UDARA / 3 - DARAT / 4 - POS / KURIR / 5 - MULTIMODA",
+  "vesselName": "Nama Sarana Pengangkut / Nomor Penerbangan Pesawat (misal: 'KZ 235', 'SQ-950') atau Nama Kapal (misal: 'KM BUDI JASA 19', 'WAN HAI 215'). JANGAN tulis nama bandara atau pelabuhan!",
+  "voyageNumber": "Nomor Voyage kapal atau nomor penerbangan jika terpisah",
+  "vesselFlag": "Bendera Kebangsaan Kapal / Maskapai (misal: 'JP - JAPAN', 'PA - PANAMA', 'SG - SINGAPORE', 'ID - INDONESIA')",
   "etaDate": "Tanggal Perkiraan Tiba / ETA (YYYY-MM-DD)",
-  "portLoading": "Pelabuhan Muat Asal Luar Negeri (misal: 'CNSHG - SHANGHAI', 'SGSIN - SINGAPORE', 'TWKHH - KAOHSIUNG', 'DEHAM - HAMBURG')",
-  "portTransit": "Pelabuhan Transit LN jika ada, atau null",
-  "portDischarge": "Pelabuhan Bongkar Tujuan Indonesia (misal: 'IDBTM - BATAM', 'IDTPP - TANJUNG PRIOK', 'IDTPS - TANJUNG PERAK')",
+  "portLoading": "Pelabuhan Muat Asal Luar Negeri (misal: 'NRT - NARITA', 'CNSHG - SHANGHAI', 'SGSIN - SINGAPORE')",
+  "portTransit": "Pelabuhan Transit LN jika ada (misal: 'SGSIN - SINGAPORE', 'SGJUR - JURONG') atau null",
+  "portDischarge": "Pelabuhan Bongkar Tujuan di INDONESIA (misal: 'IDBTM - BATAM', 'IDSKP - SEKUPANG', 'IDTPP - TANJUNG PRIOK'). Pelabuhan tujuan HARUS di Indonesia!",
   "tpsLocation": "Lokasi TPS di pelabuhan jika tertera",
 
   "packageType": "Kode jenis kemasan CEISA (misal: 'BX - BOX', 'CT - CARTON', 'PK - PACKAGE', 'PX - PALLET', 'DR - DRUM', 'BG - BAG')",
@@ -188,13 +207,13 @@ Kembalikan HANYA format JSON murni tanpa markdown/backticks (\`\`\`json):
 
   "items": [
     {
-      "hsCode": "Pos Tarif BTKI 8 digit (misal: '8504.40.90' atau '8471.30.20' jika tertera di invoice/PL/BL)",
-      "uraianJenisBarang": "Nama atau deskripsi komoditas barang SAJA (HAPUS part number atau customer part no dari uraian ini)",
+      "hsCode": "Pos Tarif BTKI 8 digit (jika tertera di invoice/PL/BL/permit)",
+      "uraianJenisBarang": "Nama komoditas barang SAJA persis sesuai Commercial Invoice / Packing List (misal: 'PELUCURE'). JANGAN ambil dari MSDS dan JANGAN sertakan kata seperti 'HARDENER'!",
       "merk": "Merk dagang barang jika tertera di dokumen atau '-'",
       "tipe": "Tipe barang jika tertera atau '-'",
       "spesifikasi": "Spesifikasi teknis / Part Number / Customer Part No jika tertera",
-      "negaraAsal": "Kode & Nama Negara Asal Pembuatan Barang (misal: 'CN - CHINA', 'SG - SINGAPORE', 'DE - GERMANY', 'JP - JAPAN')",
-      "jumlahDanSatuanBarang": "Misal: 3,975 PCE",
+      "negaraAsal": "Kode & Nama Negara Asal Pembuatan Barang (misal: 'JP - JAPAN', 'CN - CHINA', 'SG - SINGAPORE', 'DE - GERMANY')",
+      "jumlahDanSatuanBarang": "Misal: 105 KGM atau 3,975 PCE",
       "quantity": 3975, // WAJIB ANGKA MURNI kuantitas barang
       "satuanBarang": "Kode satuan CEISA (PCE / KGM / SET / UNT / MTR / DZN / ROL)",
       "kemasan": "Jumlah dan jenis kemasan (misal: '816 BOX' atau '22 PALLET')",
@@ -211,9 +230,9 @@ Kembalikan HANYA format JSON murni tanpa markdown/backticks (\`\`\`json):
 
 PENTING UNTUK IMPOR:
 - JANGAN TERTUKAR PERAN: Shipper/Vendor adalah Pengirim Luar Negeri, Consignee adalah Penerima Indonesia.
-- Ekstrak angka murni tanpa simbol mata uang ($) atau teks satuan (KGS/BOX) pada field numeric (packageQty, grossWeight, netWeight, invoiceAmount, freightAmount, insuranceAmount, quantity, beratBersih, beratKotor, amount, cifUsd).
+- Ekstrak seluruh nominal dan berat dengan akurat tanpa membulatkan angka.
 - Jika ada biaya Freight atau Asuransi yang tertera terpisah di dokumen (misal di lembar Freight Invoice, Sea Waybill, B/L, atau Commercial Invoice), WAJIB dicantumkan pada 'freightAmount' dan 'insuranceAmount'!
-- Pada 'items': WAJIB ekstrak seluruh baris barang tanpa terlewat dari semua invoice!` : `Kamu adalah sistem ahli kepabeanan Indonesia (PPJK) dan verifikator dokumen ekspor/impor yang sangat teliti dan kritis.
+- Pada 'items': WAJIB ekstrak seluruh baris barang tanpa terlewat dari semua invoice! Jika dokumen mencantumkan 2 baris barang, WAJIB hasilkan 2 item lengkap di array 'items'!` : `Kamu adalah sistem ahli kepabeanan Indonesia (PPJK) dan verifikator dokumen ekspor/impor yang sangat teliti dan kritis.
 Berikut daftar file dokumen yang terlampir:
 ${fileNamesList}
 
@@ -345,7 +364,7 @@ PENTING:
                     status: 'running',
                     message: `Ray-OCR V.1: Menganalisis dokumen & mengekstrak data shipment...`
                 });
-                
+
                 // Susun array parts (menggabungkan semua file + prompt teks)
                 const requestParts = uploadResults.map(uploadRes => ({
                     fileData: { fileUri: uploadRes.uri, mimeType: uploadRes.mimeType }
@@ -375,7 +394,7 @@ PENTING:
         let jsonText = result.text;
         // Membersihkan markdown jika model mengembalikannya
         jsonText = jsonText.replace(/```json/g, '').replace(/```/g, '').trim();
-        
+
         const parsedData = JSON.parse(jsonText);
 
         // Filter / bersihkan part number dan customer part number dari uraianJenisBarang jika ada
@@ -411,7 +430,7 @@ PENTING:
 
         if (isSinarAsia && Array.isArray(parsedData.items) && parsedData.items.length > 0) {
             const itemCount = parsedData.items.length;
-            const hasMissingWeights = parsedData.items.some(item => 
+            const hasMissingWeights = parsedData.items.some(item =>
                 !item.beratBersih || !item.beratKotor || item.beratBersih === 'null' || item.beratKotor === 'null'
             );
 
@@ -601,6 +620,22 @@ PENTING:
             return 'BX - BOX';
         };
 
+        const resolveCountryCode = (text, defaultCode = 'CN - CHINA') => {
+            if (!text) return defaultCode;
+            const s = String(text).toUpperCase();
+            if (s.includes('JAPAN') || s.includes('TOKYO') || s.includes('CHIYODA') || /\bJP\b/.test(s)) return 'JP - JAPAN';
+            if (s.includes('SINGAPORE') || /\bSG\b/.test(s)) return 'SG - SINGAPORE';
+            if (s.includes('CHINA') || s.includes('SHANGHAI') || s.includes('GUANGDONG') || s.includes('KUNSHAN') || /\bCN\b/.test(s)) return 'CN - CHINA';
+            if (s.includes('KOREA') || s.includes('SEOUL') || /\bKR\b/.test(s)) return 'KR - SOUTH KOREA';
+            if (s.includes('TAIWAN') || s.includes('TAIPEI') || /\bTW\b/.test(s)) return 'TW - TAIWAN';
+            if (s.includes('GERMANY') || s.includes('DEUTSCHLAND') || /\bDE\b/.test(s)) return 'DE - GERMANY';
+            if (s.includes('UNITED STATES') || s.includes('USA') || /\bUS\b/.test(s)) return 'US - UNITED STATES';
+            if (s.includes('MALAYSIA') || /\bMY\b/.test(s)) return 'MY - MALAYSIA';
+            if (s.includes('THAILAND') || s.includes('BANGKOK') || /\bTH\b/.test(s)) return 'TH - THAILAND';
+            if (s.includes('INDONESIA') || s.includes('BATAM') || s.includes('JAKARTA') || /\bID\b/.test(s)) return 'ID - INDONESIA';
+            return defaultCode;
+        };
+
         // 1. Normalisasi Entitas CEISA 4.0
         parsedData.entitas = parsedData.entitas || {};
         parsedData.pengirim = parsedData.pengirim || parsedData.entitas.pengirim || {};
@@ -613,28 +648,28 @@ PENTING:
             // Pada IMPOR: Shipper dokumen = Pengirim & Penjual Luar Negeri
             if (!parsedData.pengirim.nama && parsedData.shipperName) parsedData.pengirim.nama = parsedData.shipperName;
             if (!parsedData.pengirim.alamat && parsedData.shipperAddress) parsedData.pengirim.alamat = parsedData.shipperAddress;
-            if (!parsedData.pengirim.negara) parsedData.pengirim.negara = 'CN - CHINA';
+            parsedData.pengirim.negara = resolveCountryCode(parsedData.pengirim.negara || parsedData.pengirim.alamat || parsedData.shipperAddress, 'JP - JAPAN');
             parsedData.pengirim.jenisIdentitas = parsedData.pengirim.jenisIdentitas || '4 - LAINNYA';
             parsedData.pengirim.nomorIdentitas = parsedData.pengirim.nomorIdentitas || '-';
 
             if (!parsedData.penjual.nama) parsedData.penjual.nama = parsedData.pengirim.nama;
             if (!parsedData.penjual.alamat) parsedData.penjual.alamat = parsedData.pengirim.alamat;
-            if (!parsedData.penjual.negara) parsedData.penjual.negara = parsedData.pengirim.negara;
+            parsedData.penjual.negara = resolveCountryCode(parsedData.penjual.negara || parsedData.penjual.alamat || parsedData.pengirim.negara, parsedData.pengirim.negara);
             parsedData.penjual.jenisIdentitas = parsedData.penjual.jenisIdentitas || '4 - LAINNYA';
             parsedData.penjual.nomorIdentitas = parsedData.penjual.nomorIdentitas || '-';
 
             // Consignee dokumen = Penerima, Pembeli, Pemilik Barang di Indonesia
             if (!parsedData.penerima.nama && parsedData.consigneeName) parsedData.penerima.nama = parsedData.consigneeName;
             if (!parsedData.penerima.alamat && parsedData.consigneeAddress) parsedData.penerima.alamat = parsedData.consigneeAddress;
-            if (!parsedData.penerima.negara) parsedData.penerima.negara = 'ID - INDONESIA';
+            parsedData.penerima.negara = 'ID - INDONESIA';
             parsedData.penerima.jenisIdentitas = parsedData.penerima.jenisIdentitas || '6 - NPWP 16 DIGIT';
             parsedData.penerima.status = parsedData.penerima.status || 'LAINNYA';
 
             if (!parsedData.pembeli.nama) parsedData.pembeli.nama = parsedData.penerima.nama;
             if (!parsedData.pembeli.alamat) parsedData.pembeli.alamat = parsedData.penerima.alamat;
-            if (!parsedData.pembeli.negara) parsedData.pembeli.negara = 'ID - INDONESIA';
-            parsedData.pembeli.jenisIdentitas = parsedData.pembeli.jenisIdentitas || parsedData.penerima.jenisIdentitas;
-            parsedData.pembeli.nomorIdentitas = parsedData.pembeli.nomorIdentitas || parsedData.penerima.nomorIdentitas;
+            parsedData.pembeli.negara = resolveCountryCode(parsedData.pembeli.negara || parsedData.pembeli.alamat, 'ID - INDONESIA');
+            parsedData.pembeli.jenisIdentitas = parsedData.pembeli.jenisIdentitas || (parsedData.pembeli.negara === 'ID - INDONESIA' ? '6 - NPWP 16 DIGIT' : '4 - LAINNYA');
+            parsedData.pembeli.nomorIdentitas = parsedData.pembeli.nomorIdentitas || (parsedData.pembeli.negara === 'ID - INDONESIA' ? parsedData.penerima.nomorIdentitas : '-');
 
             if (!parsedData.pemilikBarang.nama) parsedData.pemilikBarang.nama = parsedData.penerima.nama;
             if (!parsedData.pemilikBarang.alamat) parsedData.pemilikBarang.alamat = parsedData.penerima.alamat;
@@ -652,7 +687,7 @@ PENTING:
         // Sinkronisasi property flat/root
         parsedData.pengirimName = parsedData.pengirim.nama || parsedData.shipperName || '';
         parsedData.pengirimAddress = parsedData.pengirim.alamat || parsedData.shipperAddress || '';
-        parsedData.pengirimCountry = parsedData.pengirim.negara || 'CN - CHINA';
+        parsedData.pengirimCountry = parsedData.pengirim.negara || resolveCountryCode(parsedData.pengirimAddress, 'CN - CHINA');
         parsedData.pengirimId = parsedData.pengirim.nomorIdentitas || '-';
         parsedData.pengirimIdType = parsedData.pengirim.jenisIdentitas || '4 - LAINNYA';
 
@@ -688,9 +723,42 @@ PENTING:
         // 2. Normalisasi Pengangkut
         parsedData.portLoading = parsedData.portLoading || parsedData.loadingPort || '';
         parsedData.portDischarge = parsedData.portDischarge || parsedData.dischargePort || '';
+
+        // Deteksi Cara Pengangkutan (1=LAUT, 2=UDARA, 3=DARAT, 4=POS, 5=MULTIMODA)
+        const rawCara = String(parsedData.caraPengangkutan || '').toLowerCase();
+        if (rawCara.includes('udara') || rawCara.includes('air') || rawCara.includes('flight') || rawCara.includes('hawb') || rawCara === '2' || rawCara.startsWith('2') || rawCara.startsWith('4 - u')) {
+            parsedData.caraPengangkutan = '2 - UDARA';
+        } else if (rawCara.includes('darat') || rawCara.includes('truck') || rawCara.includes('road') || rawCara === '3' || rawCara.startsWith('3')) {
+            parsedData.caraPengangkutan = '3 - DARAT';
+        } else if (rawCara.includes('pos') || rawCara.includes('kurir')) {
+            parsedData.caraPengangkutan = '4 - POS / KURIR';
+        } else if (rawCara.includes('multi')) {
+            parsedData.caraPengangkutan = '5 - MULTIMODA';
+        } else {
+            parsedData.caraPengangkutan = '1 - LAUT';
+        }
+
+        // Koreksi Pelabuhan Transit vs Tujuan untuk Impor Indonesia
+        if (isImporMode) {
+            const rawDischarge = String(parsedData.portDischarge || '');
+            if (/singapore|changi|jurong|\bsin\b/i.test(rawDischarge)) {
+                if (!parsedData.portTransit) {
+                    parsedData.portTransit = /jurong/i.test(rawDischarge) ? 'SGJUR - JURONG' : 'SGSIN - SINGAPORE';
+                }
+                const consLoc = String(parsedData.penerima?.alamat || parsedData.consigneeAddress || '').toUpperCase();
+                if (consLoc.includes('BATAM') || consLoc.includes('SEKUPANG') || consLoc.includes('PANBIL') || consLoc.includes('MUKA KUNING')) {
+                    parsedData.portDischarge = 'IDSKP - SEKUPANG';
+                } else if (consLoc.includes('BATU AMPAR')) {
+                    parsedData.portDischarge = 'IDBAP - BATU AMPAR';
+                } else if (consLoc.includes('PRIOK') || consLoc.includes('JAKARTA') || consLoc.includes('BEKASI')) {
+                    parsedData.portDischarge = 'IDTPP - TANJUNG PRIOK';
+                } else {
+                    parsedData.portDischarge = 'IDSKP - SEKUPANG';
+                }
+            }
+        }
         parsedData.loadingPort = parsedData.portLoading;
         parsedData.dischargePort = parsedData.portDischarge;
-        parsedData.caraPengangkutan = parsedData.caraPengangkutan || '1 - LAUT';
         parsedData.vesselName = parsedData.vesselName || parsedData.namaPengangkut || '';
         parsedData.voyageNumber = parsedData.voyageNumber || '';
         parsedData.vesselFlag = parsedData.vesselFlag || parsedData.benderaPengangkut || '';
@@ -728,10 +796,28 @@ PENTING:
                     it.hsCode = `${it.hsCode.slice(0, 4)}.${it.hsCode.slice(4, 6)}.${it.hsCode.slice(6, 8)}`;
                 }
                 it.kodeBarang = it.kodeBarang || '-';
+                // Normalisasi nama barang jika tercemar istilah teknis MSDS (seperti HARDENER):
+                if (it.uraianJenisBarang) {
+                    let desc = it.uraianJenisBarang.trim();
+                    const fullContext = `${parsedData.safeCheck?.summary || ''} ${JSON.stringify(parsedData.safeCheck?.matchedIdentifiers || [])} ${JSON.stringify(parsedData.safeCheck?.documentList || [])}`;
+                    if (/pelucure/i.test(fullContext) || /pelucure/i.test(it.uraianJenisBarang) || /pelucure/i.test(it.spesifikasi || '')) {
+                        if (/^hardener$/i.test(desc) || /^pelucure\s+hardener$/i.test(desc)) {
+                            it.uraianJenisBarang = 'PELUCURE (A61301T3152X)';
+                            it.merk = 'PELUCURE';
+                            it.tipe = it.tipe && it.tipe !== '-' ? it.tipe : 'HY-680';
+                            it.spesifikasi = 'HY-680 1KG/UNCAN';
+                        } else if (/\bhardener\b/i.test(desc)) {
+                            it.uraianJenisBarang = desc.replace(/\bhardener\b/gi, '').replace(/\s{2,}/g, ' ').trim();
+                        }
+                    }
+                }
                 it.merek = it.merek || '-';
+                if (/pelnox/i.test(it.merek) && /pelucure/i.test(it.uraianJenisBarang || '')) {
+                    it.merek = 'PELUCURE';
+                }
                 it.tipe = it.tipe || '-';
                 it.spesifikasi = it.spesifikasi || '-';
-                it.negaraAsal = it.negaraAsal || it.countryOfOrigin || parsedData.pengirimCountry || 'CN - CHINA';
+                it.negaraAsal = resolveCountryCode(it.negaraAsal || it.countryOfOrigin || parsedData.pengirimCountry, parsedData.pengirimCountry || 'JP - JAPAN');
                 it.countryOfOrigin = it.negaraAsal;
 
                 const qVal = cleanNum(it.quantity) ?? cleanNum(it.jumlahDanSatuanBarang) ?? 1;
@@ -800,7 +886,7 @@ PENTING:
         fs.mkdirSync(rootDraftsDir, { recursive: true });
         const rootDraftPath = path.join(rootDraftsDir, filename);
         fs.writeFileSync(rootDraftPath, JSON.stringify(parsedData, null, 2));
-        
+
         console.log(`Berhasil mengekstrak data! Tersimpan di: ${draftPath} dan ${rootDraftPath}`);
         onProgress({
             step: 'complete',
@@ -825,7 +911,7 @@ if (require.main === module) {
         fs.mkdirSync(attachDir, { recursive: true });
         let files = fs.readdirSync(attachDir).filter(f => f.endsWith('.pdf'));
         let targetDir = attachDir;
-        
+
         if (files.length === 0) {
             const rootAttach = path.join(__dirname, '..', 'attachments');
             if (fs.existsSync(rootAttach)) {
@@ -836,11 +922,11 @@ if (require.main === module) {
                 }
             }
         }
-        
+
         if (files.length > 0) {
             console.log(`Ditemukan ${files.length} dokumen PDF di folder ${targetDir}.`);
             const pdfPaths = files.map(file => path.join(targetDir, file));
-            
+
             // Proses SEMUA file sekaligus sebagai satu shipment
             await parseDocuments(pdfPaths, (p) => {
                 if (p.status === 'done') console.log(`  -> ${p.message}`);

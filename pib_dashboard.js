@@ -424,7 +424,16 @@ function calculatePibPungutan() {
 
     // Update item total if item row exists
     const itemCif = document.getElementById('pibItemCifUsd');
-    if (itemCif) itemCif.textContent = '$ ' + formatUsd(cifValuta);
+    if (itemCif) {
+        const activeCurr = (document.getElementById('pibCurrency')?.value || 'USD').split('-')[0].trim();
+        let currPrefix = '$ ';
+        if (activeCurr === 'JPY') currPrefix = '¥ ';
+        else if (activeCurr === 'EUR') currPrefix = '€ ';
+        else if (activeCurr === 'SGD') currPrefix = 'S$ ';
+        else if (activeCurr === 'CNY') currPrefix = '¥ ';
+        else if (activeCurr === 'IDR') currPrefix = 'Rp ';
+        itemCif.textContent = currPrefix + formatUsd(cifValuta);
+    }
 }
 
 // COLLECT PIB FORM DATA
@@ -844,14 +853,84 @@ function loadPibDraftData(data, shouldSave = true) {
 
     const setVal = (id, val) => {
         const el = document.getElementById(id);
-        if (el && val !== undefined && val !== null) {
-            if (el.type === 'number') {
-                const clean = String(val).replace(/,/g, '').replace(/[^0-9.-]/g, '');
-                el.value = clean || '';
-            } else {
-                el.value = String(val);
-            }
+        if (!el || val === undefined || val === null) return;
+
+        if (el.type === 'number') {
+            const clean = String(val).replace(/,/g, '').replace(/[^0-9.-]/g, '');
+            el.value = clean || '';
+            return;
         }
+
+        const strVal = String(val);
+        if (el.tagName === 'SELECT') {
+            const selectVal = strVal.trim();
+            // 1. Exact match
+            let matched = false;
+            for (let i = 0; i < el.options.length; i++) {
+                const opt = el.options[i];
+                if (opt.value.toLowerCase() === selectVal.toLowerCase() || opt.text.toLowerCase() === selectVal.toLowerCase()) {
+                    el.selectedIndex = i;
+                    matched = true;
+                    break;
+                }
+            }
+            // 2. Prefix match (e.g. "JPY" matches "JPY - YEN", "FCA" matches "FCA - FREE CARRIER", "JP" matches "JP - JAPAN")
+            if (!matched) {
+                const upperVal = selectVal.toUpperCase();
+                for (let i = 0; i < el.options.length; i++) {
+                    const opt = el.options[i];
+                    const optUpper = opt.value.toUpperCase();
+                    if (optUpper.startsWith(upperVal + ' -') || optUpper.startsWith(upperVal + '-') || optUpper === upperVal) {
+                        el.selectedIndex = i;
+                        matched = true;
+                        break;
+                    }
+                }
+            }
+            // 3. Special handling for Cara Pengangkutan CEISA PIB: "2 - UDARA", "1 - LAUT", "3 - DARAT"
+            if (!matched && /udara|air/i.test(selectVal)) {
+                for (let i = 0; i < el.options.length; i++) {
+                    if (/udara/i.test(el.options[i].value)) {
+                        el.selectedIndex = i;
+                        matched = true;
+                        break;
+                    }
+                }
+            }
+            if (!matched && /laut|sea/i.test(selectVal)) {
+                for (let i = 0; i < el.options.length; i++) {
+                    if (/laut/i.test(el.options[i].value)) {
+                        el.selectedIndex = i;
+                        matched = true;
+                        break;
+                    }
+                }
+            }
+            // 4. Substring/fuzzy match
+            if (!matched) {
+                const upperVal = selectVal.toUpperCase();
+                for (let i = 0; i < el.options.length; i++) {
+                    const opt = el.options[i];
+                    const optUpper = opt.value.toUpperCase();
+                    if (optUpper.includes(upperVal) || upperVal.includes(optUpper)) {
+                        el.selectedIndex = i;
+                        matched = true;
+                        break;
+                    }
+                }
+            }
+            // 5. If not matched, dynamically create option so no value is lost
+            if (!matched && selectVal !== '' && selectVal !== '-') {
+                const newOpt = document.createElement('option');
+                newOpt.value = selectVal;
+                newOpt.textContent = selectVal;
+                el.appendChild(newOpt);
+                el.value = selectVal;
+            }
+            return;
+        }
+
+        el.value = strVal;
     };
 
     const ent = (data && data.entitas) || {};
@@ -1063,17 +1142,55 @@ function loadPibDraftData(data, shouldSave = true) {
     if (data.tpsLocation) setVal('pibTpsLocation', data.tpsLocation);
     if (data.lokasiPemeriksaan) setVal('pibLokasiPemeriksaan', data.lokasiPemeriksaan);
 
-    // Kemasan & Peti Kemas (1:1 CEISA 4.0 Portal)
-    if (data.packageType) setVal('pibPackageType', data.packageType);
-    if (data.packageQty !== undefined) {
-        setVal('pibPackageQty', data.packageQty);
-    } else if (data.totalKemasan) {
-        const m = String(data.totalKemasan).match(/(\d+[\d.,]*)/);
-        if (m) setVal('pibPackageQty', parseFloat(m[1].replace(/,/g, '')));
+function detectPibPackageType(str) {
+    if (!str) return 'PK - Package';
+    const s = String(str).toLowerCase();
+    if (s.includes('ctn') || s.includes('carton') || /\bct\b/.test(s)) return 'CT - CARTON';
+    if (s.includes('box') || /\bbx\b/.test(s)) return 'BX - BOX';
+    if (s.includes('pallet') || /\bpx\b/.test(s)) return 'PX - PALLET';
+    if (s.includes('bag') || /\bbg\b/.test(s)) return 'BG - BAG';
+    if (s.includes('drum') || /\bdr\b/.test(s)) return 'DR - DRUM';
+    if (s.includes('case') || /\bcs\b/.test(s)) return 'CS - CASE';
+    return 'PK - Package';
+}
+
+// Kemasan & Peti Kemas (1:1 CEISA 4.0 Portal)
+    const pkgQty = data.packageQty !== undefined ? data.packageQty : (data.totalKemasan ? (parseFloat(String(data.totalKemasan).match(/(\d+[\d.,]*)/)?.[1]?.replace(/,/g, '')) || 1) : 1);
+    const pkgType = data.packageType || (data.totalKemasan ? detectPibPackageType(data.totalKemasan) : 'PK - Package');
+
+    setVal('pibPackageType', pkgType);
+    setVal('pibPackageQty', pkgQty);
+
+    if (data.containerNumber && data.containerNumber !== '-' && data.containerNumber !== 'null') {
+        setVal('pibContainerNumber', data.containerNumber);
+        setVal('pibContainerSize', data.containerSize || '40');
+        setVal('pibContainerType', data.containerType || 'LCL');
+        window._pibPetiKemasList = [{
+            seri: 1,
+            nomor: data.containerNumber,
+            ukuran: data.containerSize || '40',
+            jenisMuatan: data.containerType || 'LCL',
+            tipe: 'General Cargo'
+        }];
+    } else {
+        setVal('pibContainerNumber', '');
+        setVal('pibContainerSize', '');
+        setVal('pibContainerType', '');
+        window._pibPetiKemasList = [];
     }
-    if (data.containerNumber) setVal('pibContainerNumber', data.containerNumber);
-    if (data.containerSize) setVal('pibContainerSize', data.containerSize);
-    if (data.containerType) setVal('pibContainerType', data.containerType);
+
+    if (Array.isArray(data.kemasan) && data.kemasan.length > 0) {
+        window._pibKemasanList = [...data.kemasan];
+    } else if (Array.isArray(data.packages) && data.packages.length > 0) {
+        window._pibKemasanList = [...data.packages];
+    } else {
+        window._pibKemasanList = [{
+            seri: 1,
+            jumlah: pkgQty,
+            jenis: pkgType,
+            merek: data.packageBrand || '-'
+        }];
+    }
     renderPibKemasanTable(data);
     renderPibPetiKemasTable(data);
 
@@ -1481,7 +1598,19 @@ function renderPibSummaryTable(filterText = '') {
             return;
         }
 
-        const country = (item.countryOfOrigin || item.negara || 'CN').slice(0, 2);
+        const activeCurr = (document.getElementById('pibCurrency')?.value || 'USD').split('-')[0].trim();
+        let currPrefix = '$ ';
+        if (activeCurr === 'JPY') currPrefix = '¥ ';
+        else if (activeCurr === 'EUR') currPrefix = '€ ';
+        else if (activeCurr === 'SGD') currPrefix = 'S$ ';
+        else if (activeCurr === 'CNY') currPrefix = '¥ ';
+        else if (activeCurr === 'IDR') currPrefix = 'Rp ';
+        else if (activeCurr) currPrefix = `${activeCurr} `;
+
+        let country = (item.countryOfOrigin || item.negaraAsal || item.negara || '').slice(0, 2).toUpperCase();
+        if (!country || country === 'NU' || country === '-') {
+            country = (document.getElementById('pibPengirimCountry')?.value || 'JP').slice(0, 2).toUpperCase();
+        }
         const qtyInfo = parsePibQtyUnit(item.jumlahDanSatuanBarang || item.quantity, item.packageUnit || item.satuanBarang);
         const amtVal = formatPibAmount(item.amount || item.cifUsd || 0);
         const tarifBm = item.tariffBm !== undefined ? item.tariffBm : 5.0;
@@ -1499,7 +1628,7 @@ function renderPibSummaryTable(filterText = '') {
             <td style="font-size: 12px; max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapePibHtml(desc)}">${escapePibHtml(desc)}</td>
             <td style="text-align: center; font-size: 11.5px; font-weight: 600;">${escapePibHtml(country)}</td>
             <td style="text-align: right; font-family: var(--font-mono); font-size: 11.5px;">${escapePibHtml(qtyInfo.qty)} ${escapePibHtml(qtyInfo.unit)}</td>
-            <td style="text-align: right; font-family: var(--font-mono); font-size: 11.5px; font-weight: 600;">$${escapePibHtml(amtVal)}</td>
+            <td style="text-align: right; font-family: var(--font-mono); font-size: 11.5px; font-weight: 600;">${escapePibHtml(currPrefix)}${escapePibHtml(amtVal)}</td>
             <td style="text-align: center; font-size: 11.5px;">${tarifBm}%</td>
             <td style="text-align: center; white-space: nowrap;">
                 <button type="button" class="btn btn-ceisa-sub btn-xs btn-open-pib-item" data-idx="${idx}">Ubah</button>
@@ -1995,14 +2124,23 @@ function renderPibKemasanTable(data = {}) {
         window._pibKemasanList = [...data.kemasan];
     } else if (Array.isArray(data.packages) && data.packages.length > 0) {
         window._pibKemasanList = [...data.packages];
-    } else if (!window._pibKemasanList || window._pibKemasanList.length === 0) {
-        const q = data.packageQty || parseFloat(document.getElementById('pibPackageQty')?.value) || 4;
-        const t = data.packageType || document.getElementById('pibPackageType')?.value || 'PK - Package';
+    } else if (data.packageQty !== undefined || data.packageType || data.totalKemasan) {
+        const q = data.packageQty !== undefined ? data.packageQty : (data.totalKemasan ? (parseFloat(String(data.totalKemasan).match(/(\d+[\d.,]*)/)?.[1]?.replace(/,/g, '')) || 1) : 1);
+        const t = data.packageType || (data.totalKemasan ? detectPibPackageType(data.totalKemasan) : 'PK - Package');
         window._pibKemasanList = [{
             seri: 1,
             jumlah: q,
             jenis: t,
             merek: data.packageBrand || '-'
+        }];
+    } else if (!window._pibKemasanList || window._pibKemasanList.length === 0) {
+        const q = parseFloat(document.getElementById('pibPackageQty')?.value) || 1;
+        const t = document.getElementById('pibPackageType')?.value || 'PK - Package';
+        window._pibKemasanList = [{
+            seri: 1,
+            jumlah: q,
+            jenis: t,
+            merek: '-'
         }];
     }
 
@@ -2077,7 +2215,7 @@ function renderPibPetiKemasTable(data = {}) {
         window._pibPetiKemasList = [...data.petiKemas];
     } else if (Array.isArray(data.containers) && data.containers.length > 0) {
         window._pibPetiKemasList = [...data.containers];
-    } else if (data.containerNumber && data.containerNumber !== '-') {
+    } else if (data.containerNumber && data.containerNumber !== '-' && data.containerNumber !== 'null') {
         window._pibPetiKemasList = [{
             seri: 1,
             nomor: data.containerNumber,
@@ -2085,6 +2223,8 @@ function renderPibPetiKemasTable(data = {}) {
             jenisMuatan: data.containerType || 'FCL',
             tipe: 'General Cargo'
         }];
+    } else if (data.containerNumber === null || data.containerNumber === '' || data.containerNumber === '-' || data.containerNumber === 'null') {
+        window._pibPetiKemasList = [];
     }
 
     tbody.innerHTML = '';

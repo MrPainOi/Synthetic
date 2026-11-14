@@ -1,0 +1,37 @@
+{
+  "name": "CEISA PrintHub & Share",
+  "short_name": "PrintShare",
+  "description": "Forward & Cetak Dokumen Langsung via Wi-Fi",
+  "start_url": "/print_hub.html",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0284c7",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "share_target": {
+    "action": "/mobile-share",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "share_title",
+      "text": "share_text",
+      "files": [
+        {
+          "name": "share_file",
+          "accept": ["application/pdf", "image/*", "*/*"]
+        }
+      ]
+    }
+  }
+}
+
