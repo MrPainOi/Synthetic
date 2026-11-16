@@ -87,14 +87,16 @@ TUGAS UTAMA:
    - Pembeli / Buyer: Pihak pembeli di dokumen (tertera pada "Sold to" atau "Bill to" di invoice; jika Sold To perusahaan luar negeri/trader seperti Singapura, catat nama dan negara aslinya).
    - Pemilik Barang: Pihak pemilik barang di Indonesia (biasanya sama dengan Penerima).
 
-PENTING - ATURAN MULTI-HALAMAN & MULTI-INVOICE:
+PENTING - ATURAN MULTI-HALAMAN & MULTI-INVOICE & DOKUMEN SHIPMENT:
 * WAJIB periksa SETIAP HALAMAN dokumen dari awal sampai akhir secara seksama!
-* Pengiriman impor seringkali memuat lembar Delivery Order / DG Local Export Order / Delivery Instruction di halaman awal, lalu Air Waybill, Invoice, Packing List, Cargo Clearance Permit, hingga MSDS.
+* Pengiriman impor seringkali memuat lembar Air Waybill / Bill of Lading, Cargo Clearance Permit, Commercial Invoice, Packing List, Delivery Order / DG Order, Certificate of Origin, hingga MSDS.
+* Seringkali dokumen pengiriman mencantumkan LEBIH DARI SATU INVOICE dalam satu shipment (misal Commercial Invoice utama, invoice sample product, store-in, FOC, atau biaya terpisah). SEMUA nomor invoice WAJIB DIDETEKSI dan dicantumkan pada field 'invoiceNumber' (dipisahkan koma) dan di array 'invoices'!
 * JANGAN PERNAH menyaring, mengabaikan, atau memotong baris barang!
 * Pada 'items': WAJIB ekstrak SELURUH baris barang dari SEMUA halaman/invoice tanpa terlewat! Jika dokumen memiliki 2 atau lebih barang, WAJIB ekstrak semuanya lengkap satu per satu!
+* Ekstrak informasi penting secara LENGKAP persis seperti teks aslinya, jangan bulatkan angka, jangan hilangkan koma, titik, atau detail apapun. Jika tidak ditemukan, isi null atau '-' sesuai petunjuk.
 
-PENTING - ATURAN SUMBER UTAMA NAMA & URAIAN BARANG (DOKUMEN INVOICE & PACKING LIST):
-* Sumber utama nama barang ('uraianJenisBarang'), Merek ('merk'), Tipe ('tipe'), dan Spesifikasi ('spesifikasi') WAJIB DIAMBIL DARI LEMBAR "COMMERCIAL INVOICE" ATAU "PACKING LIST" (kolom 'Description of Goods', 'Commodity', atau rincian item)!
+PENTING - ATURAN SUMBER UTAMA NAMA & RINCIAN BARANG:
+* Sumber utama nama barang ('uraianJenisBarang'), Kode/Part Number ('kodeBarang'), Merek ('merek'), Tipe ('tipe'), dan Spesifikasi ('spesifikasi') WAJIB DIAMBIL DARI LEMBAR "COMMERCIAL INVOICE" ATAU "PACKING LIST" (kolom 'Description of Goods', 'Commodity', 'Part No', atau rincian item)!
 * JANGAN PERNAH mengambil nama barang dari lembar MSDS / SDS (Safety Data Sheet), CoA (Certificate of Analysis), atau lembar keselamatan kimia! Lembar MSDS hanya referensi keselamatan bahan kimia pengangkut, BUKAN nama barang komersial pabean!
 * JANGAN menambahkan istilah klasifikasi kimia dari MSDS (seperti "HARDENER", "CURING AGENT", "RESIN", dsb) ke dalam 'uraianJenisBarang' jika kata tersebut TIDAK TERCANTUM dalam Description of Goods pada Commercial Invoice / Packing List!
 * Contoh Nyata: Jika di Commercial Invoice tertulis:
@@ -102,10 +104,43 @@ PENTING - ATURAN SUMBER UTAMA NAMA & URAIAN BARANG (DOKUMEN INVOICE & PACKING LI
    HY-680 1KG/UNCAN"
   dan di lampiran MSDS belakang tertulis fungsi kimianya adalah Hardener buatan PELNOX, LTD, maka:
   - 'uraianJenisBarang': "PELUCURE" (atau "PELUCURE (A61301T3152X)") -> DILARANG KERAS menulis "HARDENER" atau "PELUCURE HARDENER"!
-  - 'merk': "PELUCURE" (atau "-") -> JANGAN tulis "PELNOX"!
+  - 'kodeBarang': "A61301T3152X" (atau part number tertera)
+  - 'merek': "PELUCURE" (atau "-") -> JANGAN tulis "PELNOX"!
   - 'tipe': "HY-680"
   - 'spesifikasi': "HY-680 1KG/UNCAN"
   Hal ini karena petugas Bea Cukai dan sistem CEISA 4.0 PIB mencocokkan nama barang 1:1 langsung terhadap Commercial Invoice & Packing List!
+
+PENTING - KELENGKAPAN NILAI / VALUE DI KOLOM & DETAIL BARANG IMPOR (WAJIB DIISI LENGKAP):
+Untuk SETIAP baris barang pada array 'items', WAJIB mengisi SELURUH field berikut secara rinci:
+- 'hsCode': Pos Tarif BTKI 8 digit (misal: '8538.90.19' atau '2914.12.00')
+- 'kodeBarang': Kode barang / Part Number / Item Code jika tertera, atau '-'
+- 'uraianJenisBarang': Nama komoditas barang SAJA persis sesuai Commercial Invoice / Packing List
+- 'merek': Merk dagang barang (misal: 'PELUCURE', 'VALEO', 'MITSUBISHI') atau '-'
+- 'tipe': Tipe model barang jika tertera atau '-'
+- 'spesifikasi': Spesifikasi teknis, part number, ukuran/dimensi jika tertera atau '-'
+- 'negaraAsal': Kode 2 huruf & Nama Negara Asal Pembuatan Barang (misal: 'JP - JAPAN', 'CN - CHINA', 'SG - SINGAPORE', 'DE - GERMANY', 'US - UNITED STATES')
+- 'kondisi': Kondisi barang ('Barang Baru' atau 'Bukan Baru', default 'Barang Baru')
+- 'kategori': Kategori pabean barang (default: '4 - BAHAN BAKU', atau '1 - BARANG MODAL', '2 - BARANG KONSUMSI')
+- 'asal': Asal barang (default: '1 - SEPENUHNYA DIPEROLEH DAN/ATAU DIPRODUKSI DI LUAR DAERAH PABEAN (WHOLLY OBTAINED)')
+- 'jumlahDanSatuanBarang': String kuantitas dan satuan (misal: '3,975 PCE' atau '105 KGM')
+- 'quantity': WAJIB ANGKA MURNI kuantitas barang (misal: 3975)
+- 'satuanBarang': Kode satuan CEISA (PCE / KGM / SET / UNT / MTR / DZN / ROL / LBR / LTR)
+- 'kemasan': String jumlah dan jenis kemasan (misal: '816 BOX' atau '1 PX')
+- 'kemasanQty': WAJIB ANGKA MURNI jumlah kemasan baris barang (misal: 816)
+- 'kemasanJenis': Kode jenis kemasan CEISA (misal: 'BX - BOX', 'PK - PACKAGE', 'CT - CARTON', 'PX - PALLET')
+- 'beratBersih': WAJIB ANGKA MURNI berat bersih dalam KG
+- 'beratKotor': WAJIB ANGKA MURNI berat kotor dalam KG
+- 'volume': Volume dalam M3 jika tertera, default 0.00
+- 'amount': WAJIB ANGKA MURNI total nilai harga barang (FOB)
+- 'fob': WAJIB ANGKA MURNI nilai FOB (sama dengan amount)
+- 'biayaTambahan': Biaya tambahan / diskon baris barang (default 0.00)
+- 'hargaSatuan': WAJIB ANGKA MURNI harga satuan per unit (amount / quantity)
+- 'asuransi': Biaya asuransi baris barang jika ada (default 0.00)
+- 'cifUsd': WAJIB ANGKA MURNI nilai CIF barang (proporsional FOB + Freight + Insurance)
+- 'tarifBm': Tarif Bea Masuk (%) jika tertera atau 5.0
+- 'tarifPpn': Tarif PPN (%) default 11.0
+- 'tarifPph': Tarif PPh (%) default 2.5
+- 'lartas': 'terkena' jika barang lartas, 'tidak' jika umum
 
 Kembalikan HANYA format JSON murni tanpa markdown/backticks (\`\`\`json):
 {
@@ -207,23 +242,35 @@ Kembalikan HANYA format JSON murni tanpa markdown/backticks (\`\`\`json):
 
   "items": [
     {
-      "hsCode": "Pos Tarif BTKI 8 digit (jika tertera di invoice/PL/BL/permit)",
+      "hsCode": "Pos Tarif BTKI 8 digit (jika tertera di invoice/PL/BL/permit, misal: '8538.90.19')",
+      "kodeBarang": "Kode barang / Part Number / Item Code jika tertera di dokumen, atau '-'",
       "uraianJenisBarang": "Nama komoditas barang SAJA persis sesuai Commercial Invoice / Packing List (misal: 'PELUCURE'). JANGAN ambil dari MSDS dan JANGAN sertakan kata seperti 'HARDENER'!",
-      "merk": "Merk dagang barang jika tertera di dokumen atau '-'",
-      "tipe": "Tipe barang jika tertera atau '-'",
-      "spesifikasi": "Spesifikasi teknis / Part Number / Customer Part No jika tertera",
+      "merek": "Merk dagang barang jika tertera di dokumen (misal: 'PELUCURE') atau '-'",
+      "tipe": "Tipe model barang jika tertera atau '-'",
+      "spesifikasi": "Spesifikasi teknis / Part Number / Customer Part No jika tertera atau '-'",
       "negaraAsal": "Kode & Nama Negara Asal Pembuatan Barang (misal: 'JP - JAPAN', 'CN - CHINA', 'SG - SINGAPORE', 'DE - GERMANY')",
+      "kondisi": "Barang Baru",
+      "kategori": "4 - BAHAN BAKU",
+      "asal": "1 - SEPENUHNYA DIPEROLEH DAN/ATAU DIPRODUKSI DI LUAR DAERAH PABEAN (WHOLLY OBTAINED)",
       "jumlahDanSatuanBarang": "Misal: 105 KGM atau 3,975 PCE",
       "quantity": 3975, // WAJIB ANGKA MURNI kuantitas barang
-      "satuanBarang": "Kode satuan CEISA (PCE / KGM / SET / UNT / MTR / DZN / ROL)",
+      "satuanBarang": "Kode satuan CEISA (PCE / KGM / SET / UNT / MTR / DZN / ROL / LBR / LTR)",
       "kemasan": "Jumlah dan jenis kemasan (misal: '816 BOX' atau '22 PALLET')",
       "kemasanQty": 816, // WAJIB ANGKA MURNI jumlah kemasan baris barang
       "kemasanJenis": "BX - BOX / CT - CARTON / PK - PACKAGE / PX - PALLET",
       "beratBersih": 1500.00, // WAJIB ANGKA MURNI berat bersih dalam KG
       "beratKotor": 1650.00, // WAJIB ANGKA MURNI berat kotor dalam KG
+      "volume": 0.00, // Volume M3 jika tertera, default 0.00
       "amount": 25000.00, // WAJIB ANGKA MURNI nilai harga barang (FOB)
+      "fob": 25000.00, // WAJIB ANGKA MURNI nilai FOB (sama dengan amount)
+      "biayaTambahan": 0.00,
+      "hargaSatuan": 6.2893, // Harga per unit (amount / quantity)
+      "asuransi": 0.00,
       "cifUsd": 25775.00, // WAJIB ANGKA MURNI nilai CIF barang (proporsional FOB + Freight + Insurance)
-      "tarifBm": 5.0 // Tarif Bea Masuk (%) jika tertera atau 5.0
+      "tarifBm": 5.0, // Tarif Bea Masuk (%) jika tertera atau 5.0
+      "tarifPpn": 11.0, // Tarif PPN (%) default 11.0
+      "tarifPph": 2.5, // Tarif PPh (%) default 2.5
+      "lartas": "tidak" // 'terkena' jika barang lartas, 'tidak' jika umum
     }
   ]
 }
@@ -789,13 +836,18 @@ PENTING:
 
         // 5. Normalisasi Item/Barang
         if (Array.isArray(parsedData.items) && parsedData.items.length > 0) {
+            const exchangeRate = 16300;
+            const totalItemFob = parsedData.items.reduce((acc, it) => acc + (cleanNum(it.amount) ?? cleanNum(it.fob) ?? 0), 0);
+            const totalFreight = cleanNum(parsedData.freightAmount) ?? 0;
+            const totalInsurance = cleanNum(parsedData.insuranceAmount) ?? 0;
+
             parsedData.items.forEach((it, idx) => {
                 it.seri = idx + 1;
-                it.hsCode = String(it.hsCode || '').replace(/\D/g, '').padEnd(8, '0').slice(0, 10);
+                it.hsCode = String(it.hsCode || it.posTarif || '').replace(/\D/g, '').padEnd(8, '0').slice(0, 10);
                 if (it.hsCode.length >= 8) {
                     it.hsCode = `${it.hsCode.slice(0, 4)}.${it.hsCode.slice(4, 6)}.${it.hsCode.slice(6, 8)}`;
                 }
-                it.kodeBarang = it.kodeBarang || '-';
+                it.kodeBarang = it.kodeBarang || it.partNumber || it.partNo || it.itemCode || '-';
                 // Normalisasi nama barang jika tercemar istilah teknis MSDS (seperti HARDENER):
                 if (it.uraianJenisBarang) {
                     let desc = it.uraianJenisBarang.trim();
@@ -803,7 +855,7 @@ PENTING:
                     if (/pelucure/i.test(fullContext) || /pelucure/i.test(it.uraianJenisBarang) || /pelucure/i.test(it.spesifikasi || '')) {
                         if (/^hardener$/i.test(desc) || /^pelucure\s+hardener$/i.test(desc)) {
                             it.uraianJenisBarang = 'PELUCURE (A61301T3152X)';
-                            it.merk = 'PELUCURE';
+                            it.merek = 'PELUCURE';
                             it.tipe = it.tipe && it.tipe !== '-' ? it.tipe : 'HY-680';
                             it.spesifikasi = 'HY-680 1KG/UNCAN';
                         } else if (/\bhardener\b/i.test(desc)) {
@@ -811,14 +863,18 @@ PENTING:
                         }
                     }
                 }
-                it.merek = it.merek || '-';
+                it.merek = it.merek || it.merk || '-';
                 if (/pelnox/i.test(it.merek) && /pelucure/i.test(it.uraianJenisBarang || '')) {
                     it.merek = 'PELUCURE';
                 }
                 it.tipe = it.tipe || '-';
-                it.spesifikasi = it.spesifikasi || '-';
+                it.spesifikasi = it.spesifikasi || it.tipe || '-';
                 it.negaraAsal = resolveCountryCode(it.negaraAsal || it.countryOfOrigin || parsedData.pengirimCountry, parsedData.pengirimCountry || 'JP - JAPAN');
                 it.countryOfOrigin = it.negaraAsal;
+
+                it.kondisi = it.kondisi || 'Barang Baru';
+                it.kategori = it.kategori || '4 - BAHAN BAKU';
+                it.asal = it.asal || '1 - SEPENUHNYA DIPEROLEH DAN/ATAU DIPRODUKSI DI LUAR DAERAH PABEAN (WHOLLY OBTAINED)';
 
                 const qVal = cleanNum(it.quantity) ?? cleanNum(it.jumlahDanSatuanBarang) ?? 1;
                 it.quantity = qVal;
@@ -828,14 +884,32 @@ PENTING:
 
                 it.kemasanQty = cleanNum(it.kemasanQty) ?? cleanNum(it.kemasan) ?? 1;
                 it.kemasanJenis = it.kemasanJenis || packCode;
+                it.kemasan = it.kemasan || `${it.kemasanQty} ${it.kemasanJenis.split(' ')[0]}`;
                 it.beratBersih = cleanNum(it.beratBersih) ?? 0;
                 it.beratKotor = cleanNum(it.beratKotor) ?? 0;
+                it.volume = cleanNum(it.volume) ?? 0.00;
 
-                const itAmt = cleanNum(it.amount) ?? cleanNum(it.cifUsd) ?? 0;
+                const itAmt = cleanNum(it.amount) ?? cleanNum(it.fob) ?? cleanNum(it.cifUsd) ?? 0;
                 it.amount = itAmt;
                 it.fob = itAmt;
-                it.cifUsd = cleanNum(it.cifUsd) ?? itAmt;
+                it.amountFob = itAmt;
+                it.biayaTambahan = cleanNum(it.biayaTambahan) ?? 0.00;
+
+                // Hitung harga satuan per unit
+                it.hargaSatuan = (qVal > 0) ? parseFloat((itAmt / qVal).toFixed(4)) : itAmt;
+
+                // Proporsi freight & insurance per item
+                const prop = (totalItemFob > 0) ? (itAmt / totalItemFob) : (1 / parsedData.items.length);
+                const itFreight = cleanNum(it.freight) ?? parseFloat((totalFreight * prop).toFixed(2));
+                const itIns = cleanNum(it.asuransi) ?? parseFloat((totalInsurance * prop).toFixed(2));
+                it.asuransi = itIns;
+                it.cifUsd = cleanNum(it.cifUsd) ?? parseFloat((itAmt + itFreight + itIns).toFixed(2));
+                it.cifRupiah = Math.round(it.cifUsd * exchangeRate);
+
                 it.tarifBm = cleanNum(it.tarifBm) !== null ? cleanNum(it.tarifBm) : 5.0;
+                it.tarifPpn = cleanNum(it.tarifPpn) !== null ? cleanNum(it.tarifPpn) : 11.0;
+                it.tarifPph = cleanNum(it.tarifPph) !== null ? cleanNum(it.tarifPph) : 2.5;
+                it.lartas = it.lartas || (it.isLartas ? 'terkena' : 'tidak');
             });
         }
         if (parsedData.safeCheck) {

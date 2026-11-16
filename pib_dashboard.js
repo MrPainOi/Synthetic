@@ -25,20 +25,64 @@ function getBackendUrl(path = '') {
     return base;
 }
 
-// 9-TAB DEFINITION FOR PIB (BC 2.0)
-const PIB_TAB_ORDER = [
-    'pib-tab-header',
-    'pib-tab-entitas',
-    'pib-tab-dokumen',
-    'pib-tab-pengangkut',
-    'pib-tab-kemasan',
-    'pib-tab-transaksi',
-    'pib-tab-barang',
-    'pib-tab-pungutan',
-    'pib-tab-pernyataan'
+// 9-TAB DEFINITION FOR PIB (BC 2.0) - Matching PEB Standard
+const CANONICAL_PIB_TABS = [
+    'tab-header',
+    'tab-entitas',
+    'tab-dokumen',
+    'tab-pengangkut',
+    'tab-kemasan',
+    'tab-transaksi',
+    'tab-barang',
+    'tab-pungutan',
+    'tab-pernyataan'
 ];
 
+function normalizePibTabId(tabId) {
+    if (!tabId) return 'tab-header';
+    let clean = String(tabId).trim();
+    if (clean.startsWith('pib-tab-')) {
+        clean = clean.replace(/^pib-/, '');
+    } else if (clean.startsWith('pib-')) {
+        clean = 'tab-' + clean.replace(/^pib-/, '');
+    } else if (!clean.startsWith('tab-')) {
+        clean = 'tab-' + clean;
+    }
+    if (CANONICAL_PIB_TABS.includes(clean)) return clean;
+    if (CANONICAL_PIB_TABS.includes(tabId)) return tabId;
+    return 'tab-header';
+}
+
+const PIB_TAB_ORDER = new Proxy([...CANONICAL_PIB_TABS], {
+    get(target, prop, receiver) {
+        if (prop === 'includes') {
+            return function(val) {
+                const norm = normalizePibTabId(val);
+                return target.includes(norm) || target.includes(val);
+            };
+        }
+        if (prop === 'indexOf') {
+            return function(val) {
+                const norm = normalizePibTabId(val);
+                const idx = target.indexOf(norm);
+                return idx !== -1 ? idx : target.indexOf(val);
+            };
+        }
+        return Reflect.get(target, prop, receiver);
+    }
+});
+
 const PIB_TAB_TITLES = {
+    'tab-header': 'Header',
+    'tab-entitas': 'Entitas',
+    'tab-dokumen': 'Dokumen',
+    'tab-pengangkut': 'Pengangkut',
+    'tab-kemasan': 'Kemasan & Peti Kemas',
+    'tab-transaksi': 'Transaksi',
+    'tab-barang': 'Barang',
+    'tab-pungutan': 'Pungutan',
+    'tab-pernyataan': 'Pernyataan',
+    // Backward compatibility aliases
     'pib-tab-header': 'Header',
     'pib-tab-entitas': 'Entitas',
     'pib-tab-dokumen': 'Dokumen',
@@ -234,17 +278,43 @@ const SAMPLE_PIB_DATA = {
     // Barang
     items: [
         {
+            seri: 1,
             hsCode: "8483.40.00",
+            kodeBarang: "GB-8483-AUTO",
             uraianJenisBarang: "Gears and Gearing, Ball or Roller Screws for Industrial Automation",
             description: "Gears and Gearing, Ball or Roller Screws for Industrial Automation",
-            countryOfOrigin: "CN",
+            merek: "SHANGHAI PRECISION",
+            tipe: "GB-SERIES",
+            spesifikasi: "Ball / Roller Screws dia 32mm L=1200mm",
+            countryOfOrigin: "CN - CHINA",
+            negaraAsal: "CN - CHINA",
+            kondisi: "Barang Baru",
+            kategori: "4 - BAHAN BAKU",
+            asal: "1 - SEPENUHNYA DIPEROLEH DAN/ATAU DIPRODUKSI DI LUAR DAERAH PABEAN (WHOLLY OBTAINED)",
             jumlahDanSatuanBarang: "48 PCE",
             quantity: 48,
             packageUnit: "PCE",
+            satuanBarang: "PCE",
+            kemasan: "4 PK - PACKAGE",
+            kemasanQty: 4,
+            kemasanJenis: "PK - PACKAGE",
+            beratBersih: "1200.0000",
+            beratKotor: "1280.0000",
+            volume: "2.40",
             amount: "71,192.25",
-            cifUsd: 71192.25,
+            amountFob: "71,192.25",
+            fob: "71,192.25",
+            biayaTambahan: "0.00",
+            hargaSatuan: "1,483.1719",
+            asuransi: "0.00",
+            cifUsd: "71,192.25",
+            cifRupiah: 1160433675,
             tariffBm: 5.0,
-            facility: "MFN"
+            tarifBm: 5.0,
+            tarifPpn: 11.0,
+            tarifPph: 2.5,
+            facility: "MFN",
+            lartas: "tidak"
         }
     ],
 
@@ -257,84 +327,117 @@ const SAMPLE_PIB_DATA = {
 
 // TAB SWITCHING IN PIB MODULE
 function switchPibTab(tabId) {
-    if (!PIB_TAB_ORDER.includes(tabId)) {
-        tabId = 'pib-tab-header';
-    }
+    const canonicalId = normalizePibTabId(tabId);
+    const shortName = canonicalId.replace(/^tab-/, '');
+    const pibPrefixedId = 'pib-tab-' + shortName;
 
-    document.querySelectorAll('#module-pib .tab-content-panel').forEach(panel => {
+    document.querySelectorAll('#module-pib .tab-content-panel, .tab-content-panel').forEach(panel => {
         panel.classList.remove('active');
     });
-    document.querySelectorAll('#module-pib .ceisa-tab-btn').forEach(btn => {
+    document.querySelectorAll('#module-pib .ceisa-tab-btn, .ceisa-tabs .ceisa-tab-btn').forEach(btn => {
         btn.classList.remove('active');
     });
 
-    const targetPanel = document.getElementById(tabId);
-    if (targetPanel) targetPanel.classList.add('active');
+    // Support both 'tab-X' and 'pib-tab-X' panel IDs
+    let targetPanel = document.getElementById(canonicalId) || document.getElementById(pibPrefixedId);
+    if (!targetPanel && document.getElementById(tabId)) {
+        targetPanel = document.getElementById(tabId);
+    }
+    if (targetPanel) {
+        targetPanel.classList.add('active');
+    }
 
-    const matchingBtn = document.querySelector(`#module-pib .ceisa-tab-btn[data-pib-tab="${tabId}"]`);
+    // Support both data-tab and data-pib-tab with either format
+    const matchingBtn = document.querySelector(
+        `#module-pib .ceisa-tab-btn[data-tab="${canonicalId}"], ` +
+        `#module-pib .ceisa-tab-btn[data-tab="${pibPrefixedId}"], ` +
+        `#module-pib .ceisa-tab-btn[data-pib-tab="${canonicalId}"], ` +
+        `#module-pib .ceisa-tab-btn[data-pib-tab="${pibPrefixedId}"], ` +
+        `.ceisa-tabs .ceisa-tab-btn[data-tab="${canonicalId}"], ` +
+        `.ceisa-tabs .ceisa-tab-btn[data-tab="${pibPrefixedId}"], ` +
+        `.ceisa-tabs .ceisa-tab-btn[data-pib-tab="${canonicalId}"], ` +
+        `.ceisa-tabs .ceisa-tab-btn[data-pib-tab="${pibPrefixedId}"]`
+    );
     if (matchingBtn) {
         matchingBtn.classList.add('active');
     }
 
-    // Update Stepper Navigation Controls
-    const currentIndex = PIB_TAB_ORDER.indexOf(tabId);
-    const btnPrev = document.getElementById('btnPibTabPrev');
-    const btnNext = document.getElementById('btnPibTabNext');
-    const stepBadge = document.getElementById('pibCeisaStepBadge');
-    const stepLabel = document.getElementById('pibCeisaStepLabel');
+    // Update Stepper Navigation Controls (support btnTabPrev/btnTabNext and btnPibTabPrev/btnPibTabNext)
+    const currentIndex = PIB_TAB_ORDER.indexOf(canonicalId);
+    const prevBtns = [document.getElementById('btnTabPrev'), document.getElementById('btnPibTabPrev')].filter(Boolean);
+    const nextBtns = [document.getElementById('btnTabNext'), document.getElementById('btnPibTabNext')].filter(Boolean);
+    const stepBadges = [document.getElementById('ceisaStepBadge'), document.getElementById('pibCeisaStepBadge')].filter(Boolean);
+    const stepLabels = [document.getElementById('ceisaStepLabel'), document.getElementById('pibCeisaStepLabel')].filter(Boolean);
 
-    if (stepBadge) stepBadge.textContent = `${currentIndex + 1}/9`;
-    if (stepLabel) stepLabel.textContent = PIB_TAB_TITLES[tabId] || 'Langkah';
+    stepBadges.forEach(b => {
+        b.textContent = `Langkah ${currentIndex + 1} / ${CANONICAL_PIB_TABS.length}`;
+    });
+    const titleText = PIB_TAB_TITLES[canonicalId] || PIB_TAB_TITLES[pibPrefixedId] || canonicalId;
+    stepLabels.forEach(l => {
+        l.textContent = titleText;
+    });
 
     if (currentIndex === 0) {
-        if (btnPrev) btnPrev.style.display = 'none';
-        if (btnNext) {
-            btnNext.style.display = 'inline-flex';
-            btnNext.style.marginLeft = 'auto';
-            btnNext.innerHTML = 'Selanjutnya <span style="font-size: 14px;">&#x21BB;</span>';
-        }
-    } else if (currentIndex === PIB_TAB_ORDER.length - 1) {
-        if (btnPrev) btnPrev.style.display = 'none';
-        if (btnNext) {
-            btnNext.style.display = 'inline-flex';
-            btnNext.style.marginLeft = 'auto';
-            btnNext.innerHTML = '<span style="font-size: 14px;">&#x21BA;</span> Sebelumnya';
-        }
+        // Tab 1 (Header): Tidak ada tombol Sebelumnya, hanya tombol Selanjutnya di kanan
+        prevBtns.forEach(btn => { btn.style.display = 'none'; });
+        nextBtns.forEach(btn => {
+            btn.style.display = 'inline-flex';
+            btn.style.marginLeft = 'auto';
+            btn.innerHTML = 'Selanjutnya <span style="font-size: 14px;">&#x21BB;</span>';
+        });
+    } else if (currentIndex === CANONICAL_PIB_TABS.length - 1) {
+        // Tab terakhir (9/9 Pernyataan): tombol Sebelumnya di kiri disembunyikan, tombol kanan diubah jadi "Sebelumnya"
+        prevBtns.forEach(btn => { btn.style.display = 'none'; });
+        nextBtns.forEach(btn => {
+            btn.style.display = 'inline-flex';
+            btn.style.marginLeft = 'auto';
+            btn.innerHTML = '<span style="font-size: 14px;">&#x21BA;</span> Sebelumnya';
+        });
     } else {
-        if (btnPrev) {
-            btnPrev.style.display = 'inline-flex';
-            btnPrev.disabled = false;
-            btnPrev.innerHTML = '<span style="font-size: 14px;">&#x21BA;</span> Sebelumnya';
-        }
-        if (btnNext) {
-            btnNext.style.display = 'inline-flex';
-            btnNext.style.marginLeft = 'auto';
-            btnNext.innerHTML = 'Selanjutnya <span style="font-size: 14px;">&#x21BB;</span>';
-        }
+        // Tab 2 - 8: Tombol Sebelumnya di kiri dan Selanjutnya di kanan
+        prevBtns.forEach(btn => {
+            btn.style.display = 'inline-flex';
+            btn.disabled = false;
+            btn.innerHTML = '<span style="font-size: 14px;">&#x21BA;</span> Sebelumnya';
+        });
+        nextBtns.forEach(btn => {
+            btn.style.display = 'inline-flex';
+            btn.style.marginLeft = 'auto';
+            btn.innerHTML = 'Selanjutnya <span style="font-size: 14px;">&#x21BB;</span>';
+        });
     }
 
-    window._activePibTab = tabId;
+    window._activePibTab = canonicalId;
 
-    if (tabId === 'pib-tab-barang') {
-        showPibItemListView();
+    if (canonicalId === 'tab-barang' || canonicalId === 'pib-tab-barang') {
+        if (typeof showPibItemListView === 'function') {
+            showPibItemListView();
+        }
     }
 }
 
 function handlePibTabNext() {
-    const current = window._activePibTab || 'pib-tab-header';
+    const current = normalizePibTabId(window._activePibTab || 'tab-header');
     const currentIndex = PIB_TAB_ORDER.indexOf(current);
-    if (currentIndex === PIB_TAB_ORDER.length - 1) {
-        switchPibTab(PIB_TAB_ORDER[0]);
-    } else if (currentIndex >= 0 && currentIndex < PIB_TAB_ORDER.length - 1) {
-        switchPibTab(PIB_TAB_ORDER[currentIndex + 1]);
+    if (currentIndex === CANONICAL_PIB_TABS.length - 1) {
+        // Pada tab 9/9, tombol kanan bertindak sebagai "Sebelumnya" (1:1 CEISA 4.0 style)
+        handlePibTabPrev();
+        return;
+    }
+    if (currentIndex >= 0 && currentIndex < CANONICAL_PIB_TABS.length - 1) {
+        switchPibTab(CANONICAL_PIB_TABS[currentIndex + 1]);
+        const mainWorkspace = document.querySelector('#module-pib .main-workspace') || document.querySelector('.main-workspace');
+        if (mainWorkspace) mainWorkspace.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 }
 
 function handlePibTabPrev() {
-    const current = window._activePibTab || 'pib-tab-header';
+    const current = normalizePibTabId(window._activePibTab || 'tab-header');
     const currentIndex = PIB_TAB_ORDER.indexOf(current);
     if (currentIndex > 0) {
-        switchPibTab(PIB_TAB_ORDER[currentIndex - 1]);
+        switchPibTab(CANONICAL_PIB_TABS[currentIndex - 1]);
+        const mainWorkspace = document.querySelector('#module-pib .main-workspace') || document.querySelector('.main-workspace');
+        if (mainWorkspace) mainWorkspace.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 }
 
@@ -349,15 +452,116 @@ function formatUsd(amount) {
     return Number(amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+// HELPER TO RESOLVE FORM FIELD ELEMENTS ACROSS PREFIXED & UNPREFIXED IDS (PIB / PEB UNIFIED)
+function findPibFieldElement(id) {
+    if (!id || typeof id !== 'string') return null;
+
+    // 1. Direct match by ID
+    let el = document.getElementById(id);
+    if (el) return el;
+
+    // 2. Candidate ID generation (Prefix 'pib' <-> Unprefixed)
+    const candidates = [];
+    if (id.startsWith('pib')) {
+        const unprefixed = id.slice(3, 4).toLowerCase() + id.slice(4);
+        candidates.push(unprefixed);
+        candidates.push(id.slice(3));
+    } else {
+        const prefixed = 'pib' + id.slice(0, 1).toUpperCase() + id.slice(1);
+        candidates.push(prefixed);
+    }
+
+    // 3. Known Aliases Map for CEISA import / export parity
+    const ALIAS_MAP = {
+        'pibNoAju': ['noAju', 'nomorAju'],
+        'noAju': ['pibNoAju', 'nomorAju'],
+        'nomorAju': ['pibNoAju', 'noAju'],
+        'pibKantorPabean': ['kantorPabean', 'kantorAsal'],
+        'kantorPabean': ['pibKantorPabean', 'kantorAsal'],
+        'pibJenisPemasukan': ['jenisPemasukan', 'jenisImpor', 'jenisEkspor'],
+        'jenisPemasukan': ['pibJenisPemasukan', 'jenisImpor'],
+        'pibJenisPemberitahuan': ['jenisPemberitahuan', 'jenisProsedur'],
+        'jenisPemberitahuan': ['pibJenisPemberitahuan', 'jenisProsedur'],
+        'pibKategoriPemasukan': ['kategoriPemasukan', 'kategoriImpor', 'kategoriEkspor'],
+        'kategoriPemasukan': ['pibKategoriPemasukan', 'kategoriImpor'],
+        'pibTujuanPemasukan': ['tujuanPemasukan'],
+        'pibCaraBayar': ['caraBayar'],
+        'caraBayar': ['pibCaraBayar'],
+        'pibPengirimIdType': ['pengirimIdType', 'shipperIdType'],
+        'pibPengirimId': ['pengirimId', 'shipperId'],
+        'pibPengirimName': ['pengirimName', 'shipperName'],
+        'pibPengirimAddress': ['pengirimAddress', 'shipperAddress'],
+        'pibPengirimCountry': ['pengirimCountry', 'shipperCountry'],
+        'pibPenerimaIdType': ['penerimaIdType', 'consigneeIdType', 'importirIdType'],
+        'pibPenerimaId': ['penerimaId', 'consigneeId', 'importirId'],
+        'pibPenerimaNitku': ['penerimaNitku', 'consigneeNitku', 'importirNitku'],
+        'pibPenerimaName': ['penerimaName', 'consigneeName', 'importirName'],
+        'pibPenerimaAddress': ['penerimaAddress', 'consigneeAddress', 'importirAddress'],
+        'pibPenerimaCountry': ['penerimaCountry', 'consigneeCountry', 'importirCountry'],
+        'pibPenerimaStatus': ['penerimaStatus', 'importirStatus'],
+        'pibPenjualName': ['penjualName', 'sellerName'],
+        'pibPenjualAddress': ['penjualAddress', 'sellerAddress'],
+        'pibPenjualCountry': ['penjualCountry', 'sellerCountry'],
+        'pibGrossWeight': ['grossWeight', 'bruto'],
+        'pibNetWeight': ['netWeight', 'netto'],
+        'pibPackageQty': ['packageQty', 'jumlahKemasan'],
+        'pibPackageType': ['packageType', 'jenisKemasan'],
+        'pibCurrency': ['currency', 'valuta'],
+        'pibExchangeRate': ['exchangeRate', 'kurs'],
+        'pibIncoterm': ['incoterm', 'caraPenyerahan'],
+        'pibInvoiceAmount': ['invoiceAmount', 'nilaiFob', 'nilaiInvoice'],
+        'pibFreightAmount': ['freightAmount', 'nilaiFreight'],
+        'pibInsuranceAmount': ['insuranceAmount', 'nilaiAsuransi'],
+        'pibInsuranceType': ['insuranceType', 'jenisAsuransi'],
+        'pibVesselName': ['vesselName', 'namaSaranaPengangkut'],
+        'pibVoyageNumber': ['voyageNumber', 'nomorVoyFlight'],
+        'pibVesselFlag': ['vesselFlag', 'benderaSaranaPengangkut'],
+        'pibEtaDate': ['etaDate', 'tanggalPerkiraanTiba'],
+        'pibPortLoading': ['portLoading', 'pelabuhanMuat'],
+        'pibPortTransit': ['portTransit', 'pelabuhanTransit'],
+        'pibPortDischarge': ['portDischarge', 'pelabuhanBongkar'],
+        'pibTpsLocation': ['tpsLocation', 'tempatPenimbunan'],
+        'pibTarifBm': ['tarifBm'],
+        'pibCifValuta': ['cifValuta'],
+        'pibCifIdr': ['cifIdr', 'cifRupiah'],
+        'pibFobTransaksi': ['fobTransaksi', 'nilaiFob'],
+        'pibPungutanCifRp': ['pungutanCifRp', 'cifRupiah'],
+        'pibPungutanNilaiBm': ['pungutanNilaiBm', 'nilaiBm'],
+        'pibPungutanNilaiImpor': ['pungutanNilaiImpor', 'nilaiImpor'],
+        'pibPungutanNilaiPpn': ['pungutanNilaiPpn', 'nilaiPpn'],
+        'pibPungutanNilaiPph': ['pungutanNilaiPph', 'nilaiPph'],
+        'pibPungutanTotalBilling': ['pungutanTotalBilling', 'totalBilling'],
+        'lblPibNoAju': ['lblNoAju'],
+        'lblPibFileName': ['lblFileName'],
+        'pibSaveIndicator': ['saveIndicator']
+    };
+
+    if (ALIAS_MAP[id]) {
+        candidates.push(...ALIAS_MAP[id]);
+    }
+
+    for (const cand of candidates) {
+        el = document.getElementById(cand);
+        if (el) return el;
+    }
+
+    for (const cand of [id, ...candidates]) {
+        el = document.querySelector(`#module-pib [name="${cand}"]`) || document.querySelector(`[name="${cand}"]`);
+        if (el) return el;
+    }
+
+    return null;
+}
+
 // AUTOMATIC TARIFF & TAX CALCULATOR FOR PIB (BC 2.0)
 function calculatePibPungutan() {
-    const invoiceAmt = parseFloat(document.getElementById('pibInvoiceAmount')?.value) || 0;
-    const freightAmt = parseFloat(document.getElementById('pibFreightAmount')?.value) || 0;
-    const insuranceAmt = parseFloat(document.getElementById('pibInsuranceAmount')?.value) || 0;
-    const exchangeRate = parseFloat(document.getElementById('pibExchangeRate')?.value) || 15850;
-    const incoterm = document.getElementById('pibIncoterm')?.value || 'FOB';
-    const tarifBm = parseFloat(document.getElementById('pibTarifBm')?.value) || 0;
-    const importirStatus = document.getElementById('pibPenerimaStatus')?.value || document.getElementById('pibImportirStatus')?.value || 'API-U';
+    const invoiceAmt = parseFloat(findPibFieldElement('pibInvoiceAmount')?.value) || 0;
+    const freightAmt = parseFloat(findPibFieldElement('pibFreightAmount')?.value) || 0;
+    const insuranceAmt = parseFloat(findPibFieldElement('pibInsuranceAmount')?.value) || 0;
+    const exchangeRate = parseFloat(findPibFieldElement('pibExchangeRate')?.value) || 15850;
+    const incoterm = findPibFieldElement('pibIncoterm')?.value || 'FOB';
+    const tarifBm = parseFloat(findPibFieldElement('pibTarifBm')?.value) || 0;
+    const importirStatus = findPibFieldElement('pibPenerimaStatus')?.value || findPibFieldElement('pibImportirStatus')?.value || 'API-U';
 
     // 1. Calculate CIF in Foreign Currency
     let cifValuta = invoiceAmt;
@@ -391,22 +595,22 @@ function calculatePibPungutan() {
     const totalBilling = nilaiBm + nilaiPpn + nilaiPph;
 
     // Update UI Fields in Transaksi tab
-    const elCifValuta = document.getElementById('pibCifValuta');
+    const elCifValuta = findPibFieldElement('pibCifValuta');
     if (elCifValuta) elCifValuta.value = formatUsd(cifValuta);
 
-    const elCifIdr = document.getElementById('pibCifIdr');
+    const elCifIdr = findPibFieldElement('pibCifIdr');
     if (elCifIdr) elCifIdr.value = Number(cifIdr).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-    const elFob = document.getElementById('pibFobTransaksi');
+    const elFob = findPibFieldElement('pibFobTransaksi');
     if (elFob) elFob.value = formatUsd(invoiceAmt);
 
     // Update UI Fields in Pungutan tab
     const setElemText = (id, text) => {
-        const el = document.getElementById(id);
+        const el = findPibFieldElement(id) || document.getElementById(id);
         if (el) el.textContent = text;
     };
     const setElemVal = (id, val) => {
-        const el = document.getElementById(id);
+        const el = findPibFieldElement(id) || document.getElementById(id);
         if (el) el.value = val;
     };
 
@@ -423,9 +627,9 @@ function calculatePibPungutan() {
     setElemText('lblPibSummaryPph', formatIdr(nilaiPph));
 
     // Update item total if item row exists
-    const itemCif = document.getElementById('pibItemCifUsd');
+    const itemCif = findPibFieldElement('pibItemCifUsd');
     if (itemCif) {
-        const activeCurr = (document.getElementById('pibCurrency')?.value || 'USD').split('-')[0].trim();
+        const activeCurr = (findPibFieldElement('pibCurrency')?.value || 'USD').split('-')[0].trim();
         let currPrefix = '$ ';
         if (activeCurr === 'JPY') currPrefix = '¥ ';
         else if (activeCurr === 'EUR') currPrefix = '€ ';
@@ -439,7 +643,7 @@ function calculatePibPungutan() {
 // COLLECT PIB FORM DATA
 function collectPibFormData() {
     const getVal = (id) => {
-        const el = document.getElementById(id);
+        const el = findPibFieldElement(id);
         return el ? el.value : '';
     };
 
@@ -791,7 +995,7 @@ function saveCurrentPibDraftState() {
     try {
         const draft = collectPibFormData();
         localStorage.setItem(STORAGE_KEY_LAST_PIB_DRAFT, JSON.stringify(draft));
-        const indicator = document.getElementById('pibSaveIndicator');
+        const indicator = findPibFieldElement('pibSaveIndicator') || document.getElementById('pibSaveIndicator') || document.getElementById('saveIndicator');
         if (indicator) {
             indicator.style.opacity = '1';
             indicator.innerHTML = '<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--color-green-text);"></span> Tersimpan Otomatis';
@@ -808,7 +1012,7 @@ function restorePibDraftState() {
         if (saved) {
             const data = JSON.parse(saved);
             if (savedName) {
-                const lbl = document.getElementById('lblPibFileName');
+                const lbl = findPibFieldElement('lblPibFileName') || document.getElementById('lblPibFileName') || document.getElementById('lblFileName');
                 if (lbl) lbl.textContent = savedName;
             }
 
@@ -852,7 +1056,7 @@ function loadPibDraftData(data, shouldSave = true) {
     if (!data) return;
 
     const setVal = (id, val) => {
-        const el = document.getElementById(id);
+        const el = findPibFieldElement(id);
         if (!el || val === undefined || val === null) return;
 
         if (el.type === 'number') {
@@ -1034,7 +1238,7 @@ function loadPibDraftData(data, shouldSave = true) {
     // No Aju
     const noAju = data.nomorAju || `010700-${Math.floor(100000 + Math.random() * 900000)}-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${Math.floor(100000 + Math.random() * 900000)}`;
     setVal('pibNoAju', noAju);
-    const lblNoAju = document.getElementById('lblPibNoAju');
+    const lblNoAju = findPibFieldElement('lblPibNoAju') || document.getElementById('lblPibNoAju') || document.getElementById('lblNoAju');
     if (lblNoAju) lblNoAju.textContent = noAju;
 
     // Header (1:1 FTZ01 / PIB)
@@ -1249,11 +1453,50 @@ function detectPibPackageType(str) {
     // Sinkronisasi items ke state global PIB & bersihkan dari duplikasi satuan
     window._pibItems = (Array.isArray(data.items) && data.items.length > 0) ? data.items.map(it => {
         const parsed = parsePibQtyUnit(it.jumlahDanSatuanBarang || it.quantity, it.packageUnit || it.satuanBarang);
+        const amt = it.amount !== undefined ? it.amount : (it.amountFob !== undefined ? it.amountFob : (it.fob !== undefined ? it.fob : (it.cifUsd !== undefined ? it.cifUsd : '0.00')));
+        const qtyNum = parseFloat(parsed.qty.replace(/\./g, '').replace(/,/g, '.')) || 0;
+        const fobNum = parseFloat(String(amt).replace(/[^0-9.]/g, '')) || 0;
+        const unitPrice = it.hargaSatuan || (qtyNum > 0 ? (fobNum / qtyNum).toFixed(4) : '0.00');
+        const kurs = parseFloat(data.exchangeRate || data.kurs || 16300) || 16300;
+        const cifRp = it.cifRupiah || Math.round(fobNum * kurs);
+
         return {
             ...it,
+            hsCode: it.hsCode || it.posTarif || '',
+            uraianJenisBarang: it.uraianJenisBarang || it.description || it.namaBarang || '',
+            description: it.uraianJenisBarang || it.description || it.namaBarang || '',
+            kodeBarang: it.kodeBarang || it.itemCode || it.partNumber || '-',
+            merek: it.merek || it.merk || it.brand || '-',
+            tipe: it.tipe || it.type || it.model || '-',
+            spesifikasi: it.spesifikasi || it.spec || it.specification || '-',
+            countryOfOrigin: it.countryOfOrigin || it.negaraAsal || it.negara || 'CN - CHINA',
+            negaraAsal: it.negaraAsal || it.countryOfOrigin || 'CN - CHINA',
+            kondisi: it.kondisi || 'Barang Baru',
+            kategori: it.kategori || '4 - BAHAN BAKU',
+            asal: it.asal || '1 - SEPENUHNYA DIPEROLEH DAN/ATAU DIPRODUKSI DI LUAR DAERAH PABEAN (WHOLLY OBTAINED)',
             jumlahDanSatuanBarang: `${parsed.qty} ${parsed.unit}`,
             packageUnit: parsed.unit,
-            quantity: parseFloat(parsed.qty.replace(/\./g, '').replace(/,/g, '.')) || 0
+            satuanBarang: parsed.unit,
+            quantity: qtyNum,
+            kemasan: it.kemasan || `${it.kemasanQty || 1} ${it.kemasanJenis || 'PX - PALLET'}`,
+            kemasanQty: it.kemasanQty || 1,
+            kemasanJenis: it.kemasanJenis || 'PX - PALLET',
+            beratBersih: it.beratBersih || it.netto || '0.0000',
+            beratKotor: it.beratKotor || it.bruto || '0.0000',
+            volume: it.volume || '0.00',
+            amount: String(amt),
+            amountFob: String(amt),
+            fob: it.fob || String(amt),
+            biayaTambahan: it.biayaTambahan || '0.00',
+            hargaSatuan: String(unitPrice),
+            asuransi: it.asuransi || '0.00',
+            cifUsd: it.cifUsd !== undefined ? it.cifUsd : fobNum,
+            cifRupiah: cifRp,
+            tarifBm: it.tarifBm !== undefined ? it.tarifBm : (it.tariffBm !== undefined ? it.tariffBm : 5.0),
+            tariffBm: it.tariffBm !== undefined ? it.tariffBm : (it.tarifBm !== undefined ? it.tarifBm : 5.0),
+            tarifPpn: it.tarifPpn !== undefined ? it.tarifPpn : 11.0,
+            tarifPph: it.tarifPph !== undefined ? it.tarifPph : 2.5,
+            lartas: it.lartas || 'tidak'
         };
     }) : [];
     showPibItemListView();
@@ -1390,12 +1633,12 @@ function renderPibActiveItem(idx = 0) {
     // 3. Identitas Barang
     setEl('pibItemKode', item.kodeBarang || '-');
     setEl('pibItemUraian', item.uraianJenisBarang || item.description || item.namaBarang || '');
-    setEl('pibItemMerek', item.merek || '-');
-    setEl('pibItemTipe', item.tipe || '-');
+    setEl('pibItemMerek', item.merek || item.merk || '-');
+    setEl('pibItemTipe', item.tipe || item.model || '-');
     setEl('pibItemSpesifikasi', item.spesifikasi || '-');
 
     // 4. Negara
-    const rawCountry = item.countryOfOrigin || item.negara || 'CN - CHINA';
+    const rawCountry = item.countryOfOrigin || item.negaraAsal || item.negara || 'CN - CHINA';
     const selCountry = document.getElementById('pibItemNegara');
     if (selCountry) {
         const found = Array.from(selCountry.options).find(o => 
@@ -1405,9 +1648,38 @@ function renderPibActiveItem(idx = 0) {
         else selCountry.value = 'CN - CHINA';
     }
 
-    setEl('pibItemKondisi', item.kondisi || 'Barang Baru');
-    setEl('pibItemKategori', item.kategori || '4 - BAHAN BAKU');
-    setEl('pibItemAsal', item.asal || '1 - SEPENUHNYA DIPEROLEH DAN/ATAU DIPRODUKSI DI LUAR DAERAH PABEAN (WHOLLY OBTAINED)');
+    // Matching kondisi
+    const selKondisi = document.getElementById('pibItemKondisi');
+    if (selKondisi) {
+        const rawKondisi = String(item.kondisi || '').toLowerCase();
+        if (rawKondisi.includes('bekas') || rawKondisi.includes('bukan baru') || rawKondisi.includes('used')) {
+            selKondisi.value = 'Bukan Baru / Bekas';
+        } else {
+            selKondisi.value = 'Barang Baru';
+        }
+    }
+
+    // Matching kategori
+    const selKategori = document.getElementById('pibItemKategori');
+    if (selKategori) {
+        const rawKategori = String(item.kategori || '').toLowerCase();
+        const foundKat = Array.from(selKategori.options).find(o => 
+            o.value.toLowerCase().includes(rawKategori) || (rawKategori && rawKategori.includes(o.value.toLowerCase().slice(0, 1)))
+        );
+        if (foundKat) selKategori.value = foundKat.value;
+        else selKategori.value = '4 - BAHAN BAKU';
+    }
+
+    // Matching asal
+    const selAsal = document.getElementById('pibItemAsal');
+    if (selAsal) {
+        const rawAsal = String(item.asal || '').toLowerCase();
+        if (rawAsal.includes('tidak') || rawAsal.includes('not wholly') || rawAsal.startsWith('2')) {
+            selAsal.value = '2 - TIDAK SEPENUHNYA DIPEROLEH (NOT WHOLLY OBTAINED)';
+        } else {
+            selAsal.value = '1 - SEPENUHNYA DIPEROLEH DAN/ATAU DIPRODUKSI DI LUAR DAERAH PABEAN (WHOLLY OBTAINED)';
+        }
+    }
 
     // 5. Kuantitas & Kemasan
     const qtyInfo = parsePibQtyUnit(item.jumlahDanSatuanBarang || item.quantity, item.packageUnit || item.satuanBarang);
@@ -1443,7 +1715,7 @@ function renderPibActiveItem(idx = 0) {
     setEl('pibItemVolume', item.volume || '0.00');
 
     // 7. Nilai & Perhitungan
-    const amtVal = formatPibAmount(item.amount || item.cifUsd || item.nilaiCif || 0);
+    const amtVal = formatPibAmount(item.amount || item.amountFob || item.fob || item.cifUsd || item.nilaiCif || 0);
     setEl('pibItemAmountFob', amtVal);
     setEl('pibItemBiayaTambahan', item.biayaTambahan || '0.00');
     setEl('pibItemFob', amtVal);
@@ -1451,17 +1723,23 @@ function renderPibActiveItem(idx = 0) {
     // Hitung Harga Satuan & CIF Rupiah
     const fobNum = parseFloat(String(amtVal).replace(/[^0-9.]/g, '')) || 0;
     const qtyNum = parseFloat(String(qtyInfo.qty).replace(/[^0-9.]/g, '')) || 1;
-    const unitPrice = qtyNum > 0 ? (fobNum / qtyNum).toFixed(4) : '0.00';
+    const unitPrice = item.hargaSatuan ? item.hargaSatuan : (qtyNum > 0 ? (fobNum / qtyNum).toFixed(4) : '0.00');
     setEl('pibItemHargaSatuan', unitPrice);
     setEl('pibItemAsuransi', item.asuransi || '0.00');
 
     const kurs = parseFloat(document.getElementById('pibExchangeRate')?.value) || 16300;
-    const cifRp = Math.round(fobNum * kurs);
+    const cifRp = item.cifRupiah ? Number(item.cifRupiah) : Math.round(fobNum * kurs);
     setEl('pibItemCifRupiah', `Rp ${cifRp.toLocaleString('id-ID')},00`);
 
     // 8. Pungutan
     const tarifBm = item.tariffBm !== undefined ? item.tariffBm : (item.tarifBm !== undefined ? item.tarifBm : 5.0);
-    setEl('pibItemBmTarifVal', `${tarifBm}%`);
+    setEl('pibItemBmTarifVal', typeof tarifBm === 'string' && tarifBm.includes('%') ? tarifBm : `${tarifBm}%`);
+
+    const tarifPpn = item.tarifPpn !== undefined ? item.tarifPpn : (item.tariffPpn !== undefined ? item.tariffPpn : 11.0);
+    setEl('pibItemPpnTarif', typeof tarifPpn === 'string' && tarifPpn.includes('%') ? tarifPpn : `${tarifPpn}%`);
+
+    const tarifPph = item.tarifPph !== undefined ? item.tarifPph : (item.tariffPph !== undefined ? item.tariffPph : 2.5);
+    setEl('pibItemPphTarif', typeof tarifPph === 'string' && tarifPph.includes('%') ? tarifPph : `${tarifPph}%`);
 
     // Badge
     const badge = document.getElementById('pibItemCountBadge');
@@ -1509,6 +1787,10 @@ function savePibActiveItemFromForm() {
     const kemasanQty = getEl('pibItemKemasanQty');
     const kemasanJenis = getEl('pibItemKemasanJenis');
     const tarifBm = parseFloat(getEl('pibItemBmTarifVal')) || 5.0;
+    const tarifPpn = parseFloat(getEl('pibItemPpnTarif')) || 11.0;
+    const tarifPph = parseFloat(getEl('pibItemPphTarif')) || 2.5;
+    const hargaSatuan = getEl('pibItemHargaSatuan');
+    const cifRupiahVal = getEl('pibItemCifRupiah').replace(/[^0-9]/g, '');
 
     const radYa = document.getElementById('pibItemLartasYa');
 
@@ -1523,12 +1805,14 @@ function savePibActiveItemFromForm() {
         tipe: getEl('pibItemTipe'),
         spesifikasi: getEl('pibItemSpesifikasi'),
         countryOfOrigin: country,
+        negaraAsal: country,
         kondisi: getEl('pibItemKondisi'),
         kategori: getEl('pibItemKategori'),
         asal: getEl('pibItemAsal'),
         jumlahDanSatuanBarang: `${cleanQty} ${unit}`,
         quantity: parseFloat(cleanQty.replace(/\./g, '').replace(/,/g, '.')) || 0,
         packageUnit: unit,
+        satuanBarang: unit,
         kemasan: `${kemasanQty} ${kemasanJenis.split(' ')[0]}`,
         kemasanQty: kemasanQty,
         kemasanJenis: kemasanJenis,
@@ -1536,11 +1820,17 @@ function savePibActiveItemFromForm() {
         beratKotor: grossWeight,
         volume: getEl('pibItemVolume'),
         amount: amountVal,
+        amountFob: amountVal,
         cifUsd: parseFloat(amountVal.replace(/[^0-9.]/g, '')) || 0,
         biayaTambahan: getEl('pibItemBiayaTambahan'),
         fob: getEl('pibItemFob'),
+        hargaSatuan: hargaSatuan,
         asuransi: getEl('pibItemAsuransi'),
-        tariffBm: tarifBm
+        cifRupiah: cifRupiahVal ? parseInt(cifRupiahVal, 10) : 0,
+        tarifBm: tarifBm,
+        tariffBm: tarifBm,
+        tarifPpn: tarifPpn,
+        tarifPph: tarifPph
     };
 
     // Update row di summary table jika tabel sedang ter-render
@@ -2313,7 +2603,7 @@ function sortPibPetiKemasRows() {
 
 // RENDER PIB SAFETY CHECK AUDIT CARD
 function renderPibSafeCheck(safeCheck) {
-    const container = document.getElementById('pibSafeCheckSection');
+    const container = document.getElementById('safeCheckSection') || document.getElementById('pibSafeCheckSection');
     if (!container) return;
 
     if (!safeCheck) {
@@ -2325,15 +2615,15 @@ function renderPibSafeCheck(safeCheck) {
 
     const isRelated = safeCheck.isRelated !== false;
     const score = safeCheck.confidenceScore !== undefined ? safeCheck.confidenceScore : 100;
-    const banner = document.getElementById('pibSafeCheckBanner');
-    const statusBadge = document.getElementById('pibSafeCheckStatusBadge');
-    const scoreVal = document.getElementById('pibSafeCheckScore');
-    const title = document.getElementById('pibSafeCheckTitle');
-    const summary = document.getElementById('pibSafeCheckSummary');
-    const matchedList = document.getElementById('pibSafeCheckMatchedList');
-    const warningsBox = document.getElementById('pibSafeCheckWarningsBox');
-    const warningsList = document.getElementById('pibSafeCheckWarningsList');
-    const docTbody = document.getElementById('pibSafeCheckDocTableBody');
+    const banner = document.getElementById('safeCheckBanner') || document.getElementById('pibSafeCheckBanner');
+    const statusBadge = document.getElementById('safeCheckStatusBadge') || document.getElementById('pibSafeCheckStatusBadge');
+    const scoreVal = document.getElementById('safeCheckScore') || document.getElementById('pibSafeCheckScore');
+    const title = document.getElementById('safeCheckTitle') || document.getElementById('pibSafeCheckTitle');
+    const summary = document.getElementById('safeCheckSummary') || document.getElementById('pibSafeCheckSummary');
+    const matchedList = document.getElementById('safeCheckMatchedList') || document.getElementById('pibSafeCheckMatchedList');
+    const warningsBox = document.getElementById('safeCheckWarningsBox') || document.getElementById('pibSafeCheckWarningsBox');
+    const warningsList = document.getElementById('safeCheckWarningsList') || document.getElementById('pibSafeCheckWarningsList');
+    const docTbody = document.getElementById('safeCheckDocTableBody') || document.getElementById('pibSafeCheckDocTableBody');
 
     if (scoreVal) scoreVal.textContent = score + '%';
     if (summary) summary.textContent = safeCheck.summary || 'Validasi keterkaitan dokumen selesai.';
@@ -2658,19 +2948,34 @@ function setupPibCopyHandlers() {
 function initPibDashboard() {
     if (!document.getElementById('module-pib')) return;
 
-    // 1. PIB Tabs Click Handlers
-    document.querySelectorAll('#module-pib .ceisa-tab-btn').forEach(btn => {
+    // 1. PIB Tabs Click Handlers (supports both data-tab and data-pib-tab)
+    document.querySelectorAll('#module-pib .ceisa-tab-btn, .ceisa-tabs .ceisa-tab-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-            const tabId = btn.getAttribute('data-pib-tab');
+            const tabId = btn.getAttribute('data-tab') || btn.getAttribute('data-pib-tab');
             if (tabId) switchPibTab(tabId);
         });
     });
 
-    // 2. Stepper Prev / Next
-    const btnPrev = document.getElementById('btnPibTabPrev');
-    const btnNext = document.getElementById('btnPibTabNext');
-    if (btnPrev) btnPrev.addEventListener('click', handlePibTabPrev);
-    if (btnNext) btnNext.addEventListener('click', handlePibTabNext);
+    // 2. Stepper Prev / Next (supports btnTabPrev/btnTabNext and btnPibTabPrev/btnPibTabNext)
+    ['btnTabPrev', 'btnPibTabPrev'].forEach(id => {
+        const btn = document.getElementById(id);
+        if (btn) btn.addEventListener('click', handlePibTabPrev);
+    });
+    ['btnTabNext', 'btnPibTabNext'].forEach(id => {
+        const btn = document.getElementById(id);
+        if (btn) btn.addEventListener('click', handlePibTabNext);
+    });
+
+    // 2b. Tab Stepper Navigation Handlers (generic data-target-tab / stepper class support)
+    document.querySelectorAll('#module-pib .btn-tab-prev, #module-pib .btn-tab-next, [data-target-tab]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const targetTab = btn.getAttribute('data-target-tab');
+            if (targetTab) {
+                e.preventDefault();
+                switchPibTab(targetTab);
+            }
+        });
+    });
 
     // 2b. Tab Stepper Navigation Handlers
     const btnNextHeader = document.getElementById('btnNextFromPibHeader');
@@ -3042,35 +3347,52 @@ function initPibDashboard() {
         });
     }
 
-    // 8. Bottom Dock Buttons
-    const btnReset = document.getElementById('btnPibResetDraft');
-    if (btnReset) btnReset.addEventListener('click', resetPibForm);
+    // 8. Bottom Dock Buttons (supports both btnResetDraft / btnPibResetDraft, etc.)
+    ['btnResetDraft', 'btnPibResetDraft'].forEach(id => {
+        const btn = document.getElementById(id);
+        if (btn && !btn._boundPibReset) {
+            btn._boundPibReset = true;
+            btn.addEventListener('click', resetPibForm);
+        }
+    });
 
-    const btnExport = document.getElementById('btnPibExportJson');
-    if (btnExport) btnExport.addEventListener('click', exportPibJson);
+    ['btnExportJson', 'btnPibExportJson'].forEach(id => {
+        const btn = document.getElementById(id);
+        if (btn && !btn._boundPibExport) {
+            btn._boundPibExport = true;
+            btn.addEventListener('click', exportPibJson);
+        }
+    });
 
-    const btnSubmit = document.getElementById('btnPibSubmitCustoms');
-    if (btnSubmit) btnSubmit.addEventListener('click', submitPibCustoms);
+    ['btnSubmitCustoms', 'btnPibSubmitCustoms'].forEach(id => {
+        const btn = document.getElementById(id);
+        if (btn && !btn._boundPibSubmit) {
+            btn._boundPibSubmit = true;
+            btn.addEventListener('click', submitPibCustoms);
+        }
+    });
 
-    // Tab Dokumen Actions: Tambah & Urutkan
-    
-    // PIB SafeCheck collapsible toggle
-    const pibSafeCheckHdr = document.getElementById('pibSafeCheckHeader');
-    const pibSafeCheckBdy = document.getElementById('pibSafeCheckBody');
-    const btnTogglePibSafe = document.getElementById('btnTogglePibSafeCheck');
-    if (pibSafeCheckHdr && pibSafeCheckBdy && btnTogglePibSafe) {
+    // PIB SafeCheck collapsible toggle (supports safeCheckHeader and pibSafeCheckHeader)
+    const pibSafeCheckHdr = document.getElementById('safeCheckHeader') || document.getElementById('pibSafeCheckHeader');
+    const pibSafeCheckBdy = document.getElementById('safeCheckBody') || document.getElementById('pibSafeCheckBody');
+    const btnTogglePibSafe = document.getElementById('btnToggleSafeCheck') || document.getElementById('btnTogglePibSafeCheck');
+    if (pibSafeCheckHdr && pibSafeCheckBdy) {
         pibSafeCheckHdr.addEventListener('click', () => {
             const isCollapsed = pibSafeCheckBdy.classList.contains('collapsed');
             if (isCollapsed) {
                 pibSafeCheckBdy.classList.remove('collapsed');
                 pibSafeCheckBdy.style.display = 'block';
-                btnTogglePibSafe.classList.add('open');
-                btnTogglePibSafe.setAttribute('aria-expanded', 'true');
+                if (btnTogglePibSafe) {
+                    btnTogglePibSafe.classList.add('open');
+                    btnTogglePibSafe.setAttribute('aria-expanded', 'true');
+                }
             } else {
                 pibSafeCheckBdy.classList.add('collapsed');
                 pibSafeCheckBdy.style.display = 'none';
-                btnTogglePibSafe.classList.remove('open');
-                btnTogglePibSafe.setAttribute('aria-expanded', 'false');
+                if (btnTogglePibSafe) {
+                    btnTogglePibSafe.classList.remove('open');
+                    btnTogglePibSafe.setAttribute('aria-expanded', 'false');
+                }
             }
         });
     }
@@ -3287,4 +3609,17 @@ if (typeof window !== 'undefined') {
     window.calculatePibPungutan = calculatePibPungutan;
     window.renderPibKemasanTable = renderPibKemasanTable;
     window.renderPibPetiKemasTable = renderPibPetiKemasTable;
+    window.switchPibTab = switchPibTab;
+    window.normalizePibTabId = normalizePibTabId;
+    window.showPibItemListView = showPibItemListView;
+    window.showPibItemEditView = openPibItemEditor;
+    window.openPibItemEditor = openPibItemEditor;
+    window.renderPibItemsTable = renderPibSummaryTable;
+    window.renderPibSummaryTable = renderPibSummaryTable;
+    window.findPibFieldElement = findPibFieldElement;
+    window.resetPibForm = resetPibForm;
+    window.exportPibJson = exportPibJson;
+    window.submitPibCustoms = submitPibCustoms;
+    window.handlePibTabNext = handlePibTabNext;
+    window.handlePibTabPrev = handlePibTabPrev;
 }
