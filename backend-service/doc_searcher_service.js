@@ -285,7 +285,7 @@ ATURAN KHUSUS ENTITAS KEPABEANAN:
             'gemini-3.5-flash-lite',
             'gemini-3.5-flash',
             'gemini-3.8-flash',
-            'gemini-3.6-flash'
+            'gemini-flash-latest'
         ];
 
         let response = null;

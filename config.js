@@ -15,7 +15,7 @@ const CEISA_CONFIG = {
 
 // Resolver dinamis URL backend CEISA (berlaku untuk localhost, IP WiFi/LAN, HP/laptop lain)
 window.getCeisaBackendUrl = function (path = '') {
-    let base = 'http://localhost:5005';
+    let base = 'http://127.0.0.1:5005';
     try {
         if (typeof window !== 'undefined' && window.location && window.location.protocol.startsWith('http')) {
             base = `${window.location.protocol}//${window.location.hostname}:5005`;

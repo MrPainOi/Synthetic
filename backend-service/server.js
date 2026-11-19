@@ -15,6 +15,10 @@ const {
     ZIPS_DIR
 } = require('./doc_searcher_service');
 const printService = require('./print_service');
+const {
+    extractDocumentText,
+    generateSearchablePdfBinary
+} = require('./ocr_service');
 
 const app = express();
 const PORT = process.env.PORT || 5005;
@@ -478,6 +482,128 @@ app.post('/api/doc-searcher/create-zip', async (req, res) => {
 });
 
 // =========================================================================
+// OCR & SEARCHABLE PDF SERVICE (GEMINI AI + PDF-LIB)
+// =========================================================================
+
+const uploadOcr = (req, res, next) => {
+    upload.fields([
+        { name: 'document', maxCount: 1 },
+        { name: 'file', maxCount: 1 }
+    ])(req, res, (err) => {
+        if (err) return res.status(400).json({ success: false, error: err.message });
+        if (req.files) {
+            req.file = (req.files['document'] && req.files['document'][0]) ||
+                       (req.files['file'] && req.files['file'][0]) ||
+                       null;
+        }
+        next();
+    });
+};
+
+// POST /api/ocr/extract-text (Multipart upload 'document' or fallback JSON)
+app.post('/api/ocr/extract-text', uploadOcr, async (req, res) => {
+    try {
+        const file = req.file;
+        let filePath = file ? file.path : (req.body && req.body.filePath ? req.body.filePath : null);
+        let fileName = file ? file.originalname : (req.body && req.body.fileName ? req.body.fileName : (filePath ? path.basename(filePath) : 'document'));
+        let mimeType = file ? file.mimetype : (req.body && req.body.mimeType ? req.body.mimeType : null);
+        let fileBuffer = null;
+
+        if (!filePath && req.body && req.body.base64Data) {
+            fileBuffer = Buffer.from(req.body.base64Data.replace(/^data:.*?;base64,/, ''), 'base64');
+        }
+
+        if (!file && !filePath && !fileBuffer) {
+            return res.status(400).json({
+                success: false,
+                error: 'Berkas dokumen wajib diunggah (field: document).'
+            });
+        }
+
+        const customApiKey = (req.body && req.body.apiKey) || req.headers['x-gemini-key'] || null;
+
+        const result = await extractDocumentText({
+            filePath,
+            fileBuffer,
+            fileName,
+            mimeType,
+            customApiKey
+        });
+
+        res.json({
+            success: true,
+            fileName: result.fileName,
+            fullText: result.fullText,
+            pages: result.pages,
+            summary: result.summary
+        });
+    } catch (err) {
+        console.error('[OCR EXTRACT ERROR]', err);
+        res.status(500).json({
+            success: false,
+            error: err.message || 'Gagal mengekstrak teks dokumen dengan OCR.'
+        });
+    }
+});
+
+// POST /api/ocr/searchable-pdf (Multipart upload 'document' or fallback JSON)
+app.post('/api/ocr/searchable-pdf', uploadOcr, async (req, res) => {
+    try {
+        const file = req.file;
+        let filePath = file ? file.path : (req.body && req.body.filePath ? req.body.filePath : null);
+        let fileName = file ? file.originalname : (req.body && req.body.fileName ? req.body.fileName : (filePath ? path.basename(filePath) : 'document.pdf'));
+        let mimeType = file ? file.mimetype : (req.body && req.body.mimeType ? req.body.mimeType : null);
+        let fileBuffer = null;
+
+        if (!filePath && req.body && req.body.base64Data) {
+            fileBuffer = Buffer.from(req.body.base64Data.replace(/^data:.*?;base64,/, ''), 'base64');
+        }
+
+        if (!file && !filePath && !fileBuffer) {
+            return res.status(400).json({
+                success: false,
+                error: 'Berkas dokumen wajib diunggah (field: document).'
+            });
+        }
+
+        let ocrResult = null;
+        if (req.body && req.body.ocrResult) {
+            try {
+                ocrResult = typeof req.body.ocrResult === 'string'
+                    ? JSON.parse(req.body.ocrResult)
+                    : req.body.ocrResult;
+            } catch (e) { }
+        }
+
+        const customApiKey = (req.body && req.body.apiKey) || req.headers['x-gemini-key'] || null;
+
+        const pdfBuffer = await generateSearchablePdfBinary({
+            filePath,
+            fileBuffer,
+            fileName,
+            mimeType,
+            ocrResult,
+            customApiKey
+        });
+
+        const safeBaseName = path.basename(fileName, path.extname(fileName)).replace(/[^a-zA-Z0-9._-]/g, '_');
+        const outputFilename = `searchable_${safeBaseName}.pdf`;
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="${outputFilename}"`);
+        res.setHeader('Content-Length', pdfBuffer.length);
+
+        return res.send(pdfBuffer);
+    } catch (err) {
+        console.error('[OCR SEARCHABLE PDF ERROR]', err);
+        res.status(500).json({
+            success: false,
+            error: err.message || 'Gagal menghasilkan Searchable PDF.'
+        });
+    }
+});
+
+// =========================================================================
 // SYNTHETIC PRINT HUB (LOCAL & MOBILE WEBSHARE PRINT SERVICE)
 // =========================================================================
 
@@ -629,7 +755,7 @@ app.post('/api/shutdown', (req, res) => {
     }, 500);
 });
 
-const server = app.listen(PORT, '0.0.0.0', () => {
+const server = app.listen(PORT, () => {
     const primaryIp = printService.getPrimaryIp();
     console.log(`=======================================================`);
     console.log(`CEISA Document Parser & Print Hub AKTIF di port ${PORT}`);

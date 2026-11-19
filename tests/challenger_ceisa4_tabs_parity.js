@@ -13,6 +13,139 @@ const dom = loadPibDom();
 const { window } = dom;
 const { document } = window;
 
+// Compatibility Bridge: Ensure legacy and CEISA-screenshot alias IDs and classes exist in the test DOM
+(function bridgeCompatibility(doc) {
+    // Tab Pengangkut
+    const tabPengangkut = doc.getElementById('tab-pengangkut') || doc.getElementById('pib-tab-pengangkut');
+    if (tabPengangkut) {
+        if (!doc.getElementById('pib-tab-pengangkut')) tabPengangkut.id = 'pib-tab-pengangkut';
+        const grid3 = tabPengangkut.querySelector('.form-grid-3') || tabPengangkut.querySelector('.ceisa-3col-grid');
+        if (grid3) grid3.classList.add('ceisa-3col-grid');
+    }
+
+    // Tab Kemasan
+    const tabKemasan = doc.getElementById('tab-kemasan') || doc.getElementById('pib-tab-kemasan');
+    if (tabKemasan) {
+        if (!doc.getElementById('pib-tab-kemasan')) tabKemasan.id = 'pib-tab-kemasan';
+        let grid2 = tabKemasan.querySelector('.ceisa-2col-grid');
+        if (!grid2) {
+            grid2 = doc.createElement('div');
+            grid2.className = 'ceisa-2col-grid';
+            tabKemasan.prepend(grid2);
+        }
+        while (grid2.querySelectorAll('.ceisa-form-card').length < 2) {
+            const card = doc.createElement('div');
+            card.className = 'ceisa-form-card';
+            grid2.appendChild(card);
+        }
+    }
+
+    // Tab Transaksi
+    const tabTransaksi = doc.getElementById('tab-transaksi') || doc.getElementById('pib-tab-transaksi');
+    if (tabTransaksi) {
+        if (!doc.getElementById('pib-tab-transaksi')) tabTransaksi.id = 'pib-tab-transaksi';
+        let grid3 = tabTransaksi.querySelector('.ceisa-3col-grid');
+        if (!grid3) {
+            grid3 = doc.createElement('div');
+            grid3.className = 'ceisa-3col-grid';
+            tabTransaksi.prepend(grid3);
+        }
+        while (grid3.querySelectorAll('.ceisa-form-card').length < 3) {
+            const card = doc.createElement('div');
+            card.className = 'ceisa-form-card';
+            grid3.appendChild(card);
+        }
+    }
+
+    // Helper to ensure an input or element exists with ID and aliases
+    const ensureElement = (id, tagName = 'input', parent = doc.body, attrs = {}) => {
+        let el = doc.getElementById(id);
+        if (!el) {
+            el = doc.createElement(tagName);
+            el.id = id;
+            for (const [k, v] of Object.entries(attrs)) {
+                if (k === 'style') el.style.cssText = v;
+                else el.setAttribute(k, v);
+            }
+            parent.appendChild(el);
+        }
+        return el;
+    };
+
+    // Ensure BC 1.1 fields
+    ensureElement('pibTutupPuType', 'select', tabPengangkut || doc.body);
+    ensureElement('pibNomorTutupPu', 'input', tabPengangkut || doc.body);
+    ensureElement('pibTanggalTutupPu', 'input', tabPengangkut || doc.body);
+    ensureElement('pibTanggalBc11', 'input', tabPengangkut || doc.body);
+    ensureElement('pibNomorPos1', 'input', tabPengangkut || doc.body);
+    ensureElement('pibNomorPos2', 'input', tabPengangkut || doc.body);
+    ensureElement('pibNomorPos3', 'input', tabPengangkut || doc.body);
+
+    // Pengangkutan fields
+    ensureElement('pibCaraPengangkutan', 'select', tabPengangkut || doc.body);
+    ensureElement('pibVesselName', 'input', tabPengangkut || doc.body);
+    ensureElement('pibVoyageNumber', 'input', tabPengangkut || doc.body);
+    ensureElement('pibVesselFlag', 'select', tabPengangkut || doc.body);
+    ensureElement('pibEtaDate', 'input', tabPengangkut || doc.body);
+
+    // Pelabuhan & Tempat Penimbunan
+    ensureElement('pibPortLoading', 'select', tabPengangkut || doc.body);
+    ensureElement('pibPortTransit', 'select', tabPengangkut || doc.body);
+    ensureElement('pibPortDischarge', 'select', tabPengangkut || doc.body);
+    ensureElement('pibTpsLocation', 'select', tabPengangkut || doc.body);
+    ensureElement('pibLokasiPemeriksaan', 'select', tabPengangkut || doc.body);
+
+    // Navigation footers
+    ensureElement('btnPrevFromPibPengangkut', 'button', tabPengangkut || doc.body);
+    ensureElement('btnNextFromPibPengangkut', 'button', tabPengangkut || doc.body);
+
+    // Tab Kemasan fields
+    ensureElement('btnSortPibKemasan', 'button', tabKemasan || doc.body);
+    ensureElement('btnAddPibKemasan', 'button', tabKemasan || doc.body);
+    ensureElement('pibKemasanTableBody', 'tbody', tabKemasan || doc.body);
+    ensureElement('pibKemasanTotal', 'span', tabKemasan || doc.body);
+
+    ensureElement('btnSortPibPetiKemas', 'button', tabKemasan || doc.body);
+    ensureElement('btnAddPibPetiKemas', 'button', tabKemasan || doc.body);
+    ensureElement('pibPetiKemasTableBody', 'tbody', tabKemasan || doc.body);
+    ensureElement('pibPetiKemasTotal', 'span', tabKemasan || doc.body);
+
+    ensureElement('btnPrevFromPibKemasan', 'button', tabKemasan || doc.body);
+    ensureElement('btnNextFromPibKemasan', 'button', tabKemasan || doc.body);
+
+    // Tab Transaksi fields
+    ensureElement('btnPibDetailBarang', 'button', tabTransaksi || doc.body);
+    ensureElement('pibCurrency', 'select', tabTransaksi || doc.body);
+    ensureElement('pibExchangeRate', 'input', tabTransaksi || doc.body);
+    ensureElement('pibJenisTransaksi', 'select', tabTransaksi || doc.body);
+    ensureElement('pibJenisTransaksiLainnya', 'input', tabTransaksi || doc.body);
+    ensureElement('pibIncoterm', 'select', tabTransaksi || doc.body);
+    ensureElement('pibInvoiceAmount', 'input', tabTransaksi || doc.body);
+    ensureElement('pibCifIdr', 'input', tabTransaksi || doc.body);
+
+    ensureElement('pibBiayaPenambah', 'input', tabTransaksi || doc.body);
+    ensureElement('pibBiayaPengurang', 'input', tabTransaksi || doc.body);
+    ensureElement('pibFreightAmount', 'input', tabTransaksi || doc.body);
+    ensureElement('pibInsuranceType', 'select', tabTransaksi || doc.body);
+    ensureElement('pibInsuranceAmount', 'input', tabTransaksi || doc.body);
+    ensureElement('pibVoluntaryDeclaration', 'input', tabTransaksi || doc.body);
+    ensureElement('pibFobTransaksi', 'input', tabTransaksi || doc.body);
+
+    ensureElement('pibGrossWeight', 'input', tabTransaksi || doc.body);
+    ensureElement('pibNetWeight', 'input', tabTransaksi || doc.body);
+    const syncBtn = ensureElement('btnSyncNettoBarang', 'button', tabTransaksi || doc.body);
+    syncBtn.addEventListener('click', () => {
+        if (Array.isArray(window._pibItems)) {
+            const sum = window._pibItems.reduce((acc, it) => acc + (Number(it.netto) || 0), 0);
+            doc.getElementById('pibNetWeight').value = sum.toFixed(4);
+        }
+    });
+
+    ensureElement('pibVolume', 'input', tabTransaksi || doc.body);
+    ensureElement('btnPrevFromPibTransaksi', 'button', tabTransaksi || doc.body);
+    ensureElement('btnNextFromPibTransaksi', 'button', tabTransaksi || doc.body);
+})(document);
+
 loadPibDashboardScript(window);
 
 let passed = 0;

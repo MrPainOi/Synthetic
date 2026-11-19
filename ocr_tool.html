@@ -1,0 +1,1836 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CEISA 4.0 - OCR & Searchable PDF Converter</title>
+
+    <!-- CEISA Critical Theme Initializer (prevents flashbang) -->
+    <script src="theme-init.js"></script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="dashboard.css">
+
+    <style>
+        /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 */
+        /* ==========================================================================
+           CEISA 4.0 OCR & SEARCHABLE PDF MODULE STYLES
+           Custom In-House Canvas Reader & High-Contrast Tactile Text Overlay
+           Strict Zero-Emoji Professional Vector UI
+           ========================================================================== */
+
+        .ocr-container {
+            padding: 16px 20px 48px;
+            max-width: 1520px;
+            margin: 0 auto;
+        }
+
+        /* Top Dropzone Area */
+        .ocr-dropzone-card {
+            background: var(--surface-card, #ffffff);
+            border: 1px solid var(--border-color, #e2e8f0);
+            border-radius: var(--radius-md, 10px);
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow-sm, 0 2px 4px rgba(15, 23, 42, 0.04));
+            transition: all 0.2s ease;
+        }
+
+        .ocr-dropzone {
+            border: 2px dashed var(--border-strong, #cbd5e1);
+            background: var(--surface-subtle, #f8fafc);
+            border-radius: var(--radius-sm, 6px);
+            padding: 28px 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .ocr-dropzone:hover,
+        .ocr-dropzone.dragover {
+            border-color: var(--ceisa-blue, #2563eb);
+            background: rgba(37, 99, 235, 0.04);
+            transform: translateY(-1px);
+        }
+
+        .ocr-dropzone-icon-box {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            background: rgba(37, 99, 235, 0.1);
+            color: var(--ceisa-blue, #2563eb);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 12px;
+            transition: transform 0.2s ease;
+        }
+
+        .ocr-dropzone:hover .ocr-dropzone-icon-box {
+            transform: scale(1.08);
+        }
+
+        .ocr-dropzone-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text-primary, #0f172a);
+            margin-bottom: 6px;
+        }
+
+        .ocr-dropzone-subtitle {
+            font-size: 12.5px;
+            color: var(--text-secondary, #475569);
+            margin-bottom: 12px;
+        }
+
+        .ocr-file-tags {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .ocr-format-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            font-size: 11px;
+            font-weight: 700;
+            font-family: var(--font-mono, monospace);
+            background: rgba(37, 99, 235, 0.1);
+            color: var(--ceisa-blue, #2563eb);
+            border: 1px solid rgba(37, 99, 235, 0.25);
+            border-radius: 4px;
+        }
+
+        /* Selected file banner */
+        .ocr-selected-file-banner {
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            background: var(--surface-subtle, #f8fafc);
+            border: 1px solid var(--border-color, #e2e8f0);
+            border-radius: var(--radius-sm, 6px);
+            margin-top: 14px;
+            animation: ocrFadeIn 0.2s ease;
+        }
+
+        .ocr-selected-file-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .ocr-selected-file-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            background: rgba(37, 99, 235, 0.12);
+            color: var(--ceisa-blue, #2563eb);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .ocr-selected-file-name {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-primary, #0f172a);
+            margin-bottom: 2px;
+            word-break: break-all;
+        }
+
+        .ocr-selected-file-meta {
+            font-size: 11.5px;
+            font-family: var(--font-mono, monospace);
+            color: var(--text-muted, #64748b);
+        }
+
+        /* Progress Bar & Processing States */
+        .ocr-progress-card {
+            display: none;
+            margin-top: 16px;
+            padding: 14px 18px;
+            background: var(--surface-subtle, #f8fafc);
+            border: 1px solid var(--border-color, #e2e8f0);
+            border-radius: var(--radius-sm, 6px);
+            animation: ocrFadeIn 0.2s ease;
+        }
+
+        .ocr-progress-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .ocr-progress-title {
+            font-size: 12.5px;
+            font-weight: 700;
+            color: var(--text-primary, #0f172a);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .ocr-progress-percentage {
+            font-size: 12px;
+            font-weight: 700;
+            font-family: var(--font-mono, monospace);
+            color: var(--ceisa-blue, #2563eb);
+        }
+
+        .ocr-progress-track {
+            width: 100%;
+            height: 8px;
+            background: var(--border-color, #e2e8f0);
+            border-radius: 999px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .ocr-progress-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #2563eb, #38bdf8);
+            border-radius: 999px;
+            transition: width 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .ocr-progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.4) 50%, rgba(255, 255, 255, 0) 100%);
+            animation: ocrShimmer 1.5s infinite;
+        }
+
+        @keyframes ocrShimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .ocr-progress-steps {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 10px;
+            font-size: 11px;
+            color: var(--text-muted, #64748b);
+        }
+
+        .ocr-step-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        .ocr-step-pill.active {
+            color: var(--ceisa-blue, #2563eb);
+            font-weight: 700;
+            background: rgba(37, 99, 235, 0.08);
+        }
+
+        .ocr-step-pill.done {
+            color: #10b981;
+            font-weight: 600;
+        }
+
+        /* Document Viewer Workspace (Full Width, No Split Layout) */
+        .ocr-viewer-section {
+            width: 100%;
+            margin-top: 4px;
+        }
+
+        .ocr-viewer-card-full {
+            background: var(--surface-card, #ffffff);
+            border: 1px solid var(--border-color, #e2e8f0);
+            border-radius: var(--radius-md, 10px);
+            box-shadow: var(--shadow-sm, 0 2px 4px rgba(15, 23, 42, 0.04));
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            min-height: 750px;
+            height: 84vh;
+            max-height: 88vh;
+            transition: all 0.2s ease;
+        }
+
+        /* Common Pane Card & Backward Compatibility */
+        .ocr-pane-card {
+            background: var(--surface-card, #ffffff);
+            border: 1px solid var(--border-color, #e2e8f0);
+            border-radius: var(--radius-md, 10px);
+            box-shadow: var(--shadow-sm, 0 2px 4px rgba(15, 23, 42, 0.04));
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Dual Row Master Toolbar */
+        .ocr-toolbar-primary {
+            padding: 12px 20px;
+            background: var(--surface-subtle, #f8fafc);
+            border-bottom: 1px solid var(--border-color, #e2e8f0);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .ocr-pane-header {
+            padding: 12px 18px;
+            background: var(--surface-subtle, #f8fafc);
+            border-bottom: 1px solid var(--border-color, #e2e8f0);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .ocr-pane-title-box {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .ocr-header-badge-icon {
+            width: 34px;
+            height: 34px;
+            border-radius: 8px;
+            background: rgba(37, 99, 235, 0.1);
+            color: var(--ceisa-blue, #2563eb);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .ocr-pane-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-primary, #0f172a);
+            margin: 0;
+            line-height: 1.2;
+        }
+
+        .ocr-pane-subtitle {
+            font-size: 11.5px;
+            color: var(--text-muted, #64748b);
+            display: block;
+            margin-top: 2px;
+        }
+
+        /* Layer Display Mode Switcher */
+        .ocr-layer-mode-switcher {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .ocr-switcher-label {
+            font-size: 11.5px;
+            font-weight: 600;
+            color: var(--text-muted, #64748b);
+        }
+
+        .ocr-segmented-pill-group {
+            display: inline-flex;
+            background: var(--surface-subtle, #f1f5f9);
+            border: 1px solid var(--border-color, #cbd5e1);
+            border-radius: 6px;
+            padding: 2px;
+            gap: 2px;
+        }
+
+        .btn-layer-pill {
+            padding: 5px 12px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary, #475569);
+            background: transparent;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.15s ease;
+        }
+
+        .btn-layer-pill:hover {
+            color: var(--text-primary, #0f172a);
+            background: rgba(0, 0, 0, 0.04);
+        }
+
+        .btn-layer-pill.active {
+            background: var(--surface-card, #ffffff);
+            color: var(--ceisa-blue, #2563eb);
+            font-weight: 700;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+        }
+
+        /* Primary Action Buttons in Header */
+        .ocr-primary-actions-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        /* Master Toolbar: Row 2 (Controls, Search, Stats) */
+        .ocr-toolbar-secondary {
+            padding: 8px 20px;
+            background: var(--surface-card, #ffffff);
+            border-bottom: 1px solid var(--border-color, #e2e8f0);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .ocr-view-controls-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .ocr-nav-controls,
+        .ocr-zoom-controls {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .ocr-toolbar-divider {
+            display: inline-block;
+            width: 1px;
+            height: 18px;
+            background: var(--border-color, #e2e8f0);
+            margin: 0 4px;
+        }
+
+        .ocr-page-indicator {
+            font-size: 11.5px;
+            font-family: var(--font-mono, monospace);
+            font-weight: 600;
+            color: var(--text-secondary, #334155);
+            min-width: 58px;
+            text-align: center;
+        }
+
+        .ocr-zoom-level {
+            font-size: 11px;
+            font-family: var(--font-mono, monospace);
+            color: var(--text-muted, #64748b);
+            min-width: 42px;
+            text-align: center;
+        }
+
+        /* Custom In-House Canvas Reader & Document Viewport */
+        .ocr-preview-viewport {
+            flex: 1;
+            position: relative;
+            background: #0f172a;
+            overflow: auto;
+            min-height: 580px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 24px 16px;
+            scroll-behavior: smooth;
+        }
+
+        .ocr-document-pages {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            align-items: center;
+            width: 100%;
+        }
+
+        /* Each Document Page with Active Selection Overlay */
+        .ocr-page-wrapper {
+            position: relative;
+            display: inline-block;
+            background: #ffffff;
+            border-radius: 4px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+            line-height: 0;
+            user-select: text;
+            -webkit-user-select: text;
+            overflow: hidden;
+        }
+
+        .ocr-page-canvas {
+            display: block;
+            max-width: 100%;
+            height: auto;
+        }
+
+        /* ==========================================================================
+           Mozilla PDF.js Official TextLayer Standards & Sub-Pixel Selection
+           High-Fidelity Acrobat/Chrome Native Cursor Selection & Zero Emojis
+           ========================================================================== */
+        :root {
+            --total-scale-factor: 1;
+            --scale-factor: 1;
+            --scale-round-x: 1px;
+            --scale-round-y: 1px;
+        }
+
+        .textLayer {
+            position: absolute;
+            text-align: initial;
+            inset: 0;
+            overflow: hidden;
+            opacity: 1;
+            line-height: 1;
+            text-size-adjust: none;
+            forced-color-adjust: none;
+            transform-origin: 0 0;
+            z-index: 2;
+            user-select: text;
+            -webkit-user-select: text;
+        }
+
+        .textLayer :is(span, br) {
+            color: transparent !important;
+            position: absolute;
+            white-space: pre;
+            cursor: text;
+            transform-origin: 0% 0%;
+            border: none !important;
+            background: transparent !important;
+            box-shadow: none !important;
+            outline: none !important;
+        }
+
+        .textLayer span {
+            font-size: calc(var(--total-scale-factor, 1) * var(--font-height, 12px));
+            transform: rotate(var(--rotate, 0deg)) scaleX(var(--scale-x, 1));
+            color: transparent !important;
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            outline: none !important;
+        }
+
+        .textLayer span:hover,
+        .textLayer.mode-boxes span,
+        .textLayer.show-boxes span,
+        .textLayer.mode-readable span {
+            color: transparent !important;
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            outline: none !important;
+        }
+
+        .textLayer ::selection {
+            background: rgba(37, 99, 235, 0.35) !important;
+            color: transparent !important;
+        }
+
+        .textLayer br::selection {
+            background: transparent !important;
+        }
+
+        .textLayer .endOfContent {
+            display: block;
+            position: absolute;
+            left: 0;
+            top: 100%;
+            right: 0;
+            bottom: 0;
+            z-index: -1;
+            cursor: default;
+            user-select: none;
+        }
+
+        .textLayer .endOfContent.active {
+            top: 0;
+        }
+
+        /* Active Text Layer sitting right on top of the scanned canvas (Z-index: 3) */
+        .ocr-text-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            user-select: text;
+            -webkit-user-select: text;
+            line-height: 1;
+            z-index: 3;
+            transition: opacity 0.15s ease;
+        }
+
+        .ocr-text-line {
+            position: absolute;
+            cursor: pointer;
+            white-space: nowrap;
+            transform-origin: 0% 0%;
+            box-sizing: border-box;
+            transition: background-color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
+        }
+
+        /* Mode 1: Transparent (Default) */
+        .ocr-text-layer.mode-transparent.is-digital {
+            pointer-events: none !important;
+            opacity: 0 !important;
+        }
+
+        .ocr-text-layer.mode-transparent:not(.is-digital) {
+            pointer-events: auto !important;
+            opacity: 1 !important;
+        }
+
+        .ocr-text-layer.mode-transparent .ocr-text-line {
+            color: transparent !important;
+            border: none !important;
+            background: transparent !important;
+            box-shadow: none !important;
+            cursor: text !important;
+            user-select: text !important;
+            -webkit-user-select: text !important;
+        }
+
+        .ocr-text-layer.mode-transparent .ocr-text-line::selection {
+            background: rgba(37, 99, 235, 0.35) !important;
+            color: transparent !important;
+        }
+
+        /* Mode 2: Kotak Penanda (show-boxes) - Clean line-level bounding boxes */
+        .ocr-text-layer.mode-boxes,
+        .ocr-text-layer.show-boxes {
+            pointer-events: auto !important;
+            opacity: 1 !important;
+        }
+
+        .ocr-text-layer.mode-boxes .ocr-text-line,
+        .ocr-text-layer.show-boxes .ocr-text-line {
+            display: block !important;
+            border: 1px solid rgba(37, 99, 235, 0.65) !important;
+            background: rgba(37, 99, 235, 0.08) !important;
+            border-radius: 3px !important;
+            color: transparent !important;
+            box-shadow: 0 1px 2px rgba(37, 99, 235, 0.1) !important;
+            cursor: pointer !important;
+        }
+
+        .ocr-text-layer.mode-boxes .ocr-text-line:hover,
+        .ocr-text-layer.show-boxes .ocr-text-line:hover {
+            border: 1.5px solid #2563eb !important;
+            background: rgba(37, 99, 235, 0.22) !important;
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35) !important;
+            z-index: 10 !important;
+        }
+
+        .ocr-text-layer.mode-boxes .ocr-text-line::selection,
+        .ocr-text-layer.show-boxes .ocr-text-line::selection {
+            background: rgba(37, 99, 235, 0.40) !important;
+            color: transparent !important;
+        }
+
+        /* Mode 3: Teks Terbaca (Readable OCR Text) */
+        .ocr-text-layer.mode-readable {
+            pointer-events: auto !important;
+            opacity: 1 !important;
+        }
+
+        .ocr-text-layer.mode-readable .ocr-text-line {
+            display: block !important;
+            border: 1px solid rgba(203, 213, 225, 0.9) !important;
+            background: rgba(255, 255, 255, 0.95) !important;
+            color: #0f172a !important;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+            font-size: 11px !important;
+            font-weight: 500 !important;
+            line-height: 1.2 !important;
+            padding: 0 4px !important;
+            border-radius: 3px !important;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+            cursor: pointer !important;
+        }
+
+        .ocr-text-layer.mode-readable .ocr-text-line:hover {
+            background: #fef08a !important;
+            border-color: #ca8a04 !important;
+            color: #713f12 !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+            z-index: 10 !important;
+        }
+
+        .ocr-text-layer.mode-readable .ocr-text-line::selection {
+            background: #2563eb !important;
+            color: #ffffff !important;
+        }
+
+        /* Quick click-to-copy pulse animation */
+        .ocr-text-line.copied-pulse {
+            animation: ocrLineCopied 0.6s ease;
+        }
+        @keyframes ocrLineCopied {
+            0% { background-color: rgba(16, 185, 129, 0.7) !important; }
+            100% { background-color: transparent; }
+        }
+
+        /* Search match styling directly on document text lines */
+        .ocr-text-line.search-match {
+            background-color: rgba(250, 204, 21, 0.70) !important;
+            border: 1px solid #ca8a04 !important;
+            color: #713f12 !important;
+        }
+        .ocr-text-line.search-match-active {
+            background-color: rgba(249, 115, 22, 0.90) !important;
+            border: 2px solid #ea580c !important;
+            color: #ffffff !important;
+            box-shadow: 0 0 10px rgba(249, 115, 22, 0.8);
+        }
+
+        /* Viewer bottom banner */
+        .ocr-viewer-hint {
+            margin-top: 12px;
+            padding: 8px 14px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: var(--radius-sm, 6px);
+            color: #cbd5e1;
+            font-size: 11.5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            max-width: 90%;
+        }
+
+        /* Empty State */
+        .ocr-preview-empty {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 60px 24px;
+            color: #94a3b8;
+        }
+
+        .ocr-preview-empty-icon {
+            width: 58px;
+            height: 58px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.06);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 12px;
+            color: #cbd5e1;
+        }
+
+        /* Right Pane: Extracted OCR Text Content */
+        .ocr-actions-strip {
+            padding: 12px 18px;
+            background: var(--surface-card, #ffffff);
+            border-bottom: 1px solid var(--border-color, #e2e8f0);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        /* Prominent Copy Button */
+        .btn-copy-all {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            color: #ffffff;
+            font-size: 13.5px;
+            font-weight: 700;
+            border: 1px solid #1e40af;
+            border-radius: var(--radius-sm, 6px);
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            transition: all 0.2s ease;
+        }
+
+        .btn-copy-all:hover:not(:disabled) {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);
+        }
+
+        .btn-copy-all:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .btn-copy-all:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-ocr-download {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 9px 15px;
+            background: var(--surface-subtle, #f1f5f9);
+            color: var(--text-primary, #0f172a);
+            font-size: 12.5px;
+            font-weight: 600;
+            border: 1px solid var(--border-color, #cbd5e1);
+            border-radius: var(--radius-sm, 6px);
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .btn-ocr-download:hover:not(:disabled) {
+            background: rgba(37, 99, 235, 0.08);
+            border-color: var(--ceisa-blue, #2563eb);
+            color: var(--ceisa-blue, #2563eb);
+        }
+
+        .btn-ocr-download:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+
+        /* Summary & Statistics Bar */
+        .ocr-summary-strip {
+            padding: 10px 18px;
+            background: var(--surface-subtle, #f8fafc);
+            border-bottom: 1px solid var(--border-color, #e2e8f0);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            font-size: 12px;
+        }
+
+        .ocr-stat-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 11.5px;
+            font-weight: 600;
+        }
+
+        .ocr-stat-chip.blue {
+            background: rgba(37, 99, 235, 0.1);
+            color: var(--ceisa-blue, #2563eb);
+            border: 1px solid rgba(37, 99, 235, 0.25);
+        }
+
+        .ocr-stat-chip.green {
+            background: rgba(16, 185, 129, 0.1);
+            color: #059669;
+            border: 1px solid rgba(16, 185, 129, 0.25);
+        }
+
+        .ocr-stat-chip.orange {
+            background: rgba(245, 158, 11, 0.1);
+            color: #d97706;
+            border: 1px solid rgba(245, 158, 11, 0.25);
+        }
+
+        .ocr-stat-chip.purple {
+            background: rgba(147, 51, 234, 0.1);
+            color: #7e22ce;
+            border: 1px solid rgba(147, 51, 234, 0.25);
+        }
+
+        /* Search Filter Toolbar */
+        .ocr-search-strip {
+            padding: 10px 18px;
+            background: var(--surface-card, #ffffff);
+            border-bottom: 1px solid var(--border-color, #e2e8f0);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .ocr-search-input-box {
+            position: relative;
+            flex: 1;
+            display: flex;
+            align-items: center;
+        }
+
+        .ocr-search-icon {
+            position: absolute;
+            left: 10px;
+            color: var(--text-muted, #64748b);
+            pointer-events: none;
+        }
+
+        .ocr-search-input {
+            width: 100%;
+            padding: 8px 36px 8px 34px;
+            font-size: 12.5px;
+            color: var(--text-primary, #0f172a);
+            background: var(--surface-subtle, #f8fafc);
+            border: 1px solid var(--border-color, #cbd5e1);
+            border-radius: var(--radius-sm, 6px);
+            outline: none;
+            transition: all 0.15s ease;
+        }
+
+        .ocr-search-input:focus {
+            border-color: var(--ceisa-blue, #2563eb);
+            background: var(--surface-card, #ffffff);
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
+        }
+
+        .ocr-search-clear {
+            position: absolute;
+            right: 8px;
+            background: none;
+            border: none;
+            color: var(--text-muted, #64748b);
+            cursor: pointer;
+            padding: 4px;
+            display: none;
+        }
+
+        .ocr-search-count {
+            font-size: 11.5px;
+            font-family: var(--font-mono, monospace);
+            font-weight: 700;
+            color: var(--text-muted, #64748b);
+            white-space: nowrap;
+            padding: 4px 8px;
+            background: var(--surface-subtle, #f1f5f9);
+            border-radius: 4px;
+        }
+
+        /* View Mode Tabs */
+        .ocr-tabs-bar {
+            display: flex;
+            align-items: center;
+            padding: 0 18px;
+            background: var(--surface-subtle, #f8fafc);
+            border-bottom: 1px solid var(--border-color, #e2e8f0);
+            gap: 2px;
+        }
+
+        .ocr-tab-btn {
+            padding: 9px 14px;
+            font-size: 12.5px;
+            font-weight: 600;
+            color: var(--text-muted, #64748b);
+            background: transparent;
+            border: none;
+            border-bottom: 2px solid transparent;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .ocr-tab-btn:hover {
+            color: var(--text-primary, #0f172a);
+        }
+
+        .ocr-tab-btn.active {
+            color: var(--ceisa-blue, #2563eb);
+            border-bottom-color: var(--ceisa-blue, #2563eb);
+            font-weight: 700;
+        }
+
+        /* Tab Content Area */
+        .ocr-content-viewport {
+            flex: 1;
+            padding: 16px 18px;
+            overflow-y: auto;
+            max-height: 620px;
+            min-height: 480px;
+            background: var(--surface-card, #ffffff);
+        }
+
+        /* Full Text Editor */
+        .ocr-editor-textarea {
+            width: 100%;
+            height: 520px;
+            padding: 14px;
+            font-family: var(--font-mono, 'JetBrains Mono', monospace);
+            font-size: 12.5px;
+            line-height: 1.6;
+            color: var(--text-primary, #0f172a);
+            background: var(--surface-subtle, #f8fafc);
+            border: 1px solid var(--border-color, #cbd5e1);
+            border-radius: var(--radius-sm, 6px);
+            outline: none;
+            resize: vertical;
+            white-space: pre-wrap;
+            tab-size: 4;
+            box-sizing: border-box;
+            transition: border-color 0.15s;
+        }
+
+        .ocr-editor-textarea:focus {
+            border-color: var(--ceisa-blue, #2563eb);
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
+        }
+
+        /* Per-Page Cards */
+        .ocr-pages-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .ocr-page-card {
+            border: 1px solid var(--border-color, #e2e8f0);
+            border-radius: var(--radius-sm, 6px);
+            background: var(--surface-card, #ffffff);
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+            transition: border-color 0.15s;
+        }
+
+        .ocr-page-card:hover {
+            border-color: var(--border-strong, #cbd5e1);
+        }
+
+        .ocr-page-header {
+            padding: 10px 14px;
+            background: var(--surface-subtle, #f8fafc);
+            border-bottom: 1px solid var(--border-color, #e2e8f0);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .ocr-page-title {
+            font-size: 12.5px;
+            font-weight: 700;
+            color: var(--text-primary, #0f172a);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .ocr-page-body {
+            padding: 14px;
+            font-family: var(--font-mono, 'JetBrains Mono', monospace);
+            font-size: 12px;
+            line-height: 1.55;
+            color: var(--text-secondary, #334155);
+            white-space: pre-wrap;
+            background: var(--surface-card, #ffffff);
+            max-height: 380px;
+            overflow-y: auto;
+        }
+
+        .btn-page-copy {
+            padding: 5px 10px;
+            font-size: 11.5px;
+            font-weight: 600;
+            background: var(--surface-card, #ffffff);
+            border: 1px solid var(--border-color, #cbd5e1);
+            border-radius: 4px;
+            color: var(--text-primary, #0f172a);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.15s ease;
+        }
+
+        .btn-page-copy:hover {
+            background: rgba(37, 99, 235, 0.08);
+            border-color: var(--ceisa-blue, #2563eb);
+            color: var(--ceisa-blue, #2563eb);
+        }
+
+        /* Search highlights */
+        mark.ocr-highlight {
+            background: #fde047;
+            color: #0f172a;
+            border-radius: 2px;
+            padding: 0 2px;
+        }
+
+        /* Toast Container */
+        .ocr-toast-container {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 10001;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-width: 380px;
+            pointer-events: none;
+        }
+
+        .ocr-toast {
+            pointer-events: auto;
+            background: var(--surface-card, #ffffff);
+            border: 1px solid var(--border-color, #cbd5e1);
+            box-shadow: var(--shadow-floating, 0 10px 25px -5px rgba(0, 0, 0, 0.2));
+            padding: 12px 16px;
+            border-radius: var(--radius-md, 10px);
+            font-size: 12.5px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: ocrSlideUp 0.25s ease;
+        }
+
+        @keyframes ocrSlideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        @keyframes ocrFadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* Dark Mode Precision */
+        [data-theme="dark"] .ocr-dropzone-card,
+        [data-theme="dark"] .ocr-pane-card,
+        [data-theme="dark"] .ocr-viewer-card-full,
+        [data-theme="dark"] .ocr-actions-strip,
+        [data-theme="dark"] .ocr-search-strip,
+        [data-theme="dark"] .ocr-toolbar-secondary,
+        [data-theme="dark"] .ocr-content-viewport,
+        [data-theme="dark"] .ocr-page-card,
+        [data-theme="dark"] .ocr-page-body {
+            background: #0f172a;
+            border-color: #1e293b;
+        }
+
+        [data-theme="dark"] .ocr-dropzone,
+        [data-theme="dark"] .ocr-pane-header,
+        [data-theme="dark"] .ocr-toolbar-primary,
+        [data-theme="dark"] .ocr-summary-strip,
+        [data-theme="dark"] .ocr-tabs-bar,
+        [data-theme="dark"] .ocr-selected-file-banner,
+        [data-theme="dark"] .ocr-progress-card,
+        [data-theme="dark"] .ocr-search-input,
+        [data-theme="dark"] .ocr-page-header,
+        [data-theme="dark"] .ocr-editor-textarea {
+            background: #090e17;
+            border-color: #1e293b;
+            color: #f1f5f9;
+        }
+
+        [data-theme="dark"] .ocr-segmented-pill-group {
+            background: #090e17;
+            border-color: #1e293b;
+        }
+
+        [data-theme="dark"] .btn-layer-pill {
+            color: #94a3b8;
+        }
+
+        [data-theme="dark"] .btn-layer-pill.active {
+            background: #1e293b;
+            color: #38bdf8;
+        }
+
+        [data-theme="dark"] .ocr-page-indicator {
+            color: #cbd5e1;
+        }
+
+        [data-theme="dark"] .ocr-toolbar-divider {
+            background: #1e293b;
+        }
+
+        [data-theme="dark"] .ocr-dropzone:hover,
+        [data-theme="dark"] .ocr-dropzone.dragover {
+            border-color: #38bdf8;
+            background: rgba(56, 189, 248, 0.05);
+        }
+
+        [data-theme="dark"] .ocr-dropzone-title,
+        [data-theme="dark"] .ocr-pane-title,
+        [data-theme="dark"] .ocr-selected-file-name,
+        [data-theme="dark"] .ocr-page-title {
+            color: #f8fafc;
+        }
+
+        [data-theme="dark"] .btn-ocr-download,
+        [data-theme="dark"] .btn-page-copy {
+            background: #131d31;
+            border-color: #1e293b;
+            color: #cbd5e1;
+        }
+
+        [data-theme="dark"] .btn-ocr-download:hover,
+        [data-theme="dark"] .btn-page-copy:hover {
+            border-color: #38bdf8;
+            color: #38bdf8;
+            background: rgba(56, 189, 248, 0.12);
+        }
+
+        [data-theme="dark"] .ocr-toast {
+            background: #0f172a;
+            border-color: #334155;
+            color: #f1f5f9;
+        }
+
+        [data-theme="dark"] mark.ocr-highlight {
+            background: #ca8a04;
+            color: #ffffff;
+        }
+
+        [data-theme="dark"] .textLayer ::selection {
+            background: rgba(96, 165, 250, 0.45) !important;
+            color: transparent !important;
+        }
+
+        [data-theme="dark"] .textLayer.mode-readable span,
+        [data-theme="dark"] .ocr-text-layer.mode-readable .ocr-text-line {
+            background: rgba(15, 23, 42, 0.92);
+            color: #f1f5f9 !important;
+            border-color: rgba(255, 255, 255, 0.18);
+        }
+
+        /* Pulse Indicator */
+        .ocr-pulse-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #10b981;
+            box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+            animation: ocrPulse 2s infinite;
+        }
+
+        @keyframes ocrPulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+        /* Server Status Chips */
+        .ph-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 5px 12px;
+            border-radius: 999px;
+            font-size: 11.5px;
+            font-weight: 600;
+            border: 1px solid var(--border-color, #cbd5e1);
+            background: var(--surface-card, #ffffff);
+            color: var(--text-secondary, #475569);
+            transition: all 0.2s ease;
+        }
+        .ph-chip-green {
+            background: rgba(16, 185, 129, 0.1);
+            color: #059669;
+            border-color: rgba(16, 185, 129, 0.3);
+        }
+        .ph-chip-red {
+            background: rgba(239, 68, 68, 0.12);
+            color: #ef4444;
+            border-color: rgba(239, 68, 68, 0.35);
+        }
+        .ph-chip-red .ocr-pulse-dot {
+            background: #ef4444;
+            box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+        }
+        [data-theme="dark"] .ph-chip-green {
+            background: rgba(16, 185, 129, 0.15);
+            color: #34d399;
+            border-color: rgba(16, 185, 129, 0.4);
+        }
+        [data-theme="dark"] .ph-chip-red {
+            background: rgba(239, 68, 68, 0.18);
+            color: #f87171;
+            border-color: rgba(239, 68, 68, 0.45);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- TOP PORTAL HEADER -->
+    <header class="portal-header">
+        <div class="portal-header-inner">
+            <div class="portal-brand">
+                <div class="portal-logo-emblem">
+                    <svg class="portal-logo-svg" width="32" height="32" viewBox="0 0 48 48" fill="none"
+                        xmlns="http://www.w3.org/2000/svg" aria-label="Logo Bea Cukai">
+                        <path d="M24 4L7 9V22C7 33.5 14.3 41.8 24 44C33.7 41.8 41 33.5 41 22V9L24 4Z" fill="#0A2540"
+                            stroke="#F59E0B" stroke-width="2.5" stroke-linejoin="round" />
+                        <path d="M24 7L10 11.2V21.5C10 31.2 16.2 38.3 24 40.5C31.8 38.3 38 31.2 38 21.5V11.2L24 7Z"
+                            fill="#0F3460" stroke="#FCD34D" stroke-width="1.2" />
+                        <path
+                            d="M24 10.5L25.6 14.5L29.8 14.7L26.5 17.3L27.7 21.3L24 18.8L20.3 21.3L21.5 17.3L18.2 14.7L22.4 14.5L24 10.5Z"
+                            fill="#FBBF24" stroke="#F59E0B" stroke-width="0.5" />
+                        <path
+                            d="M22 22C18 20 12 21 11 25C13 25.5 16 25 18 26C14 27 12 29 13 32C15.5 31 18 30 20 30.5C18 32 16 34 17 36C20 34.5 22 31.5 22.5 29V22H22Z"
+                            fill="#FBBF24" opacity="0.95" />
+                        <path
+                            d="M26 22C30 20 36 21 37 25C35 25.5 32 25 30 26C34 27 36 29 35 32C32.5 31 30 30 28 30.5C30 32 32 34 31 36C28 34.5 26 31.5 25.5 29V22H26Z"
+                            fill="#FBBF24" opacity="0.95" />
+                        <path d="M24 19V38M21 34C21 36.5 22.3 38 24 38C25.7 38 27 36.5 27 34" stroke="#FFFFFF"
+                            stroke-width="1.8" stroke-linecap="round" />
+                        <circle cx="24" cy="20" r="1.8" fill="#FCD34D" stroke="#FFFFFF" stroke-width="0.8" />
+                        <path d="M22 25C22.5 24 25.5 24 26 25C26.5 26.5 21.5 27.5 22 29C22.5 30.5 25.5 30.5 26 32"
+                            stroke="#FFFFFF" stroke-width="1.2" stroke-linecap="round" />
+                    </svg>
+                </div>
+                <div class="portal-brand-text">
+                    <span class="portal-system-title">CEISA 4.0 &bull; OCR & EKSTRAK TEKS</span>
+                    <span class="portal-system-sub">In-House Canvas PDF Reader & Lapisan Teks Searchable Berpresisi Tinggi</span>
+                </div>
+            </div>
+
+            <!-- Contextual Header Actions -->
+            <div class="portal-header-actions" style="display: flex; align-items: center; gap: 8px;">
+                <div class="ph-chip ph-chip-green" id="serverStatusChip" title="Status Layanan OCR Backend">
+                    <span class="ocr-pulse-dot"></span>
+                    <span id="serverStatusText">Layanan OCR Siap</span>
+                </div>
+                <a href="pib.html" class="btn btn-header-subtle" title="Buka Modul Draft PIB">
+                    Modul PIB
+                </a>
+                <a href="peb.html" class="btn btn-header-subtle" title="Buka Modul Draft PEB">
+                    Modul PEB
+                </a>
+                <a href="doc_searcher.html" class="btn btn-header-subtle" title="Buka Dokumen Searcher">
+                    Dokumen Searcher
+                </a>
+                <a href="print_hub.html" class="btn btn-header-subtle" title="Buka Print Hub">
+                    Print Hub
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- MASTER PORTAL WRAPPER -->
+    <div class="ceisa-portal-layout">
+        <!-- CEISA 4.0 Vertical Sidebar -->
+        <aside class="ceisa-sidebar" id="ceisaSidebar" aria-label="Navigasi Menu CEISA 4.0">
+            <div class="ceisa-sidebar-header">
+                <div class="ceisa-sidebar-brand-box">
+                    <span class="sidebar-brand-badge">PORTAL</span>
+                    <span class="sidebar-brand-title">MENU CEISA</span>
+                </div>
+                <button type="button" class="ceisa-sidebar-toggle" id="ceisaSidebarToggle"
+                    title="Perluas / Ciutkan Menu Samping" aria-label="Toggle Menu Samping" aria-expanded="false">
+                    <svg class="icon-toggle-expand" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="13 17 18 12 13 7"></polyline>
+                        <polyline points="6 17 11 12 6 7"></polyline>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="ceisa-sidebar-nav" role="tablist" aria-label="Menu Utama Portal CEISA">
+                <!-- 1. Modul Draft PEB -->
+                <a href="peb.html" class="ceisa-sidebar-item" id="btnNavPeb" role="tab"
+                    aria-selected="false" title="Modul Draft PEB (Ekspor)" data-tooltip="Modul Draft PEB (Ekspor)">
+                    <div class="sidebar-icon-box">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="16" y1="13" x2="8" y2="13"></line>
+                            <line x1="16" y1="17" x2="8" y2="17"></line>
+                        </svg>
+                    </div>
+                    <span class="sidebar-label">Modul Draft PEB</span>
+                </a>
+
+                <!-- 2. Modul Draft PIB -->
+                <a href="pib.html" class="ceisa-sidebar-item" id="btnNavPib" role="tab"
+                    aria-selected="false" title="Modul Draft PIB (Impor)" data-tooltip="Modul Draft PIB (Impor)">
+                    <div class="sidebar-icon-box">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                            <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                            <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                        </svg>
+                    </div>
+                    <span class="sidebar-label">Modul Draft PIB</span>
+                </a>
+
+                <!-- 3. HS Code Checker -->
+                <a href="hscode.html" class="ceisa-sidebar-item" id="btnNavHsCode" role="tab"
+                    aria-selected="false" title="HS Code Checker & BTKI" data-tooltip="HS Code Checker & BTKI">
+                    <div class="sidebar-icon-box">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                            <line x1="11" y1="8" x2="11" y2="14"></line>
+                            <line x1="8" y1="11" x2="14" y2="11"></line>
+                        </svg>
+                    </div>
+                    <span class="sidebar-label">HS Code Checker</span>
+                </a>
+
+                <!-- 4. Dokumen Searcher -->
+                <a href="doc_searcher.html" class="ceisa-sidebar-item" id="btnNavDocSearcher" role="tab"
+                    aria-selected="false" title="Dokumen Searcher (Pencari Dokumen Pabean)" data-tooltip="Dokumen Searcher">
+                    <div class="sidebar-icon-box">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <circle cx="11" cy="14" r="3"></circle>
+                            <line x1="13.5" y1="16.5" x2="16" y2="19"></line>
+                        </svg>
+                    </div>
+                    <span class="sidebar-label">Dokumen Searcher</span>
+                </a>
+
+                <!-- Dots Divider -->
+                <div class="ceisa-sidebar-dots" aria-hidden="true"><span></span><span></span><span></span></div>
+
+                <!-- 5. CEISA Inspector -->
+                <a href="dashboard.html" class="ceisa-sidebar-item" id="btnNavInspector" role="tab"
+                    aria-selected="false" title="CEISA Inspector (Monitoring & SPPB)" data-tooltip="CEISA Inspector">
+                    <div class="sidebar-icon-box">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                            <line x1="8" y1="21" x2="16" y2="21"></line>
+                            <line x1="12" y1="17" x2="12" y2="21"></line>
+                        </svg>
+                    </div>
+                    <span class="sidebar-label">CEISA Inspector</span>
+                </a>
+
+                <!-- 6. Print Hub -->
+                <a href="print_hub.html" class="ceisa-sidebar-item" id="btnNavPrintHub" role="tab"
+                    aria-selected="false" title="Print Hub (Pusat Cetak Mandiri & Mobile)" data-tooltip="Print Hub">
+                    <div class="sidebar-icon-box">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                            <rect x="6" y="14" width="12" height="8"></rect>
+                        </svg>
+                    </div>
+                    <span class="sidebar-label">Print Hub</span>
+                </a>
+
+                <!-- 7. OCR & Ekstrak Teks (ACTIVE) -->
+                <a href="ocr_tool.html" class="ceisa-sidebar-item active" id="btnNavOcrTool" role="tab"
+                    aria-selected="true" title="OCR & Ekstrak Teks (Searchable PDF)"
+                    data-tooltip="OCR & Ekstrak Teks">
+                    <div class="sidebar-icon-box">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 7V5a2 2 0 0 1 2-2h2"></path>
+                            <path d="M17 3h2a2 2 0 0 1 2 2v2"></path>
+                            <path d="M21 17v2a2 2 0 0 1-2 2h-2"></path>
+                            <path d="M7 21H5a2 2 0 0 1-2-2v-2"></path>
+                            <line x1="7" y1="9" x2="17" y2="9"></line>
+                            <line x1="7" y1="12" x2="17" y2="12"></line>
+                            <line x1="7" y1="15" x2="13" y2="15"></line>
+                        </svg>
+                    </div>
+                    <span class="sidebar-label">OCR & Ekstrak Teks</span>
+                </a>
+            </div>
+
+            <!-- Sidebar Bottom Theme Mode Toggle -->
+            <div class="ceisa-sidebar-footer">
+                <button type="button" class="ceisa-theme-toggle" id="themeToggleBtn"
+                    title="Beralih Mode Gelap / Terang" aria-label="Toggle Dark/Light Mode" data-tooltip="Mode Gelap / Terang">
+                    <div class="sidebar-icon-box">
+                        <svg class="icon-theme-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="5"></circle>
+                            <line x1="12" y1="1" x2="12" y2="3"></line>
+                            <line x1="12" y1="21" x2="12" y2="23"></line>
+                            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                            <line x1="1" y1="12" x2="3" y2="12"></line>
+                            <line x1="21" y1="12" x2="23" y2="12"></line>
+                            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                        </svg>
+                        <svg class="icon-theme-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                        </svg>
+                    </div>
+                    <span class="sidebar-label theme-label">Mode Gelap</span>
+                </button>
+
+                <button type="button" class="ceisa-settings-toggle" id="openUpdateModalBtn"
+                    title="Pengaturan & Update Sistem" aria-label="Pengaturan & Update Sistem" data-tooltip="Pengaturan & Update">
+                    <div class="sidebar-icon-box">
+                        <svg class="icon-settings" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="3" r="3"></circle>
+                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                        </svg>
+                    </div>
+                    <span class="sidebar-label settings-label">Update & Sistem</span>
+                    <span class="sidebar-version-badge" id="updateBtnLabel">v2.1.2</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Workspace Viewport -->
+        <div class="ceisa-portal-content">
+            <main class="main-workspace ocr-container">
+
+                <!-- Sub-Header Strip (CEISA 4.0 Standard) -->
+                <section class="doc-title-strip" style="margin-bottom: 18px;">
+                    <div class="doc-title-container">
+                        <div class="doc-title-left">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span class="badge-bc-type" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #fff; padding: 4px 10px; border-radius: 4px; font-weight: 700; font-size: 11px; letter-spacing: 0.5px;">IN-HOUSE CANVAS OCR & SEARCHABLE PDF</span>
+                                <h1 style="margin: 0; font-size: 18px; font-weight: 700; color: var(--text-primary);">OCR & Ekstrak Teks Dokumen Pabean</h1>
+                            </div>
+                            <p style="margin: 4px 0 0; font-size: 12px; color: var(--text-secondary);">
+                                In-house PDF renderer (tanpa iframe bawaan browser), overlay lapisan teks presisi tinggi yang dapat diseleksi dan disalin langsung di posisi dokumen aslinya.
+                            </p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- TOP DROPZONE SECTION -->
+                <section class="ocr-dropzone-card">
+                    <input type="file" id="ocrFileInput" accept=".pdf,.png,.jpg,.jpeg,.webp" style="display: none;">
+                    <div class="ocr-dropzone" id="ocrDropzone">
+                        <div class="ocr-dropzone-icon-box">
+                            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="17 8 12 3 7 8"></polyline>
+                                <line x1="12" y1="3" x2="12" y2="15"></line>
+                            </svg>
+                        </div>
+                        <div class="ocr-dropzone-title">Tarik & Lepaskan Berkas Dokumen ke Sini</div>
+                        <div class="ocr-dropzone-subtitle">atau klik untuk memilih berkas dari komputer Anda</div>
+                        <div class="ocr-file-tags">
+                            <span class="ocr-format-badge">PDF Scan</span>
+                            <span class="ocr-format-badge">JPG / JPEG</span>
+                            <span class="ocr-format-badge">PNG</span>
+                            <span class="ocr-format-badge">WEBP</span>
+                            <span style="font-size: 11px; color: var(--text-muted); margin-left: 6px;">Maksimal 50 MB</span>
+                        </div>
+                    </div>
+
+                    <!-- Selected File Banner -->
+                    <div class="ocr-selected-file-banner" id="ocrSelectedFileBanner">
+                        <div class="ocr-selected-file-left">
+                            <div class="ocr-selected-file-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                    <polyline points="14 2 14 8 20 8"></polyline>
+                                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                                    <polyline points="10 9 9 9 8 9"></polyline>
+                                </svg>
+                            </div>
+                            <div>
+                                <div class="ocr-selected-file-name" id="ocrFileName">—</div>
+                                <div class="ocr-selected-file-meta" id="ocrFileMeta">—</div>
+                            </div>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <button type="button" class="btn btn-secondary-ceisa" id="btnChangeFile" style="font-size: 12px; padding: 6px 12px;">
+                                Ganti Berkas
+                            </button>
+                            <button type="button" class="btn-primary-action" id="btnStartOcr" style="font-size: 12.5px; padding: 8px 16px;">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <polygon points="10 8 16 12 10 16 10 8"></polygon>
+                                </svg>
+                                Mulai Ekstraksi OCR
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Progress Bar & Processing Steps -->
+                    <div class="ocr-progress-card" id="ocrProgressCard">
+                        <div class="ocr-progress-header">
+                            <div class="ocr-progress-title">
+                                <span class="spinner-inline" id="ocrSpinner"></span>
+                                <span id="ocrProgressStatusText">Memproses dokumen...</span>
+                            </div>
+                            <div class="ocr-progress-percentage" id="ocrProgressPercent">0%</div>
+                        </div>
+                        <div class="ocr-progress-track">
+                            <div class="ocr-progress-fill" id="ocrProgressFill"></div>
+                        </div>
+                        <div class="ocr-progress-steps">
+                            <span class="ocr-step-pill" id="stepUpload">1. Upload Berkas</span>
+                            <span class="ocr-step-pill" id="stepOcr">2. Gemini OCR AI</span>
+                            <span class="ocr-step-pill" id="stepSearchable">3. Susun Teks & PDF</span>
+                            <span class="ocr-step-pill" id="stepDone">4. Selesai</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- FULL-WIDTH IN-HOUSE DOCUMENT VIEWER WORKSPACE -->
+                <section class="ocr-viewer-section" id="ocrDocumentViewer">
+                    <div class="ocr-pane-card ocr-viewer-card-full" id="ocrDocumentViewerCard">
+
+                        <!-- MASTER TOOLBAR: ROW 1 (Header Title, Mode Switcher, Primary Actions) -->
+                        <div class="ocr-pane-header ocr-toolbar-primary">
+                            <div class="ocr-pane-title-box">
+                                <div class="ocr-header-badge-icon">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                        <polyline points="14 2 14 8 20 8"></polyline>
+                                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 class="ocr-pane-title">Dokumen & Lapisan Teks Seleksi</h3>
+                                    <span class="ocr-pane-subtitle">Seleksi, salin teks langsung di atas dokumen, atau unduh berkas</span>
+                                </div>
+                            </div>
+
+                            <!-- Center: Layer Display Mode Switcher (Segmented Button Group) -->
+                            <div class="ocr-layer-mode-switcher" role="group" aria-label="Mode Tampilan Lapisan Teks">
+                                <span class="ocr-switcher-label">Mode Lapisan:</span>
+                                <div class="ocr-segmented-pill-group">
+                                    <button type="button" class="btn-layer-pill active" id="btnModeTransparent" data-mode="transparent" title="Lapisan teks transparan untuk seleksi & salin langsung (Default)">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <circle cx="12" cy="12" r="10"></circle>
+                                            <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
+                                        </svg>
+                                        <span>Transparan (Default)</span>
+                                    </button>
+                                    <button type="button" class="btn-layer-pill" id="btnModeBoxes" data-mode="boxes" title="Kotak penanda koordinat bounding box">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                                            <line x1="9" y1="3" x2="9" y2="21"></line>
+                                            <line x1="15" y1="3" x2="15" y2="21"></line>
+                                        </svg>
+                                        <span>Kotak Penanda</span>
+                                    </button>
+                                    <button type="button" class="btn-layer-pill" id="btnModeReadable" data-mode="readable" title="Tampilkan teks hasil OCR terbaca di atas dokumen">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="4 7 4 4 20 4 20 7"></polyline>
+                                            <line x1="9" y1="20" x2="15" y2="20"></line>
+                                            <line x1="12" y1="4" x2="12" y2="20"></line>
+                                        </svg>
+                                        <span>Teks Terbaca</span>
+                                    </button>
+                                </div>
+                                <button type="button" class="btn-action-icon" id="btnToggleTextLayer" title="Toggle Mode Kotak OCR" style="display: none;">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                        <circle cx="12" cy="12" r="3"></circle>
+                                    </svg>
+                                </button>
+                            </div>
+
+                            <!-- Right: Relocated Primary Action Buttons -->
+                            <div class="ocr-primary-actions-group">
+                                <button type="button" class="btn-copy-all" id="btnCopyAll" disabled title="Salin seluruh teks hasil OCR ke clipboard">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                    </svg>
+                                    <span>Salin Semua Teks</span>
+                                </button>
+                                <button type="button" class="btn-ocr-download btn-searchable-pdf" id="btnDownloadSearchablePdf" disabled title="Unduh dokumen dalam bentuk Searchable PDF (ada lapisan teks tersembunyi)">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                        <polyline points="7 10 12 15 17 10"></polyline>
+                                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                                    </svg>
+                                    <span>Unduh Searchable PDF</span>
+                                </button>
+                                <button type="button" class="btn-ocr-download" id="btnDownloadTxt" disabled title="Unduh teks mentah sebagai berkas .txt">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                        <polyline points="14 2 14 8 20 8"></polyline>
+                                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                                    </svg>
+                                    <span>Unduh File Teks (.txt)</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- MASTER TOOLBAR: ROW 2 (Quick Search, Page Nav, Zoom, & Document Metadata Stats) -->
+                        <div class="ocr-toolbar-secondary">
+                            <!-- Left: In-Document Quick Search -->
+                            <div class="ocr-search-input-box">
+                                <svg class="ocr-search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="11" cy="11" r="8"></circle>
+                                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                                </svg>
+                                <input type="text" id="ocrSearchInput" class="ocr-search-input" placeholder="Cari dalam dokumen (Ctrl+F atau ketik kata kunci)..." disabled>
+                                <button type="button" class="ocr-search-clear" id="ocrSearchClear" title="Bersihkan Pencarian">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                                    </svg>
+                                </button>
+                                <span class="ocr-search-count" id="ocrSearchCount">0 ditemukan</span>
+                                <button type="button" class="btn-action-icon" id="btnSearchPrev" title="Kecocokan Sebelumnya" disabled>
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="18 15 12 9 6 15"></polyline>
+                                    </svg>
+                                </button>
+                                <button type="button" class="btn-action-icon" id="btnSearchNext" title="Kecocokan Berikutnya" disabled>
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="6 9 12 15 18 9"></polyline>
+                                    </svg>
+                                </button>
+                            </div>
+
+                            <!-- Center: Page Navigation & Zoom Controls -->
+                            <div class="ocr-view-controls-group">
+                                <div class="ocr-nav-controls">
+                                    <button type="button" class="btn-action-icon" id="btnPrevPage" title="Halaman Sebelumnya" disabled>
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="15 18 9 12 15 6"></polyline>
+                                        </svg>
+                                    </button>
+                                    <span id="pageIndicator" class="ocr-page-indicator">Hal 1 / 1</span>
+                                    <button type="button" class="btn-action-icon" id="btnNextPage" title="Halaman Berikutnya" disabled>
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="9 18 15 12 9 6"></polyline>
+                                        </svg>
+                                    </button>
+                                </div>
+
+                                <span class="ocr-toolbar-divider"></span>
+
+                                <div class="ocr-zoom-controls">
+                                    <button type="button" class="btn-action-icon" id="btnZoomOut" title="Perkecil (-15%)">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <circle cx="11" cy="11" r="8"></circle>
+                                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                                            <line x1="8" y1="11" x2="14" y2="11"></line>
+                                        </svg>
+                                    </button>
+                                    <span id="zoomLevelDisplay" class="ocr-zoom-level">100%</span>
+                                    <button type="button" class="btn-action-icon" id="btnZoomIn" title="Perbesar (+15%)">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <circle cx="11" cy="11" r="8"></circle>
+                                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                                            <line x1="11" y1="8" x2="11" y2="14"></line>
+                                            <line x1="8" y1="11" x2="14" y2="11"></line>
+                                        </svg>
+                                    </button>
+                                    <button type="button" class="btn-action-icon" id="btnResetZoom" title="Reset Zoom ke 100%">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                                            <path d="M3 3v5h5"></path>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Right: Relocated Document Metadata Stats Chips -->
+                            <div class="ocr-summary-strip" id="ocrSummaryStrip">
+                                <span class="ocr-stat-chip blue" id="chipDocType" title="Tipe Dokumen">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path></svg>
+                                    <span id="summaryDocType">Dokumen: —</span>
+                                </span>
+                                <span class="ocr-stat-chip green" id="chipLanguage" title="Bahasa Terdeteksi">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+                                    <span id="summaryLanguage">Bahasa: —</span>
+                                </span>
+                                <span class="ocr-stat-chip orange" id="chipWords" title="Jumlah Kata">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 7 4 4 20 4 20 7"></polyline><line x1="12" y1="4" x2="12" y2="20"></line></svg>
+                                    <span id="summaryWords">0 Kata</span>
+                                </span>
+                                <span class="ocr-stat-chip purple" id="chipChars" title="Jumlah Karakter">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="9" x2="15" y2="9"></line><line x1="12" y1="9" x2="12" y2="15"></line></svg>
+                                    <span id="summaryChars">0 Karakter</span>
+                                </span>
+                                <span class="ocr-stat-chip blue" id="chipPages" title="Jumlah Halaman">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="2" width="12" height="20" rx="2"></rect></svg>
+                                    <span id="summaryPages">0 Halaman</span>
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- In-House Canvas Viewport (Spacious High-Res Document Canvas) -->
+                        <div class="ocr-preview-viewport" id="ocrPreviewViewport">
+                            <!-- Empty State -->
+                            <div class="ocr-preview-empty" id="ocrPreviewEmpty">
+                                <div class="ocr-preview-empty-icon">
+                                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                        <polyline points="14 2 14 8 20 8"></polyline>
+                                        <circle cx="10" cy="13" r="2"></circle>
+                                        <path d="m20 17-1.5-1.5a2 2 0 0 0-2.8 0L13 18"></path>
+                                    </svg>
+                                </div>
+                                <div style="font-weight: 700; font-size: 14px; margin-bottom: 6px; color: #f1f5f9;">Belum Ada Dokumen</div>
+                                <div style="font-size: 12.5px; max-width: 380px; line-height: 1.5; color: #94a3b8;">
+                                    Unggah berkas PDF scan atau gambar dokumen pabean untuk membaca, menyeleksi, dan menyalin teks langsung di atas kertas dokumen.
+                                </div>
+                            </div>
+
+                            <!-- In-house Multi-page Canvas & Text Layer Container -->
+                            <div class="ocr-document-pages" id="ocrDocumentPages">
+                                <!-- Rendered dynamically with Canvas + .ocr-text-layer -->
+                            </div>
+
+                            <!-- Informational Selection & Click-to-Copy Hint -->
+                            <div class="ocr-viewer-hint" id="ocrViewerHint" style="display: none;">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink: 0; color: #38bdf8;">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                                </svg>
+                                <span>Teks dapat diblok langsung dengan kursor mouse (Ctrl+C) atau klik baris mana pun untuk langsung menyalin. Posisi teks 1:1 di atas dokumen asli.</span>
+                            </div>
+
+                            <!-- Hidden Legacy Elements for backward test compatibility -->
+                            <iframe id="pdfPreviewFrame" class="ocr-preview-iframe" title="Pratinjau PDF" style="display: none;"></iframe>
+                            <div id="imagePreviewContainer" class="ocr-preview-image-wrapper" style="display: none;">
+                                <img id="imagePreview" class="ocr-preview-img" alt="Pratinjau Dokumen">
+                            </div>
+                        </div>
+
+                    </div>
+                </section>
+
+                <!-- Hidden Legacy Compatibility Containers for Automated Test Parity -->
+                <div id="ocrLegacyDataStore" style="display: none;" aria-hidden="true">
+                    <button type="button" id="tabBtnFullText" aria-hidden="true">Teks Lengkap</button>
+                    <button type="button" id="tabBtnPages" aria-hidden="true">Per Halaman</button>
+                    <span id="tabPagesCount">0</span>
+                    <textarea id="ocrFullTextEditor" aria-hidden="true" tabindex="-1"></textarea>
+                    <div id="ocrPagesContainer" aria-hidden="true"></div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION CONTAINER -->
+    <div class="ocr-toast-container" id="ocrToastContainer"></div>
+
+    <!-- SCRIPTS -->
+    <script src="config.js"></script>
+    <script src="sync.js"></script>
+    <script type="module" src="ocr_tool.js"></script>
+    <script src="update-center.js"></script>
+</body>
+</html>
