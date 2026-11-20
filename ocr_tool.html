@@ -624,29 +624,57 @@
             opacity: 1 !important;
         }
 
-        .ocr-text-layer.mode-boxes .ocr-text-line,
-        .ocr-text-layer.show-boxes .ocr-text-line {
+        .ocr-text-layer.mode-boxes .ocr-text-line:not(.is-fallback-line),
+        .ocr-text-layer.show-boxes .ocr-text-line:not(.is-fallback-line) {
             display: block !important;
-            border: 1px solid rgba(37, 99, 235, 0.65) !important;
-            background: rgba(37, 99, 235, 0.08) !important;
-            border-radius: 3px !important;
+            border: 1px solid rgba(59, 130, 246, 0.45) !important;
+            background: rgba(59, 130, 246, 0.03) !important;
+            border-radius: 2px !important;
             color: transparent !important;
-            box-shadow: 0 1px 2px rgba(37, 99, 235, 0.1) !important;
+            box-shadow: none !important;
             cursor: pointer !important;
+            max-height: 48px !important;
+            overflow: hidden !important;
+        }
+
+        /* Fallback lines without true spatial bounding boxes must NEVER form a solid blue wall */
+        .ocr-text-layer.mode-boxes .ocr-text-line.is-fallback-line,
+        .ocr-text-layer.show-boxes .ocr-text-line.is-fallback-line {
+            display: block !important;
+            border: none !important;
+            background: transparent !important;
+            color: transparent !important;
+            box-shadow: none !important;
+            cursor: text !important;
+        }
+
+        .ocr-text-layer.mode-boxes .ocr-text-line.is-fallback-line:hover,
+        .ocr-text-layer.show-boxes .ocr-text-line.is-fallback-line:hover {
+            border: 1px dashed #2563eb !important;
+            background: rgba(37, 99, 235, 0.08) !important;
         }
 
         .ocr-text-layer.mode-boxes .ocr-text-line:hover,
         .ocr-text-layer.show-boxes .ocr-text-line:hover {
             border: 1.5px solid #2563eb !important;
-            background: rgba(37, 99, 235, 0.22) !important;
-            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35) !important;
+            background: rgba(37, 99, 235, 0.16) !important;
+            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25) !important;
             z-index: 10 !important;
         }
 
         .ocr-text-layer.mode-boxes .ocr-text-line::selection,
         .ocr-text-layer.show-boxes .ocr-text-line::selection {
-            background: rgba(37, 99, 235, 0.40) !important;
+            background: rgba(37, 99, 235, 0.35) !important;
             color: transparent !important;
+        }
+
+        /* Suppress underlying native textLayer when boxes or readable overlay is active to avoid double-selection clutter */
+        .ocr-page-wrapper:has(.ocr-text-layer.mode-boxes) .textLayer,
+        .ocr-page-wrapper:has(.ocr-text-layer.mode-readable) .textLayer,
+        .textLayer.suppressed {
+            pointer-events: none !important;
+            user-select: none !important;
+            -webkit-user-select: none !important;
         }
 
         /* Mode 3: Teks Terbaca (Readable OCR Text) */
@@ -1503,6 +1531,7 @@
                         <div class="doc-title-left">
                             <div style="display: flex; align-items: center; gap: 8px;">
                                 <span class="badge-bc-type" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #fff; padding: 4px 10px; border-radius: 4px; font-weight: 700; font-size: 11px; letter-spacing: 0.5px;">IN-HOUSE CANVAS OCR & SEARCHABLE PDF</span>
+                                <span style="background: rgba(37, 99, 235, 0.15); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.4); padding: 3px 8px; border-radius: 4px; font-weight: 700; font-size: 11px;">Ray-OCR V.1</span>
                                 <h1 style="margin: 0; font-size: 18px; font-weight: 700; color: var(--text-primary);">OCR & Ekstrak Teks Dokumen Pabean</h1>
                             </div>
                             <p style="margin: 4px 0 0; font-size: 12px; color: var(--text-secondary);">
@@ -1555,6 +1584,9 @@
                             <button type="button" class="btn btn-secondary-ceisa" id="btnChangeFile" style="font-size: 12px; padding: 6px 12px;">
                                 Ganti Berkas
                             </button>
+                            <button type="button" class="btn btn-secondary-ceisa" id="btnClearOcrSession" style="font-size: 12px; padding: 6px 12px; border-color: rgba(239, 68, 68, 0.4); color: #f87171;" title="Tutup dokumen dan bersihkan sesi">
+                                Tutup Dokumen
+                            </button>
                             <button type="button" class="btn-primary-action" id="btnStartOcr" style="font-size: 12.5px; padding: 8px 16px;">
                                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <circle cx="12" cy="12" r="10"></circle>
@@ -1579,7 +1611,7 @@
                         </div>
                         <div class="ocr-progress-steps">
                             <span class="ocr-step-pill" id="stepUpload">1. Upload Berkas</span>
-                            <span class="ocr-step-pill" id="stepOcr">2. Gemini OCR AI</span>
+                            <span class="ocr-step-pill" id="stepOcr">2. Ray-OCR V.1</span>
                             <span class="ocr-step-pill" id="stepSearchable">3. Susun Teks & PDF</span>
                             <span class="ocr-step-pill" id="stepDone">4. Selesai</span>
                         </div>

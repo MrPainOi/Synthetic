@@ -46,7 +46,7 @@ function getBackendUrl(path = '') {
                 base = `${window.location.protocol}//${host}:${port}`;
             }
         }
-    } catch (_) {}
+    } catch (_) { }
     return `${base}${path.startsWith('/') ? path : '/' + path}`;
 }
 
@@ -113,6 +113,7 @@ function cacheElements() {
         fileName: document.getElementById('ocrFileName'),
         fileMeta: document.getElementById('ocrFileMeta'),
         btnChangeFile: document.getElementById('btnChangeFile'),
+        btnClearOcrSession: document.getElementById('btnClearOcrSession'),
         btnStartOcr: document.getElementById('btnStartOcr'),
 
         // Progress & Status
@@ -237,8 +238,207 @@ function formatBytes(bytes) {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 }
 
+// =========================================================================
+// INDEXEDDB DOCUMENT PERSISTENCE (Preserves document file across tab switches)
+// =========================================================================
+const DB_NAME = 'ceisa_storage_db';
+const DB_VERSION = 1;
+const DOC_STORE = 'documents';
+const OCR_DOC_KEY = 'last_ocr_document';
+const OCR_STATE_STORAGE_KEY = 'ceisa_ocr_last_state';
+
+function openCeisaDb() {
+    return new Promise((resolve, reject) => {
+        if (typeof indexedDB === 'undefined') {
+            return reject(new Error('IndexedDB not supported'));
+        }
+        const req = indexedDB.open(DB_NAME, DB_VERSION);
+        req.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains(DOC_STORE)) {
+                db.createObjectStore(DOC_STORE);
+            }
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+    });
+}
+
+async function saveOcrDocumentToDb(file) {
+    if (!file) return false;
+    try {
+        const arrayBuf = await file.arrayBuffer();
+        const db = await openCeisaDb();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(DOC_STORE, 'readwrite');
+            const store = tx.objectStore(DOC_STORE);
+            const record = {
+                name: file.name,
+                type: file.type || 'application/pdf',
+                size: file.size,
+                lastModified: file.lastModified,
+                buffer: arrayBuf,
+                timestamp: Date.now()
+            };
+            const req = store.put(record, OCR_DOC_KEY);
+            req.onsuccess = () => resolve(true);
+            req.onerror = () => reject(req.error);
+        });
+    } catch (err) {
+        console.warn('[OCR TOOL] Gagal menyimpan berkas ke IndexedDB:', err.message);
+        return false;
+    }
+}
+
+async function getOcrDocumentFromDb() {
+    try {
+        const db = await openCeisaDb();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(DOC_STORE, 'readonly');
+            const store = tx.objectStore(DOC_STORE);
+            const req = store.get(OCR_DOC_KEY);
+            req.onsuccess = () => resolve(req.result || null);
+            req.onerror = () => reject(req.error);
+        });
+    } catch (err) {
+        console.warn('[OCR TOOL] Gagal membaca berkas dari IndexedDB:', err.message);
+        return null;
+    }
+}
+
+async function clearOcrDocumentFromDb() {
+    try {
+        const db = await openCeisaDb();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(DOC_STORE, 'readwrite');
+            const store = tx.objectStore(DOC_STORE);
+            const req = store.delete(OCR_DOC_KEY);
+            req.onsuccess = () => resolve(true);
+            req.onerror = () => reject(req.error);
+        });
+    } catch (err) {
+        console.warn('[OCR TOOL] Gagal menghapus berkas dari IndexedDB:', err.message);
+        return false;
+    }
+}
+
+function saveOcrSessionState() {
+    try {
+        if (!state.file && (!state.result || !state.result.fullText)) {
+            return;
+        }
+        const sessionData = {
+            fileName: state.file ? state.file.name : '',
+            fileSize: state.file ? state.file.size : 0,
+            fileType: state.file ? state.file.type : 'application/pdf',
+            fileLastModified: state.file ? state.file.lastModified : Date.now(),
+            zoom: state.zoom,
+            displayMode: state.displayMode,
+            currentPage: state.currentPage,
+            activeTab: state.activeTab,
+            hasNativeText: state.hasNativeText,
+            result: state.result,
+            editedFullText: el.fullTextEditor ? el.fullTextEditor.value : (state.result ? state.result.fullText : ''),
+            timestamp: Date.now()
+        };
+        localStorage.setItem(OCR_STATE_STORAGE_KEY, JSON.stringify(sessionData));
+    } catch (err) {
+        console.warn('[OCR TOOL] Gagal menyimpan state ke localStorage:', err.message);
+    }
+}
+
+async function restoreLastOcrSession() {
+    try {
+        const savedRaw = localStorage.getItem(OCR_STATE_STORAGE_KEY);
+        if (!savedRaw) return false;
+
+        const savedState = JSON.parse(savedRaw);
+        if (!savedState) return false;
+
+        const fileRecord = await getOcrDocumentFromDb();
+        if (!fileRecord || !fileRecord.buffer) {
+            return false;
+        }
+
+        const file = new File([fileRecord.buffer], fileRecord.name, {
+            type: fileRecord.type || 'application/pdf',
+            lastModified: fileRecord.lastModified || Date.now()
+        });
+
+        state.file = file;
+        state.fileUrl = URL.createObjectURL(file);
+        state.zoom = savedState.zoom || 100;
+        state.displayMode = savedState.displayMode || 'transparent';
+        state.showBoxes = (state.displayMode === 'boxes');
+        state.currentPage = savedState.currentPage || 1;
+        state.hasNativeText = !!savedState.hasNativeText;
+
+        // Tampilkan Banner Berkas Terpilih
+        if (el.dropzone) el.dropzone.style.display = 'none';
+        if (el.selectedBanner) el.selectedBanner.style.display = 'flex';
+        if (el.fileName) el.fileName.textContent = file.name;
+        if (el.fileMeta) {
+            const ext = file.name.split('.').pop().toUpperCase();
+            el.fileMeta.textContent = `${ext} • ${formatBytes(file.size)}`;
+        }
+
+        // Render dokumen ke canvas
+        await renderDocumentInHouse(file);
+
+        // Jika ada hasil teks / OCR yang tersimpan, pulihkan
+        if (savedState.result && (savedState.result.fullText || (savedState.result.pages && savedState.result.pages.length > 0))) {
+            state.result = savedState.result;
+            if (savedState.editedFullText) {
+                state.result.fullText = savedState.editedFullText;
+            }
+            renderOcrResults(state.result);
+            populateTextOverlay();
+        }
+
+        // Pulihkan display mode
+        setLayerMode(state.displayMode);
+
+        // Pulihkan posisi halaman
+        if (state.currentPage > 1) {
+            const target = document.getElementById(`ocrPageWrapper-${state.currentPage}`);
+            if (target) {
+                setTimeout(() => target.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 120);
+            }
+        }
+
+        showToast(`Sesi dokumen "${file.name}" dipulihkan secara otomatis.`, 'info');
+        return true;
+    } catch (err) {
+        console.warn('[OCR TOOL] Gagal memulihkan sesi terakhir:', err.message);
+        return false;
+    }
+}
+
+async function clearOcrSession() {
+    try {
+        localStorage.removeItem(OCR_STATE_STORAGE_KEY);
+        await clearOcrDocumentFromDb();
+        resetOcrResults();
+        state.file = null;
+        state.pdfDoc = null;
+        state.currentPage = 1;
+        state.totalPages = 1;
+        state.hasNativeText = false;
+        if (el.selectedBanner) el.selectedBanner.style.display = 'none';
+        if (el.dropzone) el.dropzone.style.display = 'block';
+        if (el.documentPages) el.documentPages.innerHTML = '';
+        if (el.previewEmpty) el.previewEmpty.style.display = 'flex';
+        if (el.viewerHint) el.viewerHint.style.display = 'none';
+        if (el.fileInput) el.fileInput.value = '';
+        updatePageIndicator();
+        showToast('Sesi dokumen telah dibersihkan.', 'info');
+    } catch (err) {
+        console.warn('[OCR TOOL] Gagal membersihkan sesi:', err.message);
+    }
+}
+
 // File Selection Handler
-async function handleSelectedFile(file) {
+async function handleSelectedFile(file, shouldSaveToDb = true) {
     if (!file) return;
 
     const validExts = ['.pdf', '.jpg', '.jpeg', '.png', '.webp'];
@@ -257,11 +457,14 @@ async function handleSelectedFile(file) {
 
     // Clean up previous blob
     if (state.fileUrl) {
-        try { URL.revokeObjectURL(state.fileUrl); } catch (_) {}
+        try { URL.revokeObjectURL(state.fileUrl); } catch (_) { }
     }
 
     state.file = file;
     state.fileUrl = URL.createObjectURL(file);
+    state.pdfDoc = null;
+    state.currentPage = 1;
+    state.hasNativeText = false;
 
     // Update selected file banner
     if (el.fileName) el.fileName.textContent = file.name;
@@ -275,30 +478,106 @@ async function handleSelectedFile(file) {
     // Reset previous OCR outputs if new file chosen
     resetOcrResults();
 
+    // Persist to IndexedDB
+    if (shouldSaveToDb) {
+        saveOcrDocumentToDb(file);
+        saveOcrSessionState();
+    }
+
     // Render In-House Custom Document Pages (Canvas based)
     await renderDocumentInHouse(file);
 
     showToast(`Berkas "${file.name}" siap diekstrak.`, 'info');
 }
 
+// Render Token & Cancellation Lock
+let currentRenderToken = 0;
+let activeRenderTasks = [];
+let zoomDebounceTimer = null;
+let zoomPendingResolves = [];
+let pageScrollObserver = null;
+const visiblePageRatios = new Map();
+
+function cancelInFlightRenders() {
+    if (activeRenderTasks.length > 0) {
+        activeRenderTasks.forEach(task => {
+            try {
+                if (task && typeof task.cancel === 'function') {
+                    task.cancel();
+                }
+            } catch (_) { }
+        });
+        activeRenderTasks = [];
+    }
+}
+
+// Scroll Spy: Tracks active page in viewport and updates indicator
+function setupPageScrollObserver() {
+    if (pageScrollObserver) {
+        pageScrollObserver.disconnect();
+        pageScrollObserver = null;
+    }
+    visiblePageRatios.clear();
+
+    if (typeof IntersectionObserver === 'undefined') return;
+    if (!el.previewViewport || !el.documentPages) return;
+
+    pageScrollObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            const pageAttr = entry.target.getAttribute('data-page');
+            if (!pageAttr) return;
+            const pageNum = parseInt(pageAttr, 10);
+            if (entry.isIntersecting) {
+                visiblePageRatios.set(pageNum, entry.intersectionRatio);
+            } else {
+                visiblePageRatios.set(pageNum, 0);
+            }
+        });
+
+        let bestPage = state.currentPage;
+        let highestRatio = 0;
+        visiblePageRatios.forEach((ratio, pageNum) => {
+            if (ratio > highestRatio) {
+                highestRatio = ratio;
+                bestPage = pageNum;
+            }
+        });
+
+        if (highestRatio > 0.15 && bestPage !== state.currentPage) {
+            state.currentPage = bestPage;
+            updatePageIndicator();
+        }
+    }, {
+        root: el.previewViewport,
+        threshold: [0.1, 0.25, 0.5, 0.75, 0.9]
+    });
+
+    const pageWrappers = el.documentPages.querySelectorAll('.ocr-page-wrapper');
+    pageWrappers.forEach(wrapper => pageScrollObserver.observe(wrapper));
+}
+
 // Custom In-House Canvas Document Rendering (PDF & Image)
 async function renderDocumentInHouse(file) {
-    if (!el.documentPages) return;
+    if (!file || !el.documentPages) return;
+
+    const thisRenderId = ++currentRenderToken;
+    cancelInFlightRenders();
 
     if (el.previewEmpty) el.previewEmpty.style.display = 'none';
     if (el.viewerHint) el.viewerHint.style.display = 'flex';
     el.documentPages.style.display = 'flex';
-    el.documentPages.innerHTML = '';
 
     const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
 
     if (isPdf) {
-        await renderPdfPages(file);
+        await renderPdfPages(file, thisRenderId);
     } else {
-        await renderImagePage(file);
+        await renderImagePage(file, thisRenderId);
     }
 
+    if (thisRenderId !== currentRenderToken) return;
     updatePageIndicator();
+    setupPageScrollObserver();
 }
 
 /**
@@ -318,20 +597,25 @@ async function extractNativePageContent(page, viewport, pageNum) {
 
         validItems.forEach(it => {
             const [x, y] = viewport.convertToViewportPoint(it.transform[4], it.transform[5]);
-            const fontH = Math.abs(it.height || it.transform[0] || it.transform[3] || 10) * (viewport.scale / (viewport.rawDims?.scale || 1.5));
-            const fontW = (it.width || (it.str.length * 6)) * (viewport.scale / (viewport.rawDims?.scale || 1.5));
+            const rawH = Math.abs(it.height || it.transform[0] || it.transform[3] || 10);
+            const fontH = rawH * (viewport.scale / (viewport.rawDims?.scale || 1.0));
+            const rawW = (it.width || (it.str.length * (rawH * 0.55)));
+            const fontW = rawW * (viewport.scale / (viewport.rawDims?.scale || 1.0));
             const top = y - fontH;
             const bottom = y;
             const left = x;
             const right = x + fontW;
 
-            let group = lineGroups.find(g => Math.abs(g.baselineY - y) < 6);
+            // Pengelompokan baris berbasis ambang batas toleransi vertikal adaptif
+            const threshold = Math.max(6, fontH * 0.65);
+            let group = lineGroups.find(g => Math.abs(g.baselineY - y) < threshold);
             if (!group) {
-                group = { baselineY: y, top, bottom, items: [] };
+                group = { baselineY: y, top, bottom, fontH, items: [] };
                 lineGroups.push(group);
             } else {
                 group.top = Math.min(group.top, top);
                 group.bottom = Math.max(group.bottom, bottom);
+                group.fontH = Math.max(group.fontH, fontH);
             }
             group.items.push({ text: it.str, left, right, top, bottom, fontH, fontW });
         });
@@ -340,7 +624,7 @@ async function extractNativePageContent(page, viewport, pageNum) {
 
         const lines = lineGroups.map((g, lIdx) => {
             g.items.sort((a, b) => a.left - b.left);
-            const lineText = g.items.map(i => i.text).join(' ');
+            const lineText = g.items.map(i => i.text).join(' ').replace(/\s{2,}/g, ' ').trim();
             const minX = Math.min(...g.items.map(i => i.left));
             const maxX = Math.max(...g.items.map(i => i.right));
             const minY = Math.min(...g.items.map(i => i.top));
@@ -383,8 +667,13 @@ async function extractNativePageContent(page, viewport, pageNum) {
     }
 }
 
-async function renderPdfPages(file) {
+async function renderPdfPages(file, renderId = null) {
+    const thisRenderId = renderId || ++currentRenderToken;
+    if (!renderId) cancelInFlightRenders();
+
     const pdfLib = await initPdfJs();
+    if (thisRenderId !== currentRenderToken) return;
+
     if (!pdfLib) {
         // Fallback display if pdf.mjs unavailable
         el.documentPages.innerHTML = `
@@ -396,25 +685,56 @@ async function renderPdfPages(file) {
     }
 
     try {
-        const arrayBuf = await file.arrayBuffer();
-        const loadingTask = pdfLib.getDocument({ data: arrayBuf });
-        const pdfDoc = await loadingTask.promise;
+        let pdfDoc = state.pdfDoc;
+        if (!pdfDoc) {
+            const arrayBuf = await file.arrayBuffer();
+            if (thisRenderId !== currentRenderToken) return;
 
-        state.pdfDoc = pdfDoc;
+            const loadingTask = pdfLib.getDocument({ data: arrayBuf });
+            pdfDoc = await loadingTask.promise;
+            if (thisRenderId !== currentRenderToken) return;
+
+            state.pdfDoc = pdfDoc;
+        }
+
         state.totalPages = pdfDoc.numPages;
-        state.currentPage = 1;
 
-        const nativeExtractedPages = [];
+        // Preserve current active page if valid, otherwise initialize to 1
+        if (!state.currentPage || state.currentPage < 1 || state.currentPage > state.totalPages) {
+            state.currentPage = 1;
+        }
+        const savedPage = state.currentPage;
 
+        // Pre-allocated Sorted DOM Slots:
+        // Clear el.documentPages once, then immediately create and append all page wrapper elements
+        // (ocrPageWrapper-1 through ocrPageWrapper-N) into el.documentPages synchronously in strict numerical order.
+        el.documentPages.innerHTML = '';
+        const wrappers = [];
         for (let p = 1; p <= pdfDoc.numPages; p++) {
-            const page = await pdfDoc.getPage(p);
-            const scale = (state.zoom / 100) * 1.5; // High resolution crisp canvas
-            const viewport = page.getViewport({ scale });
-
             const pageWrapper = document.createElement('div');
             pageWrapper.className = 'ocr-page-wrapper';
             pageWrapper.id = `ocrPageWrapper-${p}`;
             pageWrapper.setAttribute('data-page', String(p));
+            el.documentPages.appendChild(pageWrapper);
+            wrappers.push(pageWrapper);
+        }
+
+        const hasExistingPages = state.result && Array.isArray(state.result.pages) && state.result.pages.length > 0;
+        const nativeExtractedPages = [];
+
+        for (let p = 1; p <= pdfDoc.numPages; p++) {
+            if (thisRenderId !== currentRenderToken) return;
+
+            const page = await pdfDoc.getPage(p);
+            if (thisRenderId !== currentRenderToken) return;
+
+            const scale = (state.zoom / 100) * 1.5; // High resolution crisp canvas
+            const viewport = page.getViewport({ scale });
+
+            const pageWrapper = wrappers[p - 1] || document.getElementById(`ocrPageWrapper-${p}`);
+            if (!pageWrapper) continue;
+
+            pageWrapper.innerHTML = '';
             pageWrapper.style.width = `${viewport.width}px`;
             pageWrapper.style.height = `${viewport.height}px`;
 
@@ -431,7 +751,23 @@ async function renderPdfPages(file) {
             canvas.height = viewport.height;
 
             const ctx = canvas.getContext('2d');
-            await page.render({ canvasContext: ctx, viewport }).promise;
+            const renderTask = page.render({ canvasContext: ctx, viewport });
+            activeRenderTasks.push(renderTask);
+
+            try {
+                await renderTask.promise;
+            } catch (renderErr) {
+                if (renderErr && (renderErr.name === 'RenderingCancelledException' || renderErr.message === 'Rendering cancelled')) {
+                    return;
+                }
+                throw renderErr;
+            } finally {
+                const tIdx = activeRenderTasks.indexOf(renderTask);
+                if (tIdx !== -1) activeRenderTasks.splice(tIdx, 1);
+            }
+
+            if (thisRenderId !== currentRenderToken) return;
+
             pageWrapper.appendChild(canvas);
 
             // Native Mozilla text layer for sub-pixel digital text selection (Always 100% transparent)
@@ -446,80 +782,103 @@ async function renderPdfPages(file) {
             textLayer.id = `ocrTextLayer-${p}`;
             pageWrapper.appendChild(textLayer);
 
-            el.documentPages.appendChild(pageWrapper);
-
-            // Instant native text extraction
-            const nativePage = await extractNativePageContent(page, viewport, p);
-            if (nativePage && nativePage.lines && nativePage.lines.length > 0) {
-                nativeExtractedPages.push(nativePage);
-
-                // Render Mozilla official TextLayer for digital text fidelity
-                if (pdfLib && typeof pdfLib.TextLayer === 'function') {
-                    try {
-                        const textContentSource = await page.getTextContent();
-                        if (textContentSource && textContentSource.items && textContentSource.items.length > 0) {
-                            const tl = new pdfLib.TextLayer({
-                                textContentSource,
-                                container: nativeTextLayer,
-                                viewport
-                            });
-                            await tl.render();
-                        }
-                    } catch (tlErr) {
-                        console.warn(`[OCR TOOL] Mozilla TextLayer native render notice (hal ${p}):`, tlErr.message);
+            // Render Mozilla official TextLayer for digital text fidelity if native text support is available
+            if (pdfLib && typeof pdfLib.TextLayer === 'function') {
+                try {
+                    const textContentSource = await page.getTextContent();
+                    if (thisRenderId !== currentRenderToken) return;
+                    if (textContentSource && textContentSource.items && textContentSource.items.length > 0) {
+                        const tl = new pdfLib.TextLayer({
+                            textContentSource,
+                            container: nativeTextLayer,
+                            viewport
+                        });
+                        await tl.render();
                     }
+                } catch (tlErr) {
+                    console.warn(`[OCR TOOL] Mozilla TextLayer native render notice (hal ${p}):`, tlErr.message);
+                }
+            }
+
+            // Extract digital text only on initial file load if not already extracted
+            if (!hasExistingPages) {
+                const nativePage = await extractNativePageContent(page, viewport, p);
+                if (thisRenderId !== currentRenderToken) return;
+                if (nativePage && nativePage.lines && nativePage.lines.length > 0) {
+                    nativeExtractedPages.push(nativePage);
                 }
             }
         }
 
-        // Jika dokumen memiliki teks digital asli
-        if (nativeExtractedPages.length > 0) {
-            state.hasNativeText = true;
-            state.result.pages = nativeExtractedPages;
-            state.result.fullText = nativeExtractedPages
-                .map(pg => (pdfDoc.numPages > 1 ? `--- HALAMAN ${pg.pageNumber} ---\n` : '') + (pg.text || ''))
-                .join('\n\n')
-                .trim();
+        if (thisRenderId !== currentRenderToken) return;
 
-            state.result.summary = {
-                docType: 'Dokumen Digital (Teks Asli)',
-                detectedLanguage: 'Indonesia / English',
-                totalWords: (state.result.fullText.trim().match(/\S+/g) || []).length,
-                totalCharacters: state.result.fullText.length,
-                totalPages: pdfDoc.numPages
-            };
+        // If native text extraction was performed on first load
+        if (!hasExistingPages) {
+            if (nativeExtractedPages.length > 0) {
+                state.hasNativeText = true;
+                state.result.pages = nativeExtractedPages;
+                state.result.fullText = nativeExtractedPages
+                    .map(pg => (pdfDoc.numPages > 1 ? `--- HALAMAN ${pg.pageNumber} ---\n` : '') + (pg.text || ''))
+                    .join('\n\n')
+                    .trim();
 
-            // Render Output into Document Viewer & Right Editor immediately!
-            renderOcrResults(state.result);
-            populateTextOverlay();
+                state.result.summary = {
+                    docType: 'Dokumen Digital (Teks Asli)',
+                    detectedLanguage: 'Indonesia / English',
+                    totalWords: (state.result.fullText.trim().match(/\S+/g) || []).length,
+                    totalCharacters: state.result.fullText.length,
+                    totalPages: pdfDoc.numPages
+                };
 
-            const isAllDigital = nativeExtractedPages.length === pdfDoc.numPages;
-            if (isAllDigital) {
-                showToast(`Teks digital asli (${pdfDoc.numPages} halaman) langsung aktif. Dokumen siap disalin atau diunduh tanpa perlu OCR.`, 'success');
+                // Render Output into Document Viewer & Right Editor immediately
+                renderOcrResults(state.result);
+                populateTextOverlay();
+
+                const isAllDigital = nativeExtractedPages.length === pdfDoc.numPages;
+                if (isAllDigital) {
+                    showToast(`Teks digital asli (${pdfDoc.numPages} halaman) langsung aktif. Dokumen siap disalin atau diunduh tanpa perlu OCR.`, 'success');
+                } else {
+                    showToast(`Teks digital asli aktif pada ${nativeExtractedPages.length} dari ${pdfDoc.numPages} halaman. Anda dapat langsung menyalin teks, atau klik 'Mulai Ekstraksi OCR' untuk memindai halaman gambar.`, 'info');
+                }
             } else {
-                showToast(`Teks digital asli aktif pada ${nativeExtractedPages.length} dari ${pdfDoc.numPages} halaman. Anda dapat langsung menyalin teks, atau klik 'Mulai Ekstraksi OCR' untuk memindai halaman gambar.`, 'info');
+                state.hasNativeText = false;
+                if (state.result.pages && state.result.pages.length > 0) {
+                    populateTextOverlay();
+                }
+                showToast('Dokumen hasil scan terdeteksi. Klik "Mulai Ekstraksi OCR" untuk mengekstrak teks dengan Ray-OCR.', 'info');
             }
         } else {
-            state.hasNativeText = false;
-            // Mount any existing OCR text onto the text layer
-            if (state.result.pages && state.result.pages.length > 0) {
-                populateTextOverlay();
+            // Reusing existing pages (native or OCR) on zoom - refresh overlay positions
+            populateTextOverlay();
+        }
+
+        // Preserve active page view by scrolling back to target page
+        if (savedPage > 1) {
+            const activeEl = document.getElementById(`ocrPageWrapper-${savedPage}`);
+            if (activeEl) {
+                activeEl.scrollIntoView({ behavior: 'auto', block: 'nearest' });
             }
-            showToast('Dokumen hasil scan terdeteksi. Klik "Mulai Ekstraksi OCR" untuk mengekstrak teks dengan AI.', 'info');
         }
     } catch (err) {
-        console.error('In-house PDF render error:', err);
-        showToast('Gagal merender halaman PDF secara internal: ' + err.message, 'error');
+        if (thisRenderId === currentRenderToken) {
+            console.error('In-house PDF render error:', err);
+            showToast('Gagal merender halaman PDF secara internal: ' + err.message, 'error');
+        }
     }
 }
 
-async function renderImagePage(file) {
+async function renderImagePage(file, renderId = null) {
+    const thisRenderId = renderId || ++currentRenderToken;
     state.totalPages = 1;
     state.currentPage = 1;
 
     return new Promise((resolve) => {
         const img = new Image();
         img.onload = () => {
+            if (thisRenderId !== currentRenderToken) return resolve();
+
+            el.documentPages.innerHTML = '';
+
             const pageWrapper = document.createElement('div');
             pageWrapper.className = 'ocr-page-wrapper';
             pageWrapper.id = 'ocrPageWrapper-1';
@@ -559,6 +918,7 @@ async function renderImagePage(file) {
 
             resolve();
         };
+        img.onerror = () => resolve();
         img.src = state.fileUrl;
     });
 }
@@ -580,44 +940,80 @@ function populateTextOverlay() {
         if (!textLayer) return;
 
         textLayer.innerHTML = '';
-        textLayer.className = `ocr-text-layer mode-${state.displayMode}` + 
-            (state.showBoxes ? ' show-boxes' : '') + 
+        textLayer.className = `ocr-text-layer mode-${state.displayMode}` +
+            (state.showBoxes ? ' show-boxes' : '') +
             (pg.isDigital ? ' is-digital' : '');
         const lines = pg.lines || [];
 
         if (lines.length === 0 && pg.text) {
+            // Guard: Cegah raw JSON string bocor ke baris tampilan kanvas
+            let cleanText = pg.text;
+            if (typeof cleanText === 'string' && cleanText.trim().startsWith('{') && (cleanText.includes('"pageNumber"') || cleanText.includes('"lines"'))) {
+                try {
+                    const parsed = JSON.parse(cleanText);
+                    if (parsed.text) cleanText = parsed.text;
+                } catch (_) {
+                    cleanText = cleanText.replace(/"text"\s*:\s*"((?:\\.|[^"\\])*)"/gi, '$1\n')
+                                         .replace(/"(?:pageNumber|box_2d|lines|summary)"\s*:[^,\n}]+/gi, '')
+                                         .replace(/[{}\[\]"]/g, '')
+                                         .trim();
+                }
+            }
+
             // Generate lines from text paragraphs
-            const rawLines = pg.text.split('\n');
+            const rawLines = cleanText.split('\n').filter(Boolean);
             const stepY = 100 / Math.max(1, rawLines.length);
             rawLines.forEach((t, lIdx) => {
-                if (!t.trim()) return;
+                const trimmed = t.trim();
+                if (!trimmed || trimmed === '{' || trimmed === '}' || trimmed === ']' || trimmed === '[') return;
                 const span = document.createElement('span');
-                span.className = 'ocr-text-line';
+                span.className = 'ocr-text-line is-fallback-line';
                 span.setAttribute('data-line', String(lIdx));
-                span.setAttribute('data-text', t);
+                span.setAttribute('data-text', trimmed);
                 span.style.top = `${lIdx * stepY}%`;
                 span.style.left = '5%';
                 span.style.width = '90%';
                 span.style.fontSize = '13px';
-                span.textContent = t;
+                span.textContent = trimmed;
                 attachLineCopyHandler(span);
                 textLayer.appendChild(span);
             });
             return;
         }
 
-        lines.forEach((line, lIdx) => {
-            const lineText = line.text || '';
-            if (!lineText.trim()) return;
-
-            const box = Array.isArray(line.box_2d) ? line.box_2d :
-                        (Array.isArray(line.bbox) ? line.bbox :
-                        (Array.isArray(line.box) ? line.box : null));
-
+        const createSpanElement = (textStr, topP, leftP, widthP, heightP, lineIndex) => {
             const span = document.createElement('span');
             span.className = 'ocr-text-line';
-            span.setAttribute('data-line', String(lIdx));
-            span.setAttribute('data-text', lineText);
+            span.setAttribute('data-line', String(lineIndex));
+            span.setAttribute('data-text', textStr);
+
+            span.style.top = `${topP}%`;
+            span.style.left = `${leftP}%`;
+            span.style.width = `${Math.max(1, widthP)}%`;
+            span.style.height = `${Math.max(1.2, Math.min(12, heightP))}%`;
+
+            const parentH = textLayer.clientHeight || 800;
+            const calcFont = Math.max(9, Math.min(24, Math.round((heightP / 100) * parentH * 0.8)));
+            span.style.fontSize = `${calcFont}px`;
+            span.style.lineHeight = `${Math.max(10, Math.round((heightP / 100) * parentH))}px`;
+
+            span.textContent = textStr;
+            attachLineCopyHandler(span);
+            textLayer.appendChild(span);
+        };
+
+        lines.forEach((line, lIdx) => {
+            const lineText = (line.text || '').toString();
+            if (!lineText.trim()) return;
+
+            let box = Array.isArray(line.box_2d) ? line.box_2d :
+                (Array.isArray(line.bbox) ? line.bbox :
+                    (Array.isArray(line.box) ? line.box : null));
+
+            // Buka kemasan nested array jika ada
+            if (Array.isArray(box) && box.length > 0 && Array.isArray(box[0])) {
+                box = box[0];
+            }
 
             let topPct, leftPct, widthPct, heightPct;
 
@@ -626,11 +1022,11 @@ function populateTextOverlay() {
                 leftPct = Number(line.leftPercent);
                 widthPct = Number(line.widthPercent || 10);
                 heightPct = Number(line.heightPercent || 2);
-            } else if (box && box.length === 4) {
-                const [ymin, xmin, ymax, xmax] = box.map(Number);
+            } else if (box && box.length >= 4) {
+                const [ymin, xmin, ymax, xmax] = box.slice(0, 4).map(Number);
                 const maxVal = Math.max(ymin, xmin, ymax, xmax);
 
-                if (maxVal <= 1.01) {
+                if (maxVal <= 1.01 && maxVal > 0) {
                     topPct = ymin * 100;
                     leftPct = xmin * 100;
                     widthPct = (xmax - xmin) * 100;
@@ -650,20 +1046,21 @@ function populateTextOverlay() {
                 heightPct = 2.5;
             }
 
-            span.style.top = `${topPct}%`;
-            span.style.left = `${leftPct}%`;
-            span.style.width = `${Math.max(1, widthPct)}%`;
-            span.style.height = `${Math.max(1.2, heightPct)}%`;
-
-            // Calculate font size relative to rendered page height
-            const parentH = textLayer.clientHeight || 800;
-            const calcFont = line.fontSizePt || Math.max(9, Math.round((heightPct / 100) * parentH * 0.8));
-            span.style.fontSize = `${calcFont}px`;
-            span.style.lineHeight = `${Math.max(10, Math.round((heightPct / 100) * parentH))}px`;
-
-            span.textContent = lineText;
-            attachLineCopyHandler(span);
-            textLayer.appendChild(span);
+            // Anti-Bongkahan di frontend: Jika ada teks berbaris banyak dalam satu kotak, pecah per baris
+            const subLines = lineText.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+            if (subLines.length > 1 && heightPct > 4) {
+                const subStepH = heightPct / subLines.length;
+                subLines.forEach((sText, sIdx) => {
+                    const sTop = topPct + sIdx * subStepH;
+                    createSpanElement(sText, sTop, leftPct, widthPct, subStepH, `${lIdx}_${sIdx}`);
+                });
+            } else {
+                // Batasi tinggi kotak jika abnormal (> 10% halaman untuk 1 baris)
+                if (heightPct > 10 && subLines.length <= 1) {
+                    heightPct = 2.8;
+                }
+                createSpanElement(lineText, topPct, leftPct, widthPct, heightPct, lIdx);
+            }
         });
     });
 }
@@ -682,7 +1079,7 @@ function attachLineCopyHandler(span) {
                 setTimeout(() => span.classList.remove('copied-pulse'), 600);
                 const preview = text.length > 40 ? text.slice(0, 37) + '...' : text;
                 showToast(`Tersalin: "${preview}"`, 'success');
-            }).catch(() => {});
+            }).catch(() => { });
         }
     });
 }
@@ -700,6 +1097,12 @@ function setLayerMode(mode) {
         if (mode === 'boxes') ly.classList.add('show-boxes');
     });
 
+    // Suppress underlying native textLayer when boxes or readable overlay is active
+    const nativeLayers = document.querySelectorAll('.textLayer');
+    nativeLayers.forEach(nl => {
+        nl.classList.toggle('suppressed', mode !== 'transparent');
+    });
+
     if (el.btnModeTransparent) el.btnModeTransparent.classList.toggle('active', mode === 'transparent');
     if (el.btnModeBoxes) el.btnModeBoxes.classList.toggle('active', mode === 'boxes');
     if (el.btnModeReadable) el.btnModeReadable.classList.toggle('active', mode === 'readable');
@@ -708,6 +1111,9 @@ function setLayerMode(mode) {
         el.btnToggleTextLayer.style.borderColor = (mode === 'boxes') ? 'var(--ceisa-blue, #2563eb)' : '';
         el.btnToggleTextLayer.style.color = (mode === 'boxes') ? 'var(--ceisa-blue, #2563eb)' : '';
     }
+
+    // Persist user preference across tabs
+    saveOcrSessionState();
 
     if (mode === 'transparent') {
         showToast('Mode Lapisan: Transparan (Default) - seleksi dan salin teks langsung aktif.', 'info');
@@ -726,12 +1132,36 @@ function updatePageIndicator() {
     if (el.btnNextPage) el.btnNextPage.disabled = state.currentPage >= state.totalPages;
 }
 
-function setZoom(val) {
+function setZoom(val, immediate = false) {
     state.zoom = Math.max(50, Math.min(250, val));
     if (el.zoomLevelDisplay) el.zoomLevelDisplay.textContent = `${state.zoom}%`;
-    if (state.file) {
-        renderDocumentInHouse(state.file);
+    if (!state.file) return Promise.resolve();
+
+    if (zoomDebounceTimer) {
+        clearTimeout(zoomDebounceTimer);
+        zoomDebounceTimer = null;
     }
+
+    if (immediate) {
+        const res = renderDocumentInHouse(state.file);
+        if (zoomPendingResolves.length > 0) {
+            const resolvers = zoomPendingResolves;
+            zoomPendingResolves = [];
+            resolvers.forEach(r => r(res));
+        }
+        return res;
+    }
+
+    return new Promise((resolve) => {
+        zoomPendingResolves.push(resolve);
+        zoomDebounceTimer = setTimeout(async () => {
+            zoomDebounceTimer = null;
+            const res = await renderDocumentInHouse(state.file);
+            const resolvers = zoomPendingResolves;
+            zoomPendingResolves = [];
+            resolvers.forEach(r => r(res));
+        }, 90);
+    });
 }
 
 // Reset results state
@@ -804,15 +1234,15 @@ async function startOcrProcess() {
     const formData = new FormData();
     formData.append('document', state.file);
 
-    // Progress timeline simulation while waiting for Gemini AI
+    // Progress timeline simulation while waiting for Ray-OCR V.1
     let progressVal = 20;
     const progressTimer = setInterval(() => {
         if (progressVal < 45) {
             progressVal += 5;
-            setProgress(progressVal, 'Mengirim berkas pabean ke engine AI...', 'stepUpload');
+            setProgress(progressVal, 'Mengirim berkas pabean ke engine Ray-OCR...', 'stepUpload');
         } else if (progressVal < 78) {
             progressVal += 3;
-            setProgress(progressVal, 'Google Gemini OCR membaca tata letak & teks...', 'stepOcr');
+            setProgress(progressVal, 'Ray-OCR V.1 membaca tata letak & teks dokumen...', 'stepOcr');
         } else if (progressVal < 92) {
             progressVal += 1;
             setProgress(progressVal, 'Menghitung koordinat lapisan teks & PDF Searchable...', 'stepSearchable');
@@ -832,7 +1262,7 @@ async function startOcrProcess() {
             try {
                 const errJson = await res.json();
                 if (errJson && errJson.error) errText = errJson.error;
-            } catch (_) {}
+            } catch (_) { }
             throw new Error(errText);
         }
 
@@ -911,6 +1341,8 @@ function renderOcrResults(result) {
     if (el.btnDownloadSearchablePdf) el.btnDownloadSearchablePdf.disabled = false;
     if (el.btnDownloadTxt) el.btnDownloadTxt.disabled = false;
     if (el.searchInput) el.searchInput.disabled = false;
+
+    saveOcrSessionState();
 }
 
 function updateSummaryChips(summary) {
@@ -1116,7 +1548,7 @@ async function downloadSearchablePdf() {
             try {
                 const errJson = await res.json();
                 if (errJson && errJson.error) errText = errJson.error;
-            } catch (_) {}
+            } catch (_) { }
             throw new Error(errText);
         }
 
@@ -1308,6 +1740,21 @@ function setupEventListeners() {
         });
     }
 
+    // Clear session / close document button
+    if (el.btnClearOcrSession) {
+        el.btnClearOcrSession.addEventListener('click', clearOcrSession);
+    }
+
+    // Auto-save fullTextEditor changes
+    if (el.fullTextEditor) {
+        el.fullTextEditor.addEventListener('input', () => {
+            if (state.result) {
+                state.result.fullText = el.fullTextEditor.value;
+            }
+            saveOcrSessionState();
+        });
+    }
+
     // Start OCR button
     if (el.btnStartOcr) {
         el.btnStartOcr.addEventListener('click', startOcrProcess);
@@ -1463,13 +1910,15 @@ async function checkBackendHealth() {
 // Init on DOMContentLoaded
 if (typeof document !== 'undefined') {
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
             cacheElements();
             setupEventListeners();
+            await restoreLastOcrSession();
         });
     } else {
         cacheElements();
         setupEventListeners();
+        restoreLastOcrSession();
     }
 }
 
@@ -1481,11 +1930,15 @@ if (typeof window !== 'undefined') {
         renderDocumentInHouse,
         populateTextOverlay,
         setLayerMode,
+        setZoom,
         startOcrProcess,
         copyAllText,
         copyPageText,
         downloadTxtFile,
-        downloadSearchablePdf
+        downloadSearchablePdf,
+        saveOcrSessionState,
+        restoreLastOcrSession,
+        clearOcrSession
     };
 }
 
@@ -1495,9 +1948,13 @@ export {
     renderDocumentInHouse,
     populateTextOverlay,
     setLayerMode,
+    setZoom,
     startOcrProcess,
     copyAllText,
     copyPageText,
     downloadTxtFile,
-    downloadSearchablePdf
+    downloadSearchablePdf,
+    saveOcrSessionState,
+    restoreLastOcrSession,
+    clearOcrSession
 };

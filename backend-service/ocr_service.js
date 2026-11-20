@@ -92,6 +92,12 @@ function parseSafeJson(rawText) {
         clean = clean.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
     }
 
+    // 0. Pre-clean AI commentary and syntax quirks
+    clean = clean.replace(/\/\/[^\n\r]*/g, '');
+    clean = clean.replace(/\/\*[\s\S]*?\*\//g, '');
+    clean = clean.replace(/,\s*\[\s*x?min[^\n\r\]]+\]\s*->\s*\[[^\]]+\]/gi, '');
+    clean = clean.replace(/->\s*\[[^\]]+\]/g, '');
+
     // 1. Direct JSON parse
     try {
         return JSON.parse(clean);
@@ -146,25 +152,52 @@ function parseSafeJson(rawText) {
         } catch (_) { }
     }
 
-    // 4. Regex fallback extraction
-    const fullTextMatch = clean.match(/"fullText"\s*:\s*"((?:\\.|[^"\\])*)"/);
-    let extractedText = '';
-    if (fullTextMatch) {
+    // 4. Robust Line & Text Recovery via Regex (rescuing lines and bounding boxes from malformed AI JSON)
+    const recoveredLines = [];
+    const lineRegex = /\{\s*"text"\s*:\s*"((?:\\.|[^"\\])*)"\s*,\s*"box_2d"\s*:\s*\[\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\]/gi;
+    let m;
+    while ((m = lineRegex.exec(clean)) !== null) {
         try {
-            extractedText = JSON.parse(`"${fullTextMatch[1]}"`);
+            const text = JSON.parse(`"${m[1]}"`);
+            const box = [Number(m[2]), Number(m[3]), Number(m[4]), Number(m[5])];
+            recoveredLines.push({ text, box_2d: box });
         } catch (_) {
-            extractedText = fullTextMatch[1];
+            recoveredLines.push({ text: m[1], box_2d: [Number(m[2]), Number(m[3]), Number(m[4]), Number(m[5])] });
         }
-    } else {
-        extractedText = clean;
     }
+
+    // Try finding fullText or text field
+    const textMatch = clean.match(/"(?:fullText|text)"\s*:\s*"((?:\\.|[^"\\])*)"/);
+    let extractedText = '';
+    if (textMatch) {
+        try {
+            extractedText = JSON.parse(`"${textMatch[1]}"`);
+        } catch (_) {
+            extractedText = textMatch[1];
+        }
+    } else if (recoveredLines.length > 0) {
+        extractedText = recoveredLines.map(l => l.text).join('\n');
+    } else {
+        // Extreme fallback: strip all JSON syntax keys and braces, NEVER return raw JSON code
+        extractedText = clean
+            .replace(/"pageNumber"\s*:\s*\d+,?/gi, '')
+            .replace(/"box_2d"\s*:\s*\[[^\]]+\]/gi, '')
+            .replace(/"lines"\s*:\s*\[/gi, '')
+            .replace(/[{}\[\]",:]/g, ' ')
+            .replace(/\s{2,}/g, ' ')
+            .trim();
+    }
+
+    // Extract pageNumber if present
+    const pgNumMatch = clean.match(/"pageNumber"\s*:\s*(\d+)/);
+    const resolvedPageNum = pgNumMatch ? parseInt(pgNumMatch[1], 10) : 1;
 
     return {
         fullText: extractedText,
         pages: [{
-            pageNumber: 1,
+            pageNumber: resolvedPageNum,
             text: extractedText,
-            lines: []
+            lines: recoveredLines
         }],
         summary: {
             documentType: 'Dokumen',
@@ -209,16 +242,16 @@ function normalizeOcrData(rawJson, fileName) {
     pages = pages.map((page, pIdx) => {
         const pageNum = Number(page.pageNumber) || (pIdx + 1);
         const pageText = typeof page.text === 'string' ? page.text : '';
-        let lines = Array.isArray(page.lines) ? page.lines : [];
+        let rawLinesList = Array.isArray(page.lines) ? page.lines : [];
 
         // Jika lines kosong tapi pageText ada, buat fallback lines dari baris teks
-        if (lines.length === 0 && pageText.trim().length > 0) {
+        if (rawLinesList.length === 0 && pageText.trim().length > 0) {
             const rawLines = pageText.split('\n').filter(l => l.trim().length > 0);
             const totalLines = rawLines.length || 1;
-            const lineH = Math.min(30, Math.floor(900 / totalLines));
-            lines = rawLines.map((lineStr, lIdx) => {
+            const lineH = Math.min(28, Math.floor(900 / totalLines));
+            rawLinesList = rawLines.map((lineStr, lIdx) => {
                 const ymin = Math.min(950, 50 + lIdx * lineH);
-                const ymax = Math.min(990, ymin + lineH - 5);
+                const ymax = Math.min(990, ymin + lineH - 4);
                 return {
                     text: lineStr.trim(),
                     box_2d: [ymin, 50, ymax, 950]
@@ -226,22 +259,30 @@ function normalizeOcrData(rawJson, fileName) {
             });
         }
 
-        const normalizedLines = lines.map(line => {
+        // Ekstrak dan pecah bongkahan multi-line/paragraf menjadi baris-baris individual presisi
+        const expandedLines = [];
+        rawLinesList.forEach(line => {
             const text = (line.text || '').toString();
+            if (!text.trim()) return;
+
             let box = Array.isArray(line.box_2d) ? line.box_2d :
                 (Array.isArray(line.bbox) ? line.bbox :
                     (Array.isArray(line.box) ? line.box : null));
+
+            // Buka kemasan nested array jika AI mengembalikan [[ymin, xmin, ymax, xmax], ...]
+            if (Array.isArray(box) && box.length > 0 && Array.isArray(box[0])) {
+                box = box[0];
+            }
+
             if (!box || box.length < 4) {
-                // fallback box
                 box = [0, 0, 1000, 1000];
             }
 
-            const rawCoords = box.map(v => Number(v) || 0);
+            const rawCoords = box.slice(0, 4).map(v => Number(v) || 0);
             const maxVal = Math.max(...rawCoords);
             let ymin, xmin, ymax, xmax;
 
             if (maxVal <= 1.05 && maxVal > 0) {
-                // Coordinates normalized to 0.0 - 1.0 -> map to 0 - 1000
                 ymin = Math.round(rawCoords[0] * 1000);
                 xmin = Math.round(rawCoords[1] * 1000);
                 ymax = Math.round(rawCoords[2] * 1000);
@@ -255,8 +296,41 @@ function normalizeOcrData(rawJson, fileName) {
 
             ymin = Math.max(0, Math.min(1000, ymin));
             xmin = Math.max(0, Math.min(1000, xmin));
-            ymax = Math.max(ymin, Math.min(1000, Math.max(ymax, ymin + 10)));
-            xmax = Math.max(xmin, Math.min(1000, Math.max(xmax, xmin + 20)));
+            ymax = Math.max(ymin, Math.min(1000, Math.max(ymax, ymin + 8)));
+            xmax = Math.max(xmin, Math.min(1000, Math.max(xmax, xmin + 15)));
+
+            const boxH = ymax - ymin;
+            const subLines = text.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+
+            // Anti-Bongkahan: Jika teks terdiri dari beberapa baris dan tinggi kotak > 35, pecah menjadi baris terpisah
+            if (subLines.length > 1 && boxH > 35) {
+                const stepH = boxH / subLines.length;
+                subLines.forEach((sText, sIdx) => {
+                    const sYmin = Math.round(ymin + sIdx * stepH);
+                    const sYmax = Math.round(ymin + (sIdx + 1) * stepH);
+                    expandedLines.push({
+                        text: sText,
+                        box_2d: [sYmin, xmin, sYmax, xmax],
+                        words: line.words
+                    });
+                });
+            } else {
+                // Batasi tinggi kotak tunggal agar tidak pernah menutupi sebagian besar halaman (> 10% halaman)
+                let finalYmax = ymax;
+                if (boxH > 100 && subLines.length <= 1) {
+                    finalYmax = Math.min(1000, ymin + 26);
+                }
+                expandedLines.push({
+                    text,
+                    box_2d: [ymin, xmin, finalYmax, xmax],
+                    words: line.words
+                });
+            }
+        });
+
+        const normalizedLines = expandedLines.map(line => {
+            const text = line.text;
+            const [ymin, xmin, ymax, xmax] = line.box_2d;
 
             const normX = xmin / 1000;
             const normY = ymin / 1000;
@@ -272,7 +346,6 @@ function normalizeOcrData(rawJson, fileName) {
             const lineItem = {
                 text,
                 box_2d: [ymin, xmin, ymax, xmax],
-                // Helper normalized coordinates (0..1) dan dimensi untuk PDF overlay & HTML in-house canvas text layer
                 ymin,
                 xmin,
                 ymax,
@@ -518,9 +591,10 @@ async function processSinglePageGemini({
         });
 
         const singlePagePrompt = `You are an expert OCR, document layout analysis, and text extraction engine.
-Analyze page ${pageNumber} of the provided document with high structural precision and exact spatial alignment.
+Analyze the provided document page with high structural precision and exact spatial alignment.
+This file represents page ${pageNumber} of the document.
 
-Extract all visible text on this page and output ONLY a valid JSON object matching this schema:
+Extract all visible text on this page image and output ONLY a valid JSON object matching this schema:
 {
   "pageNumber": ${pageNumber},
   "text": "Clean structured text of this specific page preserving lines, whitespace, and table columns.",
@@ -536,15 +610,16 @@ Extract all visible text on this page and output ONLY a valid JSON object matchi
   }
 }
 
-CRITICAL INSTRUCTIONS FOR PAGE ${pageNumber}:
-1. "lines": Break text down into precise visual lines or table cells.
-   - "box_2d": [ymin, xmin, ymax, xmax] MUST tightly wrap the exact visual bounds of each line of text on this page.
+CRITICAL INSTRUCTIONS:
+1. "lines": Break text down into precise, individual visual lines or table cells. Every distinct visual line must be a separate entry in the "lines" array.
+   - NEVER group multiple lines, large paragraphs, or multi-row tables into a single line item.
+   - "box_2d": [ymin, xmin, ymax, xmax] MUST tightly wrap the exact visual bounds of that individual line of text.
    - Scale: Normalized 0 to 1000 integer coordinates:
      * ymin = top edge of text line (0 = very top of page, 1000 = bottom of page)
      * xmin = left edge of text line (0 = very left edge, 1000 = right edge)
      * ymax = bottom edge of text line
      * xmax = right edge of text line
-2. Extract ONLY text visible on this page ${pageNumber}. Output ONLY pure JSON.`;
+2. Extract all visible text on this page image. Output ONLY pure JSON.`;
 
         let result = null;
         let lastErr = null;
@@ -736,7 +811,7 @@ async function extractDocumentText({
                 onProgress({ step: 'ocr', message: `Memproses ${pagesNeedingOcr.length} halaman pindaian dari total ${totalPages} halaman...` });
 
                 const allPageObjects = Array.from(digitalPagesMap.values());
-                const concurrency = 3;
+                const concurrency = 2;
 
                 for (let i = 0; i < pagesNeedingOcr.length; i += concurrency) {
                     const batchPages = pagesNeedingOcr.slice(i, i + concurrency);
@@ -750,38 +825,55 @@ async function extractDocumentText({
                             singleBytes = await singleDoc.save();
                         }
 
-                        try {
-                            const singleData = await processSinglePageGemini({
-                                ai,
-                                fileBuffer: singleBytes ? Buffer.from(singleBytes) : fileBuf,
-                                fileName: `${path.basename(resolvedName, '.pdf')}_hal_${pageNum}.pdf`,
-                                mimeType: 'application/pdf',
-                                pageNumber: pageNum,
-                                candidateModels: modelsToTry,
-                                onProgress
-                            });
+                        let pageObj = null;
+                        let lastErr = null;
 
-                            const pageObj = (singleData.pages && singleData.pages[0]) ? singleData.pages[0] : {
+                        // Percobaan ekstraksi per halaman dengan retry jika model sibuk (503/429)
+                        for (let attempt = 1; attempt <= 2; attempt++) {
+                            try {
+                                const singleData = await processSinglePageGemini({
+                                    ai,
+                                    fileBuffer: singleBytes ? Buffer.from(singleBytes) : fileBuf,
+                                    fileName: `${path.basename(resolvedName, '.pdf')}_hal_${pageNum}.pdf`,
+                                    mimeType: 'application/pdf',
+                                    pageNumber: pageNum,
+                                    candidateModels: modelsToTry,
+                                    onProgress
+                                });
+
+                                if (singleData.pages && singleData.pages[0]) {
+                                    const candidate = singleData.pages[0];
+                                    candidate.pageNumber = pageNum;
+                                    if ((candidate.lines && candidate.lines.length > 0) || (candidate.text && candidate.text.trim().length > 0)) {
+                                        pageObj = candidate;
+                                        break;
+                                    }
+                                }
+                            } catch (singleErr) {
+                                lastErr = singleErr;
+                                console.warn(`[OCR SERVICE] Percobaan ${attempt} hal ${pageNum} gagal: ${singleErr.message}`);
+                                if (attempt < 2) await delay(1500);
+                            }
+                        }
+
+                        if (!pageObj) {
+                            console.warn(`[OCR SERVICE] Halaman ${pageNum} tidak menghasilkan baris teks (${lastErr ? lastErr.message : 'kosong'}).`);
+                            pageObj = {
                                 pageNumber: pageNum,
-                                text: singleData.fullText || '',
-                                lines: []
-                            };
-                            pageObj.pageNumber = pageNum;
-                            return pageObj;
-                        } catch (singleErr) {
-                            console.warn(`[OCR SERVICE] Halaman ${pageNum} gagal via Gemini API (${singleErr.message}). Mengembalikan fallback graceful.`);
-                            return {
-                                pageNumber: pageNum,
-                                text: `[Halaman ${pageNum}: Pindaian gambar - ${singleErr.message}]`,
+                                text: `[Halaman ${pageNum}: Pindaian gambar - ${lastErr ? lastErr.message : 'tidak terdeteksi'}]`,
                                 lines: [],
                                 isDigital: false
                             };
                         }
+                        return pageObj;
                     });
 
                     const batchResults = await Promise.all(batchPromises);
                     allPageObjects.push(...batchResults);
                     onProgress({ step: 'ocr', message: `Selesai ${Math.min(i + concurrency, pagesNeedingOcr.length)} dari ${pagesNeedingOcr.length} halaman pindaian...` });
+                    if (i + concurrency < pagesNeedingOcr.length) {
+                        await delay(700);
+                    }
                 }
 
                 allPageObjects.sort((a, b) => (a.pageNumber || 0) - (b.pageNumber || 0));
@@ -819,7 +911,7 @@ async function extractDocumentText({
                 candidateModels.push('gemini-3.5-flash-lite', 'gemini-3.5-flash', 'gemini-3.8-flash', 'gemini-flash-latest');
                 const modelsToTry = [...new Set(candidateModels)];
 
-                onProgress({ step: 'ocr', message: `Mengekstrak teks gambar dengan Gemini AI...` });
+                onProgress({ step: 'ocr', message: `Mengekstrak teks gambar dengan Ray-OCR V.1...` });
                 const singleResult = await processSinglePageGemini({
                     ai,
                     fileBuffer,

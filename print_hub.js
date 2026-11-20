@@ -110,22 +110,22 @@
         const toast = document.createElement('div');
         toast.className = 'ph-toast';
         
-        let icon = 'ℹ️';
+        let iconSvg = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>`;
         let borderColor = 'var(--border-color)';
         if (type === 'success') {
-            icon = '✅';
+            iconSvg = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.2"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
             borderColor = '#10b981';
         } else if (type === 'error') {
-            icon = '⚠️';
+            iconSvg = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>`;
             borderColor = '#ef4444';
         } else if (type === 'loading') {
-            icon = '⏳';
+            iconSvg = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>`;
             borderColor = '#0284c7';
         }
 
         toast.style.borderLeft = `4px solid ${borderColor}`;
         toast.innerHTML = `
-            <span style="font-size: 16px;">${icon}</span>
+            <span style="display: flex; align-items: center; justify-content: center; flex-shrink: 0;">${iconSvg}</span>
             <div style="flex: 1; word-break: break-word;">${message}</div>
         `;
 
@@ -188,7 +188,7 @@
 
             renderPrinterSelect();
         } catch (err) {
-            elements.printerSelect.innerHTML = `<option value="">⚠️ Gagal terhubung ke backend server (Port 5005). Pastikan START_SERVER.bat sudah berjalan.</option>`;
+            elements.printerSelect.innerHTML = `<option value="">Gagal terhubung ke backend server (Port 5005). Pastikan START_SERVER.bat sudah berjalan.</option>`;
             elements.printerCountChip.textContent = 'Server Offline';
             elements.printerCountChip.className = 'ph-chip ph-chip-orange';
             elements.serverStatusChip.className = 'ph-chip ph-chip-orange';
@@ -214,7 +214,7 @@
         state.printers.forEach(p => {
             const opt = document.createElement('option');
             opt.value = p.name;
-            opt.textContent = `${p.name} ${p.isDefault ? '★ (Default)' : ''}`;
+            opt.textContent = `${p.name} ${p.isDefault ? '(Default)' : ''}`.trim();
             if (savedPrinter && p.name === savedPrinter) {
                 opt.selected = true;
                 matched = true;
@@ -248,13 +248,13 @@
         // Port pill
         const portPill = document.createElement('span');
         portPill.className = 'ph-chip';
-        portPill.innerHTML = `🔌 Port: <strong>${p.portName || 'N/A'}</strong>`;
+        portPill.innerHTML = `Port: <strong>${p.portName || 'N/A'}</strong>`;
         elements.printerMetaBar.appendChild(portPill);
 
         // Driver pill
         const driverPill = document.createElement('span');
         driverPill.className = 'ph-chip';
-        driverPill.innerHTML = `🖨️ Driver: ${p.driverName || 'Generic'}`;
+        driverPill.innerHTML = `Driver: ${p.driverName || 'Generic'}`;
         elements.printerMetaBar.appendChild(driverPill);
 
         // Status pill
@@ -385,6 +385,113 @@
         }, 60000);
     }
 
+    // Storage constants for persistence across tab switches
+    const PRINT_STATE_KEY = 'ceisa_print_hub_state';
+    const PRINT_DOC_KEY = 'last_print_document';
+
+    function savePrintState() {
+        try {
+            const data = {
+                activeTab: state.activeTab || 'tab-file',
+                rawText: elements.rawTextArea ? elements.rawTextArea.value : '',
+                rawMode: elements.rawModeToggle ? elements.rawModeToggle.checked : false,
+                ejectPage: elements.ejectPageToggle ? elements.ejectPageToggle.checked : false,
+                copies: elements.fileCopies ? elements.fileCopies.value : '1',
+                paperSize: elements.paperSizeSelect ? elements.paperSizeSelect.value : 'auto',
+                pageRange: elements.pageRangeInput ? elements.pageRangeInput.value : '',
+                fileMode: elements.fileModeSelect ? elements.fileModeSelect.value : 'false',
+                selectedPrinter: elements.printerSelect ? elements.printerSelect.value : '',
+                timestamp: Date.now()
+            };
+            localStorage.setItem(PRINT_STATE_KEY, JSON.stringify(data));
+        } catch (_) {}
+    }
+
+    async function savePrintDocumentToDb(file) {
+        if (!file || typeof indexedDB === 'undefined') return;
+        try {
+            const arrayBuf = await file.arrayBuffer();
+            const req = indexedDB.open('ceisa_storage_db', 1);
+            req.onupgradeneeded = (e) => {
+                const db = e.target.result;
+                if (!db.objectStoreNames.contains('documents')) db.createObjectStore('documents');
+            };
+            req.onsuccess = () => {
+                const db = req.result;
+                const tx = db.transaction('documents', 'readwrite');
+                tx.objectStore('documents').put({
+                    name: file.name,
+                    type: file.type || 'application/pdf',
+                    size: file.size,
+                    lastModified: file.lastModified,
+                    buffer: arrayBuf,
+                    timestamp: Date.now()
+                }, PRINT_DOC_KEY);
+            };
+        } catch (_) {}
+    }
+
+    async function getPrintDocumentFromDb() {
+        if (typeof indexedDB === 'undefined') return null;
+        return new Promise(resolve => {
+            try {
+                const req = indexedDB.open('ceisa_storage_db', 1);
+                req.onupgradeneeded = (e) => {
+                    const db = e.target.result;
+                    if (!db.objectStoreNames.contains('documents')) db.createObjectStore('documents');
+                };
+                req.onsuccess = () => {
+                    const db = req.result;
+                    const tx = db.transaction('documents', 'readonly');
+                    const getReq = tx.objectStore('documents').get(PRINT_DOC_KEY);
+                    getReq.onsuccess = () => resolve(getReq.result || null);
+                    getReq.onerror = () => resolve(null);
+                };
+                req.onerror = () => resolve(null);
+            } catch (_) {
+                resolve(null);
+            }
+        });
+    }
+
+    async function clearPrintDocumentFromDb() {
+        if (typeof indexedDB === 'undefined') return;
+        try {
+            const req = indexedDB.open('ceisa_storage_db', 1);
+            req.onsuccess = () => {
+                const db = req.result;
+                const tx = db.transaction('documents', 'readwrite');
+                tx.objectStore('documents').delete(PRINT_DOC_KEY);
+            };
+        } catch (_) {}
+    }
+
+    async function restorePrintState() {
+        try {
+            const raw = localStorage.getItem(PRINT_STATE_KEY);
+            if (raw) {
+                const data = JSON.parse(raw);
+                if (data.rawText && elements.rawTextArea) elements.rawTextArea.value = data.rawText;
+                if (data.rawMode !== undefined && elements.rawModeToggle) elements.rawModeToggle.checked = !!data.rawMode;
+                if (data.ejectPage !== undefined && elements.ejectPageToggle) elements.ejectPageToggle.checked = !!data.ejectPage;
+                if (data.copies && elements.fileCopies) elements.fileCopies.value = data.copies;
+                if (data.paperSize && elements.paperSizeSelect) elements.paperSizeSelect.value = data.paperSize;
+                if (data.pageRange && elements.pageRangeInput) elements.pageRangeInput.value = data.pageRange;
+                if (data.fileMode && elements.fileModeSelect) elements.fileModeSelect.value = data.fileMode;
+                if (data.activeTab && data.activeTab !== 'tab-file') switchTab(data.activeTab);
+            }
+
+            const fileRec = await getPrintDocumentFromDb();
+            if (fileRec && fileRec.buffer) {
+                const file = new File([fileRec.buffer], fileRec.name, {
+                    type: fileRec.type || 'application/pdf',
+                    lastModified: fileRec.lastModified || Date.now()
+                });
+                handleSelectedFile(file, false);
+            }
+        } catch (_) {}
+    }
+
     // Tab Switching
     function switchTab(tabId) {
         state.activeTab = tabId;
@@ -397,10 +504,11 @@
         elements.tabPanes.forEach(pane => {
             pane.style.display = (pane.id === tabId) ? 'block' : 'none';
         });
+        savePrintState();
     }
 
     // File Drag & Drop Handling
-    function handleSelectedFile(file) {
+    function handleSelectedFile(file, shouldSaveToDb = true) {
         if (!file) return;
 
         state.selectedFile = file;
@@ -413,6 +521,11 @@
         // Auto detect RAW if file is .txt
         if (file.name.toLowerCase().endsWith('.txt')) {
             elements.fileModeSelect.value = 'true';
+        }
+
+        if (shouldSaveToDb) {
+            savePrintDocumentToDb(file);
+            savePrintState();
         }
 
         // Convert to Base64 in background immediately for bulletproof mobile upload
@@ -430,6 +543,8 @@
         elements.filePreview.classList.remove('active');
         elements.dropzone.style.display = 'block';
         elements.btnSubmitFile.disabled = true;
+        clearPrintDocumentFromDb();
+        savePrintState();
     }
 
     // Form Submissions
@@ -606,6 +721,7 @@ Diberikan izin untuk mengeluarkan barang impor dari Kawasan Pabean.
         } else if (type === 'lqTest') {
             elements.rawTextArea.value = `EPSON LQ-310 24-PIN ESC/P ASCII TEST OK - ${new Date().toLocaleTimeString('id-ID')}`;
         }
+        savePrintState();
     }
 
     // Event Listeners Initialization
@@ -666,7 +782,18 @@ Diberikan izin untuk mengeluarkan barang impor dari Kawasan Pabean.
         elements.btnClearText.addEventListener('click', () => {
             elements.rawTextArea.value = '';
             elements.rawTextArea.focus();
+            savePrintState();
         });
+
+        // Auto-save print form inputs on change
+        if (elements.rawTextArea) elements.rawTextArea.addEventListener('input', savePrintState);
+        if (elements.rawModeToggle) elements.rawModeToggle.addEventListener('change', savePrintState);
+        if (elements.ejectPageToggle) elements.ejectPageToggle.addEventListener('change', savePrintState);
+        if (elements.fileCopies) elements.fileCopies.addEventListener('input', savePrintState);
+        if (elements.paperSizeSelect) elements.paperSizeSelect.addEventListener('change', savePrintState);
+        if (elements.pageRangeInput) elements.pageRangeInput.addEventListener('input', savePrintState);
+        if (elements.fileModeSelect) elements.fileModeSelect.addEventListener('change', savePrintState);
+        if (elements.printerSelect) elements.printerSelect.addEventListener('change', savePrintState);
 
         // Refresh Queue & Clear History
         elements.btnRefreshQueue.addEventListener('click', () => {
@@ -708,6 +835,7 @@ Diberikan izin untuk mengeluarkan barang impor dari Kawasan Pabean.
     // Startup
     document.addEventListener('DOMContentLoaded', () => {
         initListeners();
+        restorePrintState();
         fetchServerStatus();
         fetchPrinters();
         fetchQueue();

@@ -176,6 +176,8 @@
 
             extractedDocData = resData.data;
             applyExtractedParameters(extractedDocData);
+            saveDocSearcherDocumentToDb(file);
+            saveDocSearcherState();
 
             dsLogSpinner.style.display = 'none';
             if (resData.isAIFallback) {
@@ -349,6 +351,7 @@
 
             searchResultsData = result;
             renderResultsTable(result);
+            saveDocSearcherState();
 
             if (result.totalDocsFound > 0 && btnDownloadAllZip) {
                 btnDownloadAllZip.disabled = false;
@@ -808,6 +811,12 @@
         extractedDocData = null;
         searchResultsData = null;
 
+        // Bersihkan state tersimpan di localStorage dan IndexedDB
+        try {
+            localStorage.removeItem('ceisa_doc_searcher_state');
+            clearDocSearcherDocumentFromDb();
+        } catch (_) {}
+
         if (dsFileInput) dsFileInput.value = '';
         if (dsDropzone) dsDropzone.style.display = 'block';
         if (dsSelectedFileCard) dsSelectedFileCard.style.display = 'none';
@@ -851,8 +860,152 @@
         if (dsResultCountBadge) dsResultCountBadge.textContent = '0 Dokumen';
     }
 
+    // --- Persistensi Antar-Tab (IndexedDB & localStorage) ---
+    function openDocSearcherDb() {
+        return new Promise((resolve) => {
+            if (!window.indexedDB) return resolve(null);
+            const req = indexedDB.open('ceisa_storage_db', 1);
+            req.onupgradeneeded = (e) => {
+                const db = e.target.result;
+                if (!db.objectStoreNames.contains('documents')) {
+                    db.createObjectStore('documents');
+                }
+            };
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = () => resolve(null);
+        });
+    }
+
+    async function saveDocSearcherDocumentToDb(file) {
+        try {
+            const db = await openDocSearcherDb();
+            if (!db) return;
+            const arrayBuf = await file.arrayBuffer();
+            return new Promise((resolve) => {
+                const tx = db.transaction('documents', 'readwrite');
+                const store = tx.objectStore('documents');
+                store.put({
+                    key: 'last_docsearcher_document',
+                    fileName: file.name,
+                    mimeType: file.type || 'application/pdf',
+                    buffer: arrayBuf,
+                    size: file.size,
+                    savedAt: Date.now()
+                }, 'last_docsearcher_document');
+                tx.oncomplete = () => resolve(true);
+                tx.onerror = () => resolve(false);
+            });
+        } catch (e) {
+            console.warn('[DOC SEARCHER] Gagal menyimpan dokumen ke IndexedDB:', e);
+        }
+    }
+
+    async function clearDocSearcherDocumentFromDb() {
+        try {
+            const db = await openDocSearcherDb();
+            if (!db) return;
+            const tx = db.transaction('documents', 'readwrite');
+            tx.objectStore('documents').delete('last_docsearcher_document');
+        } catch (_) {}
+    }
+
+    function saveDocSearcherState() {
+        try {
+            const stateObj = {
+                extractedDocData,
+                searchResultsData,
+                params: {
+                    pibNo: paramPibNo?.value || '',
+                    pibDate: paramPibDate?.value || '',
+                    invoiceNo: paramInvoiceNo?.value || '',
+                    invoiceDate: paramInvoiceDate?.value || '',
+                    blNo: paramBlNo?.value || '',
+                    blDate: paramBlDate?.value || '',
+                    company: paramCompany?.value || '',
+                    supplier: paramSupplier?.value || '',
+                    consignee: paramConsignee?.value || '',
+                    vessel: paramVessel?.value || '',
+                    container: paramContainer?.value || '',
+                    customQuery: paramCustomQuery?.value || ''
+                },
+                fileInfo: currentUploadedFile ? {
+                    name: currentUploadedFile.name,
+                    size: currentUploadedFile.size,
+                    type: currentUploadedFile.type
+                } : null,
+                timestamp: Date.now()
+            };
+            localStorage.setItem('ceisa_doc_searcher_state', JSON.stringify(stateObj));
+        } catch (e) {
+            console.warn('[DOC SEARCHER] Gagal menyimpan state ke localStorage:', e);
+        }
+    }
+
+    async function restoreDocSearcherState() {
+        try {
+            const raw = localStorage.getItem('ceisa_doc_searcher_state');
+            if (!raw) return;
+            const saved = JSON.parse(raw);
+            if (!saved) return;
+
+            // Pulihkan parameter form
+            if (saved.params) {
+                const p = saved.params;
+                if (paramPibNo && p.pibNo) paramPibNo.value = p.pibNo;
+                if (paramPibDate && p.pibDate) paramPibDate.value = p.pibDate;
+                if (paramInvoiceNo && p.invoiceNo) paramInvoiceNo.value = p.invoiceNo;
+                if (paramInvoiceDate && p.invoiceDate) paramInvoiceDate.value = p.invoiceDate;
+                if (paramBlNo && p.blNo) paramBlNo.value = p.blNo;
+                if (paramBlDate && p.blDate) paramBlDate.value = p.blDate;
+                if (paramCompany && p.company) paramCompany.value = p.company;
+                if (paramSupplier && p.supplier) paramSupplier.value = p.supplier;
+                if (paramConsignee && p.consignee) paramConsignee.value = p.consignee;
+                if (paramVessel && p.vessel) paramVessel.value = p.vessel;
+                if (paramContainer && p.container) paramContainer.value = p.container;
+                if (paramCustomQuery && p.customQuery) paramCustomQuery.value = p.customQuery;
+            }
+
+            // Pulihkan hasil analisis PIB/PEB
+            if (saved.extractedDocData) {
+                extractedDocData = saved.extractedDocData;
+                applyExtractedParameters(extractedDocData);
+                if (btnStartSearchOutlook) btnStartSearchOutlook.disabled = false;
+            }
+
+            // Pulihkan hasil pencarian berkas Outlook
+            if (saved.searchResultsData) {
+                searchResultsData = saved.searchResultsData;
+                renderResultsTable(searchResultsData);
+                if (searchResultsData.totalDocsFound > 0 && btnDownloadAllZip) {
+                    btnDownloadAllZip.disabled = false;
+                }
+            }
+
+            // Pulihkan tampilan kartu berkas jika ada
+            if (saved.fileInfo) {
+                if (dsDropzone) dsDropzone.style.display = 'none';
+                if (dsSelectedFileCard) dsSelectedFileCard.style.display = 'flex';
+                if (dsFileName) dsFileName.textContent = saved.fileInfo.name;
+                if (dsFileSize) dsFileSize.textContent = formatBytes(saved.fileInfo.size);
+            }
+        } catch (e) {
+            console.warn('[DOC SEARCHER] Gagal memulihkan state:', e);
+        }
+    }
+
+    // Pasang listener auto-save pada seluruh input parameter
+    [paramPibNo, paramPibDate, paramInvoiceNo, paramInvoiceDate, paramBlNo, paramBlDate, paramCompany, paramSupplier, paramConsignee, paramVessel, paramContainer, paramCustomQuery].forEach(inp => {
+        if (inp) {
+            inp.addEventListener('input', saveDocSearcherState);
+            inp.addEventListener('change', saveDocSearcherState);
+        }
+    });
+
     // --- Sidebar Expand & Hover Listener ---
     document.addEventListener('DOMContentLoaded', () => {
+        // Pulihkan state dokumen dan pencarian terakhir saat halaman dimuat
+        restoreDocSearcherState();
+
         const sidebar = document.getElementById('ceisaSidebar');
         const sidebarToggle = document.getElementById('ceisaSidebarToggle');
         if (sidebar) {

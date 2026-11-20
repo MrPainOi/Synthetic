@@ -331,6 +331,10 @@ function switchPibTab(tabId) {
     const shortName = canonicalId.replace(/^tab-/, '');
     const pibPrefixedId = 'pib-tab-' + shortName;
 
+    try {
+        localStorage.setItem('ceisa_active_pib_tab', canonicalId);
+    } catch (_) {}
+
     document.querySelectorAll('#module-pib .tab-content-panel, .tab-content-panel').forEach(panel => {
         panel.classList.remove('active');
     });
@@ -2648,7 +2652,7 @@ function renderPibSafeCheck(safeCheck) {
         if (matched.length > 0) {
             matched.forEach(m => {
                 const li = document.createElement('li');
-                li.innerHTML = `<span style="color: var(--color-green-text); font-weight: 700; flex-shrink: 0;">✓</span><span>${escapePibHtml(m)}</span>`;
+                li.innerHTML = `<span style="color: var(--color-green-text); font-weight: 700; flex-shrink: 0; display: inline-flex; align-items: center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg></span><span>${escapePibHtml(m)}</span>`;
                 matchedList.appendChild(li);
             });
         } else {
@@ -3562,6 +3566,12 @@ function initPibDashboard() {
 
     // 11. Initial Draft Restore & Calculation
     restorePibDraftState();
+    try {
+        const savedActivePibTab = localStorage.getItem('ceisa_active_pib_tab');
+        if (savedActivePibTab) {
+            switchPibTab(savedActivePibTab);
+        }
+    } catch (_) {}
 
     // 12. Check if payload from HS Code Checker exists
     try {
