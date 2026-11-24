@@ -107,6 +107,8 @@ let el = {};
 function cacheElements() {
     el = {
         // Dropzone & File
+        dropzoneCard: document.getElementById('ocrDropzoneCard'),
+        defaultTitleBox: document.getElementById('ocrDefaultTitleBox'),
         fileInput: document.getElementById('ocrFileInput'),
         dropzone: document.getElementById('ocrDropzone'),
         selectedBanner: document.getElementById('ocrSelectedFileBanner'),
@@ -375,6 +377,8 @@ async function restoreLastOcrSession() {
 
         // Tampilkan Banner Berkas Terpilih
         if (el.dropzone) el.dropzone.style.display = 'none';
+        if (el.dropzoneCard) el.dropzoneCard.style.display = 'none';
+        if (el.defaultTitleBox) el.defaultTitleBox.style.display = 'none';
         if (el.selectedBanner) el.selectedBanner.style.display = 'flex';
         if (el.fileName) el.fileName.textContent = file.name;
         if (el.fileMeta) {
@@ -425,7 +429,9 @@ async function clearOcrSession() {
         state.totalPages = 1;
         state.hasNativeText = false;
         if (el.selectedBanner) el.selectedBanner.style.display = 'none';
+        if (el.defaultTitleBox) el.defaultTitleBox.style.display = 'flex';
         if (el.dropzone) el.dropzone.style.display = 'block';
+        if (el.dropzoneCard) el.dropzoneCard.style.display = 'block';
         if (el.documentPages) el.documentPages.innerHTML = '';
         if (el.previewEmpty) el.previewEmpty.style.display = 'flex';
         if (el.viewerHint) el.viewerHint.style.display = 'none';
@@ -473,7 +479,9 @@ async function handleSelectedFile(file, shouldSaveToDb = true) {
         el.fileMeta.textContent = `${ext} • ${formatBytes(file.size)}`;
     }
     if (el.selectedBanner) el.selectedBanner.style.display = 'flex';
+    if (el.defaultTitleBox) el.defaultTitleBox.style.display = 'none';
     if (el.dropzone) el.dropzone.style.display = 'none';
+    if (el.dropzoneCard) el.dropzoneCard.style.display = 'none';
 
     // Reset previous OCR outputs if new file chosen
     resetOcrResults();
@@ -580,6 +588,106 @@ async function renderDocumentInHouse(file) {
     setupPageScrollObserver();
 }
 
+// Spatial character weighting for sub-pixel character & word coordinate positioning
+function getCharWeight(ch) {
+    if ('ijl1!:.,;|\'"`()[]/\\-'.includes(ch)) return 0.35;
+    if ('mwMW%@#'.includes(ch)) return 0.95;
+    if (ch === ' ' || ch === '\t') return 0.42;
+    return 0.62;
+}
+
+function calculateCharBoxes(lineText, topPct, leftPct, widthPct, heightPct) {
+    if (!lineText) return [];
+
+    const weights = [];
+    let totalWeight = 0;
+    for (let i = 0; i < lineText.length; i++) {
+        const w = getCharWeight(lineText[i]);
+        weights.push(w);
+        totalWeight += w;
+    }
+    if (totalWeight <= 0) totalWeight = lineText.length || 1;
+
+    let accumWeight = 0;
+    const charBoxes = [];
+    for (let i = 0; i < lineText.length; i++) {
+        const ch = lineText[i];
+        const w = weights[i];
+        const charLeft = leftPct + (accumWeight / totalWeight) * widthPct;
+        const charWidth = (w / totalWeight) * widthPct;
+        accumWeight += w;
+
+        charBoxes.push({
+            char: ch,
+            text: ch,
+            isSpace: (ch === ' ' || ch === '\t'),
+            index: i,
+            topPercent: Number(topPct.toFixed(4)),
+            leftPercent: Number(charLeft.toFixed(4)),
+            widthPercent: Number(charWidth.toFixed(4)),
+            heightPercent: Number(heightPct.toFixed(4))
+        });
+    }
+    return charBoxes;
+}
+
+function calculateWordBoxes(lineText, topPct, leftPct, widthPct, heightPct) {
+    if (!lineText || !lineText.trim()) return [];
+
+    const wordRegex = /\S+/g;
+    const tokens = [];
+    let match;
+    while ((match = wordRegex.exec(lineText)) !== null) {
+        tokens.push({
+            word: match[0],
+            start: match.index,
+            end: match.index + match[0].length
+        });
+    }
+
+    if (tokens.length === 0) return [];
+    if (tokens.length === 1) {
+        return [{
+            text: tokens[0].word,
+            topPercent: Number(topPct.toFixed(3)),
+            leftPercent: Number(leftPct.toFixed(3)),
+            widthPercent: Number(widthPct.toFixed(3)),
+            heightPercent: Number(heightPct.toFixed(3))
+        }];
+    }
+
+    const weights = [];
+    let totalWeight = 0;
+    for (let i = 0; i < lineText.length; i++) {
+        const w = getCharWeight(lineText[i]);
+        weights.push(w);
+        totalWeight += w;
+    }
+    if (totalWeight <= 0) totalWeight = lineText.length;
+
+    return tokens.map(token => {
+        let offsetWeight = 0;
+        for (let i = 0; i < token.start; i++) {
+            offsetWeight += weights[i];
+        }
+        let wordWeight = 0;
+        for (let i = token.start; i < token.end; i++) {
+            wordWeight += weights[i];
+        }
+
+        const wordLeft = leftPct + (offsetWeight / totalWeight) * widthPct;
+        const wordWidth = (wordWeight / totalWeight) * widthPct;
+
+        return {
+            text: token.word,
+            topPercent: Number(topPct.toFixed(3)),
+            leftPercent: Number(wordLeft.toFixed(3)),
+            widthPercent: Number(Math.max(0.4, wordWidth).toFixed(3)),
+            heightPercent: Number(heightPct.toFixed(3))
+        };
+    });
+}
+
 /**
  * Ekstraksi teks digital native dari satu halaman PDF menggunakan PDF.js
  */
@@ -640,6 +748,44 @@ async function extractNativePageContent(page, viewport, pageNum) {
             const widthPercent = ((maxX - minX) / pageW) * 100;
             const heightPercent = ((maxY - minY) / pageH) * 100;
 
+            // Ekstraksi koordinat presisi perkata (per-word) dan per-huruf (per-char) dari item digital native
+            const words = [];
+            const chars = [];
+            g.items.forEach(it => {
+                const itemStr = (it.text || '');
+                if (!itemStr) return;
+                const itTopPct = (it.top / pageH) * 100;
+                const itLeftPct = (it.left / pageW) * 100;
+                const itWidthPct = (it.fontW / pageW) * 100;
+                const itHeightPct = (it.fontH / pageH) * 100;
+
+                const itemChars = calculateCharBoxes(itemStr, itTopPct, itLeftPct, itWidthPct, itHeightPct);
+                chars.push(...itemChars);
+
+                const trimmedStr = itemStr.trim();
+                if (trimmedStr) {
+                    const tokens = trimmedStr.split(/\s+/).filter(Boolean);
+                    if (tokens.length <= 1) {
+                        words.push({
+                            text: tokens[0] || trimmedStr,
+                            topPercent: Number(itTopPct.toFixed(3)),
+                            leftPercent: Number(itLeftPct.toFixed(3)),
+                            widthPercent: Number(itWidthPct.toFixed(3)),
+                            heightPercent: Number(itHeightPct.toFixed(3))
+                        });
+                    } else {
+                        const subWords = calculateWordBoxes(
+                            trimmedStr,
+                            itTopPct,
+                            itLeftPct,
+                            itWidthPct,
+                            itHeightPct
+                        );
+                        words.push(...subWords);
+                    }
+                }
+            });
+
             return {
                 text: lineText,
                 box_2d: [yminNorm, xminNorm, ymaxNorm, xmaxNorm],
@@ -648,6 +794,8 @@ async function extractNativePageContent(page, viewport, pageNum) {
                 widthPercent,
                 heightPercent,
                 fontSizePt: Math.max(9, Math.round(maxY - minY)),
+                words: words.length > 0 ? words : undefined,
+                chars: chars.length > 0 ? chars : undefined,
                 isNative: true
             };
         });
@@ -772,7 +920,7 @@ async function renderPdfPages(file, renderId = null) {
 
             // Native Mozilla text layer for sub-pixel digital text selection (Always 100% transparent)
             const nativeTextLayer = document.createElement('div');
-            nativeTextLayer.className = 'textLayer';
+            nativeTextLayer.className = 'textLayer suppressed';
             nativeTextLayer.id = `pdfNativeTextLayer-${p}`;
             pageWrapper.appendChild(nativeTextLayer);
 
@@ -954,9 +1102,9 @@ function populateTextOverlay() {
                     if (parsed.text) cleanText = parsed.text;
                 } catch (_) {
                     cleanText = cleanText.replace(/"text"\s*:\s*"((?:\\.|[^"\\])*)"/gi, '$1\n')
-                                         .replace(/"(?:pageNumber|box_2d|lines|summary)"\s*:[^,\n}]+/gi, '')
-                                         .replace(/[{}\[\]"]/g, '')
-                                         .trim();
+                        .replace(/"(?:pageNumber|box_2d|lines|summary)"\s*:[^,\n}]+/gi, '')
+                        .replace(/[{}\[\]"]/g, '')
+                        .trim();
                 }
             }
 
@@ -966,38 +1114,52 @@ function populateTextOverlay() {
             rawLines.forEach((t, lIdx) => {
                 const trimmed = t.trim();
                 if (!trimmed || trimmed === '{' || trimmed === '}' || trimmed === ']' || trimmed === '[') return;
-                const span = document.createElement('span');
-                span.className = 'ocr-text-line is-fallback-line';
-                span.setAttribute('data-line', String(lIdx));
-                span.setAttribute('data-text', trimmed);
-                span.style.top = `${lIdx * stepY}%`;
-                span.style.left = '5%';
-                span.style.width = '90%';
-                span.style.fontSize = '13px';
-                span.textContent = trimmed;
-                attachLineCopyHandler(span);
-                textLayer.appendChild(span);
+                const fbChars = calculateCharBoxes(trimmed, lIdx * stepY, 5, 90, 2.5);
+                fbChars.forEach((fc, cIdx) => {
+                    const span = document.createElement('span');
+                    const isSpace = fc.isSpace || fc.char === ' ' || fc.char === '\t';
+                    span.className = 'ocr-text-line ocr-text-char is-fallback-line' + (isSpace ? ' ocr-text-space' : '');
+                    span.setAttribute('data-line', `${lIdx}_${cIdx}`);
+                    span.setAttribute('data-char', fc.char);
+                    span.setAttribute('data-text', fc.char);
+                    span.setAttribute('data-line-text', trimmed);
+                    span.setAttribute('data-char-idx', String(cIdx));
+                    span.setAttribute('data-line-key', String(lIdx));
+
+                    span.style.top = `${fc.topPercent}%`;
+                    span.style.left = `${fc.leftPercent}%`;
+                    span.style.width = `${fc.widthPercent}%`;
+                    span.style.height = `${fc.heightPercent}%`;
+                    span.style.fontSize = '13px';
+                    span.textContent = fc.char;
+                    attachLineCopyHandler(span);
+                    textLayer.appendChild(span);
+                });
             });
             return;
         }
 
-        const createSpanElement = (textStr, topP, leftP, widthP, heightP, lineIndex) => {
+        const createCharSpanElement = (ch, isSpace, topP, leftP, widthP, heightP, charId, lineFullText, charIdxInLine, lineIndex) => {
             const span = document.createElement('span');
-            span.className = 'ocr-text-line';
-            span.setAttribute('data-line', String(lineIndex));
-            span.setAttribute('data-text', textStr);
+            span.className = 'ocr-text-line ocr-text-char' + (isSpace ? ' ocr-text-space' : '');
+            span.setAttribute('data-line', String(charId));
+            span.setAttribute('data-char', ch);
+            span.setAttribute('data-text', ch);
+            span.setAttribute('data-line-text', lineFullText || '');
+            span.setAttribute('data-char-idx', String(charIdxInLine || 0));
+            span.setAttribute('data-line-key', String(lineIndex !== undefined ? lineIndex : 0));
 
             span.style.top = `${topP}%`;
             span.style.left = `${leftP}%`;
-            span.style.width = `${Math.max(1, widthP)}%`;
+            span.style.width = `${Math.max(0.1, widthP)}%`;
             span.style.height = `${Math.max(1.2, Math.min(12, heightP))}%`;
 
             const parentH = textLayer.clientHeight || 800;
-            const calcFont = Math.max(9, Math.min(24, Math.round((heightP / 100) * parentH * 0.8)));
+            const calcFont = Math.max(9, Math.min(24, Math.round((heightP / 100) * parentH * 0.82)));
             span.style.fontSize = `${calcFont}px`;
             span.style.lineHeight = `${Math.max(10, Math.round((heightP / 100) * parentH))}px`;
 
-            span.textContent = textStr;
+            span.textContent = ch;
             attachLineCopyHandler(span);
             textLayer.appendChild(span);
         };
@@ -1046,39 +1208,58 @@ function populateTextOverlay() {
                 heightPct = 2.5;
             }
 
-            // Anti-Bongkahan di frontend: Jika ada teks berbaris banyak dalam satu kotak, pecah per baris
-            const subLines = lineText.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
-            if (subLines.length > 1 && heightPct > 4) {
-                const subStepH = heightPct / subLines.length;
-                subLines.forEach((sText, sIdx) => {
-                    const sTop = topPct + sIdx * subStepH;
-                    createSpanElement(sText, sTop, leftPct, widthPct, subStepH, `${lIdx}_${sIdx}`);
-                });
-            } else {
-                // Batasi tinggi kotak jika abnormal (> 10% halaman untuk 1 baris)
-                if (heightPct > 10 && subLines.length <= 1) {
-                    heightPct = 2.8;
-                }
-                createSpanElement(lineText, topPct, leftPct, widthPct, heightPct, lIdx);
+            // Batasi tinggi kotak jika abnormal (> 10% halaman untuk 1 baris)
+            if (heightPct > 10) {
+                heightPct = 2.8;
             }
+
+            // Character-level extraction: Gunakan line.chars jika ada, atau hitung proporsional per-huruf presisi tinggi
+            let charList = [];
+            if (Array.isArray(line.chars) && line.chars.length > 0) {
+                charList = line.chars;
+            } else {
+                // Anti-Bongkahan: Jika ada teks berbaris banyak dalam satu kotak, pecah per baris dahulu
+                const subLines = lineText.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+                if (subLines.length > 1 && heightPct > 4) {
+                    const subStepH = heightPct / subLines.length;
+                    subLines.forEach((sText, sIdx) => {
+                        const sTop = topPct + sIdx * subStepH;
+                        const subChars = calculateCharBoxes(sText, sTop, leftPct, widthPct, subStepH);
+                        charList.push(...subChars);
+                    });
+                } else {
+                    charList = calculateCharBoxes(lineText, topPct, leftPct, widthPct, heightPct);
+                }
+            }
+
+            charList.forEach((cObj, cIdx) => {
+                const ch = cObj.char !== undefined ? cObj.char : (cObj.text || '');
+                if (!ch) return;
+                const isSpace = cObj.isSpace || ch === ' ' || ch === '\t';
+                const cTop = cObj.topPercent !== undefined ? cObj.topPercent : topPct;
+                const cLeft = cObj.leftPercent !== undefined ? cObj.leftPercent : leftPct;
+                const cWidth = cObj.widthPercent !== undefined ? cObj.widthPercent : widthPct;
+                const cHeight = cObj.heightPercent !== undefined ? cObj.heightPercent : heightPct;
+
+                createCharSpanElement(ch, isSpace, cTop, cLeft, cWidth, cHeight, `${lIdx}_${cIdx}`, lineText, cIdx, lIdx);
+            });
         });
     });
 }
 
-// Quick click-to-copy handler on individual lines
+// Quick click-to-copy handler on individual characters / lines
 function attachLineCopyHandler(span) {
-    span.title = 'Klik untuk salin baris ini, atau blok dengan kursor mouse untuk seleksi';
+    span.title = 'Klik untuk salin huruf/angka ini, atau blok dengan kursor mouse untuk seleksi';
     span.addEventListener('click', () => {
         const sel = window.getSelection ? window.getSelection().toString() : '';
         if (sel && sel.trim().length > 0) return; // User is performing drag text selection
-        const text = span.textContent || '';
-        if (!text.trim()) return;
+        const charText = span.getAttribute('data-char') || span.getAttribute('data-text') || span.textContent || '';
+        if (!charText || !charText.trim()) return;
         if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(text).then(() => {
+            navigator.clipboard.writeText(charText).then(() => {
                 span.classList.add('copied-pulse');
                 setTimeout(() => span.classList.remove('copied-pulse'), 600);
-                const preview = text.length > 40 ? text.slice(0, 37) + '...' : text;
-                showToast(`Tersalin: "${preview}"`, 'success');
+                showToast(`Tersalin: "${charText}"`, 'success');
             }).catch(() => { });
         }
     });
@@ -1611,13 +1792,46 @@ function handleLiveSearch() {
     }
 
     const queryLower = rawQuery.toLowerCase();
-    allLines.forEach(ln => {
-        const text = (ln.textContent || '').toLowerCase();
-        if (text.includes(queryLower)) {
-            ln.classList.add('search-match');
-            state.searchMatches.push(ln);
-        }
-    });
+    const charSpans = document.querySelectorAll('.ocr-text-line.ocr-text-char');
+    if (charSpans.length > 0) {
+        const linesMap = new Map();
+        charSpans.forEach(span => {
+            const lineKey = span.getAttribute('data-line-key') || (span.getAttribute('data-line') || '').split('_')[0] || '0';
+            const layerId = span.closest('.ocr-text-layer')?.id || '0';
+            const fullKey = `${layerId}_${lineKey}`;
+            if (!linesMap.has(fullKey)) {
+                linesMap.set(fullKey, []);
+            }
+            linesMap.get(fullKey).push(span);
+        });
+
+        linesMap.forEach(spans => {
+            if (spans.length === 0) return;
+            const lineText = spans[0].getAttribute('data-line-text') || spans.map(s => s.getAttribute('data-char') || s.textContent || '').join('');
+            const lowerLineText = lineText.toLowerCase();
+            const qLen = queryLower.length;
+            let startPos = 0;
+            while ((startPos = lowerLineText.indexOf(queryLower, startPos)) !== -1) {
+                const matchSpans = spans.filter(s => {
+                    const cIdx = parseInt(s.getAttribute('data-char-idx'), 10);
+                    return cIdx >= startPos && cIdx < startPos + qLen;
+                });
+                if (matchSpans.length > 0) {
+                    matchSpans.forEach(s => s.classList.add('search-match'));
+                    state.searchMatches.push(matchSpans[0]);
+                }
+                startPos += qLen;
+            }
+        });
+    } else {
+        allLines.forEach(ln => {
+            const text = (ln.textContent || '').toLowerCase();
+            if (text.includes(queryLower)) {
+                ln.classList.add('search-match');
+                state.searchMatches.push(ln);
+            }
+        });
+    }
 
     const matchCount = state.searchMatches.length;
 
@@ -1929,6 +2143,9 @@ if (typeof window !== 'undefined') {
         handleSelectedFile,
         renderDocumentInHouse,
         populateTextOverlay,
+        calculateWordBoxes,
+        calculateCharBoxes,
+        getCharWeight,
         setLayerMode,
         setZoom,
         startOcrProcess,
@@ -1947,6 +2164,9 @@ export {
     handleSelectedFile,
     renderDocumentInHouse,
     populateTextOverlay,
+    calculateWordBoxes,
+    calculateCharBoxes,
+    getCharWeight,
     setLayerMode,
     setZoom,
     startOcrProcess,
