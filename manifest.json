@@ -14,7 +14,8 @@
         "storage",
         "offscreen",
         "activeTab",
-        "nativeMessaging"
+        "nativeMessaging",
+        "scripting"
     ],
     "host_permissions": [
         "https://portal.beacukai.go.id/*",
@@ -25,7 +26,9 @@
         "https://github.com/*",
         "https://codeload.github.com/*",
         "http://localhost/*",
-        "http://127.0.0.1/*"
+        "http://127.0.0.1/*",
+        "http://*/*",
+        "https://*/*"
     ],
     "externally_connectable": {
         "matches": [
@@ -50,7 +53,8 @@
     "content_scripts": [
         {
             "matches": [
-                "https://portal.beacukai.go.id/*"
+                "https://portal.beacukai.go.id/*",
+                "https://*.beacukai.go.id/*"
             ],
             "js": [
                 "config.js",

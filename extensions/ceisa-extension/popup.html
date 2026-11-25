@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CEISA 4.0 Automation</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="alternate icon" type="image/png" href="icons/icon-32.png">
+    <link rel="stylesheet" href="popup.css">
+</head>
+
+<body>
+
+    <div class="app">
+        <div class="header">
+            <div class="title">CEISA 4.0 Automation</div>
+            <span id="popupVersionText" class="version-badge" title="Versi Ekstensi">v2.1.2</span>
+        </div>
+
+        <!-- SUB-HEADER DUA TOMBOL: GANTI FUNGSI POPUP -->
+        <div class="popup-mode-switcher" role="tablist" aria-label="Mode Operasi Popup">
+            <button type="button" class="mode-tab-btn active" id="btnModeScanner" role="tab" aria-selected="true" title="Fungsi Saat Ini: Scanner & Monitoring SPPB">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <span>Scanner Status</span>
+            </button>
+            <button type="button" class="mode-tab-btn" id="btnModeAutoInput" role="tab" aria-selected="false" title="Fitur Baru: Auto Input Draft Dokumen ke CEISA 4.0">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
+                <span>Auto Input CEISA</span>
+                <span class="mode-tab-badge">Baru</span>
+            </button>
+        </div>
+
+        <!-- VIEW 1: SCANNER & MONITORING STATUS (FUNGSI SAAT INI) -->
+        <div id="viewScanner" class="popup-view-container active">
+        <div class="control">
+            <input type="date" id="scanDate">
+            <button id="start" class="icon-btn" title="Mulai Scan">▶</button>
+            <button id="stop" class="icon-btn" title="Stop Scan">■</button>
+        </div>
+
+        <div class="action-bar-row">
+            <button id="saveAllData" class="btn-save-main">Simpan Data</button>
+            <button id="openDashboard" class="btn-dash">Web Dashboard</button>
+        </div>
+
+        <!-- GOOGLE CLOUD SYNC STATUS -->
+        <div class="wifi-config-card">
+            <div class="wifi-config-header">
+                <span>Cloud Sync (Google Sheets):</span>
+                <span id="wifiStatusBadge" class="wifi-status-on">Terhubung</span>
+            </div>
+        </div>
+
+        <div class="summary">
+            <span>STATUS: <b id="statusText">SIAP</b></span>
+            <span>|</span>
+            <span>H: <b id="green">0</b></span>
+            <span>|</span>
+            <span>M: <b id="red">0</b></span>
+            <span>|</span>
+            <span>Err: <b id="error">0</b></span>
+            <span>|</span>
+            <span>TOTAL: <b id="total">0</b></span>
+        </div>
+
+        <!-- NOMOR SELESAI HIJAU -->
+        <div class="completed">
+            <div class="section-header">
+                <div class="section-title">Nomor Selesai (Input Kode Hijau)</div>
+                <button id="clearCache" class="clear-btn" title="Hapus Cache Scan">Reset Cache</button>
+            </div>
+            <textarea id="completedNumbers" placeholder="Contoh:&#10;081049&#10;081052" spellcheck="false"></textarea>
+            <button id="saveCompleted" class="save-btn">Simpan Kode Hijau</button>
+        </div>
+
+        <!-- NOMOR SELESAI PIB/PEB -->
+        <div class="completed pibpeb-section">
+            <div class="section-header">
+                <div class="section-title blue-title">Nomor Selesai PIB / PEB</div>
+            </div>
+            <textarea id="pibPebNumbers" placeholder="Contoh nomor PIB/PEB:&#10;082202&#10;082073"
+                spellcheck="false"></textarea>
+            <button id="savePibPeb" class="save-btn pibpeb-btn">Simpan Kode PIB/PEB</button>
+        </div>
+
+        <!-- LEGENDA WARNA (COLOR INFO DROPDOWN ACCORDION) -->
+        <div class="color-info-card">
+            <button id="toggleInfoBtn" class="info-toggle-btn">
+                <span>ℹ️ Info & Panduan Warna Highlight</span>
+                <span id="infoArrow" class="arrow-icon">▼</span>
+            </button>
+            <div id="infoContent" class="info-content hidden">
+                <ul class="color-list">
+                    <li><span class="color-badge bg-green">Hijau</span> <span>SPPB/NPPB Udah Di Print (SEWU)</span></li>
+                    <li><span class="color-badge bg-yellow">Kuning</span> <span>SPPB/NPPB Udah Di Print (BATU
+                            AMPAR)</span></li>
+                    <li><span class="color-badge bg-purple">Ungu</span> <span>PIB/PEB Udah Di Print (SEWU)</span></li>
+                    <li><span class="color-badge bg-pink">Pink</span> <span>PIB/PEB Udah Di Print (BATU AMPAR)</span>
+                    </li>
+                    <li><span class="color-badge bg-blue">Biru</span> <span>PIB/PEB + SPPB/NPPB Udah Di Print
+                            (SEWU)</span></li>
+                    <li><span class="color-badge bg-aqua">Aqua</span> <span>PIB/PEB + SPPB/NPPB Udah Di Print (BATU
+                            AMPAR)</span></li>
+                    <li><span class="color-badge bg-orange">Oren</span> <span>BELUM DI PRINT SPPB/NPPB (SEWU)</span>
+                    </li>
+                    <li><span class="color-badge bg-red">Merah</span> <span>BELUM DI PRINT SPPB/NPPB (BATU AMPAR)</span>
+                    </li>
+                    <hr>
+                    <li><span class="color-badge bg-gray">INFO</span> <span>NPPB = Ekspor, SPPB = Impor</span></li>
+                </ul>
+            </div>
+        </div>
+        </div> <!-- /#viewScanner -->
+
+        <!-- VIEW 2: FITUR AUTO INPUT DRAFT KE CEISA 4.0 (FITUR BARU) -->
+        <div id="viewAutoInput" class="popup-view-container auto-input-view" style="display: none;">
+            
+            <!-- CARD 1: STATUS PORTAL & PILIH SUMBER DRAFT -->
+            <div class="ai-control-deck" id="ceisaPortalStatusCard">
+                <!-- Baris Atas: Status Tab CEISA -->
+                <div class="ai-status-bar">
+                    <div class="ai-status-indicator">
+                        <span class="ai-dot dot-offline" id="ceisaPortalDot"></span>
+                        <div class="ai-status-info">
+                            <span class="ai-status-title">Portal CEISA 4.0</span>
+                            <span class="ai-status-sub" id="ceisaPortalText">Memeriksa tab CEISA...</span>
+                        </div>
+                    </div>
+                    <button type="button" class="ai-btn-portal" id="btnFocusCeisaTab" title="Buka atau fokuskan tab portal CEISA">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                        <span>Buka CEISA</span>
+                    </button>
+                </div>
+
+                <!-- Baris Bawah: Mode Dokumen & Sumber Draft -->
+                <div class="ai-source-bar">
+                    <div class="ai-type-toggle">
+                        <button type="button" class="ai-pill-btn pill-btn active" id="btnSelectTypePib">PIB (Impor)</button>
+                        <button type="button" class="ai-pill-btn pill-btn" id="btnSelectTypePeb">PEB (Ekspor)</button>
+                    </div>
+                    <div class="ai-source-actions">
+                        <button type="button" class="ai-btn-action" id="btnLoadLatestDraft" title="Muat draft dokumen aktif">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+                            <span>Muat Draft</span>
+                        </button>
+                        <label class="ai-btn-action ai-btn-upload" title="Unggah berkas JSON draft dari komputer">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                            <span>JSON</span>
+                            <input type="file" id="autoInputJsonFile" accept=".json" style="display: none;">
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Baris Sumber Data LAN & Host Web Terpisah -->
+                <div class="ai-host-strip" id="aiHostConfigDeck">
+                    <div class="ai-host-summary">
+                        <span class="ai-host-dot" id="dotDraftHostStatus" title="Status koneksi sumber draft"></span>
+                        <span class="ai-host-label">Sumber Draft:</span>
+                        <strong class="ai-host-value" id="lblActiveDraftHost">localhost:5005</strong>
+                    </div>
+                    <button type="button" class="ai-btn-host-toggle" id="btnToggleHostPanel" title="Atur IP PC Sumber Draft & Host Web Dashboard">Atur IP / Host</button>
+                </div>
+
+                <div class="ai-host-panel" id="aiHostPanel" style="display: none;">
+                    <div class="ai-host-field">
+                        <label for="inputDraftSourceHost" class="ai-host-field-label">IP / Host PC Sumber Draft (mis. 192.168.100.15):</label>
+                        <div class="ai-host-input-row">
+                            <input type="text" id="inputDraftSourceHost" class="ai-host-input" placeholder="192.168.100.15 atau localhost:5005" spellcheck="false">
+                            <button type="button" class="ai-btn-host-apply" id="btnSaveDraftSourceHost">Hubungkan</button>
+                            <button type="button" class="ai-btn-host-reset" id="btnResetDraftSourceLocal" title="Kembalikan ke localhost:5005">Lokal</button>
+                        </div>
+                        <span class="ai-host-hint" id="lblDraftHostConnectInfo">Mengambil draft dari PC lokal atau PC rekan di jaringan LAN.</span>
+                    </div>
+
+                    <div class="ai-host-field">
+                        <label for="selectRemoteDraft" class="ai-host-field-label">Pilih File Draft dari Sumber:</label>
+                        <div class="ai-host-input-row">
+                            <select id="selectRemoteDraft" class="ai-host-select">
+                                <option value="">Terbaru (Otomatis)</option>
+                            </select>
+                            <button type="button" class="ai-btn-host-reset" id="btnRefreshRemoteDraftList" title="Muat ulang daftar draft dari host">Segarkan</button>
+                        </div>
+                    </div>
+
+                    <div class="ai-host-field">
+                        <label for="inputWebHost" class="ai-host-field-label">Host Web Dashboard Anda (terpisah dari sumber draft):</label>
+                        <div class="ai-host-input-row">
+                            <input type="text" id="inputWebHost" class="ai-host-input" placeholder="http://localhost:5005" spellcheck="false">
+                            <button type="button" class="ai-btn-host-reset" id="btnOpenWebDashboardAuto" title="Buka Web Dashboard di host Anda">Buka Web</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CARD 2: KARTU IDENTITAS DRAFT (DOCKET PASSPORT) -->
+            <div class="ai-docket-card" id="autoInputDraftSummaryCard">
+                <div class="ai-docket-header">
+                    <div class="ai-docket-title-wrap">
+                        <span class="ai-doc-badge draft-badge bg-pib" id="lblDraftBadge">PIB</span>
+                        <strong class="ai-docket-title draft-title-no" id="lblDraftAjuNo">Belum Ada Draft Dimuat</strong>
+                    </div>
+                    <span class="ai-draft-status-pill">Draft Aktif</span>
+                </div>
+                
+                <div class="ai-docket-route">
+                    <div class="ai-route-node">
+                        <span class="ai-route-label">Pengirim</span>
+                        <span class="ai-route-val detail-val" id="lblDraftShipper">-</span>
+                    </div>
+                    <div class="ai-route-arrow">➔</div>
+                    <div class="ai-route-node">
+                        <span class="ai-route-label">Penerima</span>
+                        <span class="ai-route-val detail-val" id="lblDraftConsignee">-</span>
+                    </div>
+                </div>
+
+                <div class="ai-docket-chips draft-detail-chips">
+                    <div class="ai-chip">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        <span><b id="lblDraftDocCount">0</b> Dokumen</span>
+                    </div>
+                    <div class="ai-chip">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+                        <span><b id="lblDraftItemCount">0</b> Barang</span>
+                    </div>
+                    <div class="ai-chip ai-chip-val">
+                        <span>Valuta: <b id="lblDraftValuta">USD</b></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CARD 2.5: PENGATURAN TOGGLE AUTO FILL -->
+            <div class="ai-config-card" id="cardAutofillConfig">
+                <div class="ai-config-header" id="btnToggleAfCollapse" role="button" tabindex="0" title="Klik untuk membuka/menutup pengaturan bagian auto-fill">
+                    <div class="ai-config-title-wrap">
+                        <span class="ai-config-icon">⚙️</span>
+                        <div class="ai-config-titles">
+                            <span class="ai-config-title">Pengaturan Bagian Auto Fill</span>
+                            <span class="ai-config-subtitle">Atur tab mana saja yang diisi otomatis ke CEISA</span>
+                        </div>
+                    </div>
+                    <div class="ai-config-header-right">
+                        <span class="af-active-badge" id="lblAfActiveCount">7 / 9 Aktif</span>
+                        <span class="af-chevron" id="iconAfChevron">▾</span>
+                    </div>
+                </div>
+
+                <div class="ai-config-body" id="afConfigBody" style="display: none;">
+                    <div class="af-quick-actions">
+                        <button type="button" class="af-btn-quick" id="btnAfSelectAll" title="Aktifkan semua bagian">Semua ON</button>
+                        <button type="button" class="af-btn-quick" id="btnAfResetDefault" title="Kembalikan ke setelan awal (PPJK & Pungutan Manual)">Reset Default</button>
+                    </div>
+
+                    <div class="af-toggle-list">
+                        <!-- 1. Header -->
+                        <div class="af-toggle-row">
+                            <div class="af-toggle-info">
+                                <span class="af-toggle-label">1. Header</span>
+                                <span class="af-toggle-desc">Nomor Aju, Kantor Pabean, Jenis &amp; Kategori</span>
+                            </div>
+                            <label class="af-switch" title="Toggle Auto-fill Header">
+                                <input type="checkbox" id="afToggle_header" checked>
+                                <span class="af-slider"></span>
+                            </label>
+                        </div>
+
+                        <!-- 2. Entitas Master -->
+                        <div class="af-toggle-row af-master-row">
+                            <div class="af-toggle-info">
+                                <span class="af-toggle-label">2. Entitas</span>
+                                <span class="af-toggle-desc">Pemasok, Importir, Pembeli, Penjual, Pemilik, PPJK</span>
+                            </div>
+                            <label class="af-switch" title="Toggle Auto-fill Entitas">
+                                <input type="checkbox" id="afToggle_entitas" checked>
+                                <span class="af-slider"></span>
+                            </label>
+                        </div>
+
+                        <!-- Entitas Sub-Items -->
+                        <div class="af-sub-group" id="afSubGroupEntitas">
+                            <div class="af-toggle-row af-sub-row">
+                                <div class="af-toggle-info">
+                                    <span class="af-toggle-label">Pengirim / Pemasok LN</span>
+                                </div>
+                                <label class="af-switch">
+                                    <input type="checkbox" id="afToggle_entitas_pengirim" checked>
+                                    <span class="af-slider"></span>
+                                </label>
+                            </div>
+                            <div class="af-toggle-row af-sub-row">
+                                <div class="af-toggle-info">
+                                    <span class="af-toggle-label">Penerima / Importir</span>
+                                </div>
+                                <label class="af-switch">
+                                    <input type="checkbox" id="afToggle_entitas_penerima" checked>
+                                    <span class="af-slider"></span>
+                                </label>
+                            </div>
+                            <div class="af-toggle-row af-sub-row">
+                                <div class="af-toggle-info">
+                                    <span class="af-toggle-label">Pembeli (Buyer)</span>
+                                </div>
+                                <label class="af-switch">
+                                    <input type="checkbox" id="afToggle_entitas_pembeli" checked>
+                                    <span class="af-slider"></span>
+                                </label>
+                            </div>
+                            <div class="af-toggle-row af-sub-row">
+                                <div class="af-toggle-info">
+                                    <span class="af-toggle-label">Penjual (Seller)</span>
+                                </div>
+                                <label class="af-switch">
+                                    <input type="checkbox" id="afToggle_entitas_penjual" checked>
+                                    <span class="af-slider"></span>
+                                </label>
+                            </div>
+                            <div class="af-toggle-row af-sub-row">
+                                <div class="af-toggle-info">
+                                    <span class="af-toggle-label">Pemilik Barang</span>
+                                </div>
+                                <label class="af-switch">
+                                    <input type="checkbox" id="afToggle_entitas_pemilik" checked>
+                                    <span class="af-slider"></span>
+                                </label>
+                            </div>
+                            <div class="af-toggle-row af-sub-row">
+                                <div class="af-toggle-info">
+                                    <span class="af-toggle-label">PPJK <span class="af-sub-badge">Manual Default</span></span>
+                                    <span class="af-toggle-desc">Nyalakan untuk auto-fill PPJK</span>
+                                </div>
+                                <label class="af-switch" title="Nyalakan jika ingin PPJK diisi otomatis">
+                                    <input type="checkbox" id="afToggle_entitas_ppjk">
+                                    <span class="af-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- 3. Dokumen Lampiran -->
+                        <div class="af-toggle-row">
+                            <div class="af-toggle-info">
+                                <span class="af-toggle-label">3. Dokumen Lampiran</span>
+                                <span class="af-toggle-desc">Invoice, Packing List, BL, COO</span>
+                            </div>
+                            <label class="af-switch" title="Toggle Auto-fill Dokumen">
+                                <input type="checkbox" id="afToggle_dokumen" checked>
+                                <span class="af-slider"></span>
+                            </label>
+                        </div>
+
+                        <!-- 4. Pengangkut -->
+                        <div class="af-toggle-row">
+                            <div class="af-toggle-info">
+                                <span class="af-toggle-label">4. Pengangkut</span>
+                                <span class="af-toggle-desc">Sarana Pengangkut, Pelabuhan, TPS</span>
+                            </div>
+                            <label class="af-switch" title="Toggle Auto-fill Pengangkut">
+                                <input type="checkbox" id="afToggle_pengangkut" checked>
+                                <span class="af-slider"></span>
+                            </label>
+                        </div>
+
+                        <!-- 5. Kemasan & Peti Kemas -->
+                        <div class="af-toggle-row">
+                            <div class="af-toggle-info">
+                                <span class="af-toggle-label">5. Kemasan &amp; Peti Kemas</span>
+                                <span class="af-toggle-desc">Jumlah/Jenis Kemasan, Kontainer, Berat</span>
+                            </div>
+                            <label class="af-switch" title="Toggle Auto-fill Kemasan">
+                                <input type="checkbox" id="afToggle_kemasan" checked>
+                                <span class="af-slider"></span>
+                            </label>
+                        </div>
+
+                        <!-- 6. Transaksi -->
+                        <div class="af-toggle-row">
+                            <div class="af-toggle-info">
+                                <span class="af-toggle-label">6. Transaksi</span>
+                                <span class="af-toggle-desc">Valuta, Incoterm, Nilai Pabean, Kurs</span>
+                            </div>
+                            <label class="af-switch" title="Toggle Auto-fill Transaksi">
+                                <input type="checkbox" id="afToggle_transaksi" checked>
+                                <span class="af-slider"></span>
+                            </label>
+                        </div>
+
+                        <!-- 7. Data Barang -->
+                        <div class="af-toggle-row">
+                            <div class="af-toggle-info">
+                                <span class="af-toggle-label">7. Data Barang</span>
+                                <span class="af-toggle-desc">Pos Tarif HS, Uraian, Qty, Satuan, Nilai</span>
+                            </div>
+                            <label class="af-switch" title="Toggle Auto-fill Barang">
+                                <input type="checkbox" id="afToggle_barang" checked>
+                                <span class="af-slider"></span>
+                            </label>
+                        </div>
+
+                        <!-- 8. Pungutan -->
+                        <div class="af-toggle-row">
+                            <div class="af-toggle-info">
+                                <span class="af-toggle-label">8. Pungutan <span class="af-sub-badge">Manual Default</span></span>
+                                <span class="af-toggle-desc">Tarif BM, PPN, PPh, Total Billing</span>
+                            </div>
+                            <label class="af-switch" title="Nyalakan jika ingin Pungutan diisi otomatis">
+                                <input type="checkbox" id="afToggle_pungutan">
+                                <span class="af-slider"></span>
+                            </label>
+                        </div>
+
+                        <!-- 9. Pernyataan -->
+                        <div class="af-toggle-row">
+                            <div class="af-toggle-info">
+                                <span class="af-toggle-label">9. Pernyataan</span>
+                                <span class="af-toggle-desc">Nama &amp; Jabatan Pemberitahu</span>
+                            </div>
+                            <label class="af-switch" title="Toggle Auto-fill Pernyataan">
+                                <input type="checkbox" id="afToggle_pernyataan" checked>
+                                <span class="af-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CARD 3: STUDIO PENGISIAN FORMULIR CEISA (CORE WORKSPACE) -->
+            <div class="ai-workspace-card">
+                
+                <!-- Section Picker -->
+                <div class="ai-field-group">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+                        <label for="autoInputSectionSelect" class="ai-label">Pilih Bagian / Tab CEISA:</label>
+                        <span class="ai-sync-indicator" id="lblCeisaAutoSyncBadge" title="Otomatis mengikuti tab yang aktif di portal CEISA">
+                            <span class="ai-sync-dot"></span> Otomatis Ikuti Tab CEISA
+                        </span>
+                    </div>
+                    <div class="ai-select-wrapper">
+                        <select id="autoInputSectionSelect" class="ai-select section-select">
+                            <option value="header">1. Header (Kantor, Jenis/Kategori, No Aju)</option>
+                            <option value="entitas" selected>2. Entitas (Pengirim, Penerima, Pembeli, Penjual)</option>
+                            <option value="dokumen">3. Dokumen Lampiran (Invoice, PL, BL, COO)</option>
+                            <option value="pengangkut">4. Pengangkut (Sarana, Pelabuhan)</option>
+                            <option value="kemasan">5. Kemasan &amp; Peti Kemas</option>
+                            <option value="transaksi">6. Transaksi (Valuta, Nilai Pabean)</option>
+                            <option value="barang">7. Data Barang (Pos Tarif, Uraian, Qty, Nilai)</option>
+                            <option value="pungutan">8. Pungutan (Tarif BM, PPN, PPh, Billing)</option>
+                            <option value="pernyataan">9. Pernyataan (Kebenaran Data Kepabeanan)</option>
+                        </select>
+                        <span class="ai-select-arrow">▾</span>
+                    </div>
+                </div>
+
+                <!-- Stepper Box (Input Satu Persatu) -->
+                <div class="ai-stepper-deck" id="stepItemControllerBox">
+                    <div class="ai-stepper-header">
+                        <div class="ai-stepper-mode-title">
+                            <span class="ai-stepper-pulse"></span>
+                            <span id="lblStepperMode">Input Satu Persatu:</span>
+                        </div>
+                        <span class="ai-stepper-counter" id="lblStepperIndex">0 / 0</span>
+                    </div>
+
+                    <!-- Live Item Preview Box -->
+                    <div class="ai-preview-box" id="itemPreviewCard">
+                        <div class="ai-preview-title" id="lblItemPreviewTitle">Pilih Dokumen / Muat Draft</div>
+                        <div class="ai-preview-desc" id="lblItemPreviewDesc">Klik 'Muat Draft' untuk memulai pengisian.</div>
+                    </div>
+
+                    <!-- Stepper Primary Nav Row -->
+                    <div class="ai-stepper-actions">
+                        <button type="button" class="ai-btn-step-prev" id="btnStepPrev" title="Mundur ke baris sebelumnya" disabled>
+                            ◀ Mundur
+                        </button>
+                        <button type="button" class="ai-btn-step-inject" id="btnStepInject">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                            <span id="lblBtnInjectText">Masukkan Baris Ini &amp; Lanjut ▶</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Quick Bulk Actions -->
+                <div class="ai-bulk-deck">
+                    <span class="ai-bulk-divider-label">Atau eksekusi seluruh baris:</span>
+                    <div class="ai-bulk-actions">
+                        <button type="button" class="ai-btn-bulk" id="btnFillActiveSection" title="Isi seluruh data pada bagian/tab ini sekaligus">
+                            ⚡ Isi Semua Baris
+                        </button>
+                        <button type="button" class="ai-btn-auto" id="btnAutoInputAll" title="Jalankan pengisian berurutan otomatis">
+                            🚀 Auto Input Berurutan
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- CARD 4: MONITOR LOG AKTIVITAS -->
+            <div class="ai-log-deck">
+                <div class="ai-log-header">
+                    <div class="ai-log-header-left">
+                        <span class="ai-log-terminal-icon">❯_</span>
+                        <span class="ai-log-title">Log Eksekusi &amp; Aktivitas</span>
+                    </div>
+                    <button type="button" class="ai-btn-clear-log" id="btnClearAutoInputLog">Bersihkan Log</button>
+                </div>
+                <div class="ai-log-body" id="autoInputLogBody">
+                    <div class="log-entry log-info">[Sistem] Siap melakukan input draft ke CEISA 4.0.</div>
+                </div>
+            </div>
+        </div> <!-- /#viewAutoInput -->
+
+    </div>
+
+    <script src="module_config.js"></script>
+    <script src="config.js"></script>
+    <script src="sync.js"></script>
+    <script src="draft_source_client.js"></script>
+    <script src="popup.js"></script>
+</body>
+
+</html>

@@ -4,7 +4,7 @@ const os = require('os');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 require('dotenv').config(); // juga baca dari root jika ada
 const { GoogleGenAI } = require('@google/genai');
-const { PDFDocument } = require('pdf-lib');
+const { PDFDocument, PDFName, PDFDict, PDFRef } = require('pdf-lib');
 const pdfjs = require('pdfjs-dist/legacy/build/pdf.js');
 
 const delay = ms => new Promise(res => setTimeout(res, ms));
@@ -368,6 +368,12 @@ function normalizeOcrData(rawJson, fileName) {
             if (Array.isArray(line.words) && line.words.length > 0) {
                 lineItem.words = line.words;
             }
+            if (line.fontSizePct) {
+                lineItem.fontSizePct = Number(line.fontSizePct);
+            }
+            if (line.fontFamily) {
+                lineItem.fontFamily = line.fontFamily;
+            }
 
             return lineItem;
         });
@@ -415,51 +421,94 @@ async function extractDigitalPage(page, pageNum) {
     const tc = await page.getTextContent();
     const validItems = tc.items.filter(it => it.str && it.str.trim().length > 0);
 
+    const styles = tc.styles || {};
     const lineGroups = [];
     validItems.forEach(it => {
         const [x, y] = vp.convertToViewportPoint(it.transform[4], it.transform[5]);
-        const fontH = Math.abs(it.height || it.transform[0] || it.transform[3] || 10);
-        const fontW = it.width || (it.str.length * 6);
-        const top = y - fontH;
-        const bottom = y;
+        const fontH = Math.abs(it.height || Math.hypot(it.transform[2], it.transform[3]) || it.transform[0] || 10);
+        const fontW = it.width || (it.str.length * (fontH * 0.55));
+        const st = (it.fontName && styles[it.fontName]) ? styles[it.fontName] : null;
+        const fontFamily = (st && st.fontFamily) ? st.fontFamily : 'sans-serif';
+        const ascent = (st && st.ascent) ? Math.min(1.15, Math.max(0.75, st.ascent)) : 0.88;
+        const descent = (st && st.descent !== undefined) ? Math.min(0.35, Math.abs(st.descent)) : 0.20;
+        const top = y - (fontH * Math.max(0.84, Math.min(0.95, ascent)));
+        const bottom = y + (fontH * descent);
         const left = x;
         const right = x + fontW;
 
-        let group = lineGroups.find(g => Math.abs(g.baselineY - y) < 4);
+        const threshold = Math.max(4, fontH * 0.55);
+        let group = lineGroups.find(g => Math.abs(g.baselineY - y) < threshold);
         if (!group) {
-            group = { baselineY: y, top, bottom, items: [] };
+            group = { baselineY: y, top, bottom, fontH, items: [] };
             lineGroups.push(group);
         } else {
             group.top = Math.min(group.top, top);
             group.bottom = Math.max(group.bottom, bottom);
+            group.fontH = Math.max(group.fontH, fontH);
         }
-        group.items.push({ text: it.str, left, right, top, bottom, fontH, fontW });
+        group.items.push({ text: it.str, left, right, top, bottom, fontH, fontW, fontFamily });
     });
 
     lineGroups.sort((a, b) => a.top - b.top);
 
-    const lines = lineGroups.map(g => {
+    const lines = [];
+    const rowTexts = [];
+
+    lineGroups.forEach(g => {
         g.items.sort((a, b) => a.left - b.left);
-        const lineText = g.items.map(i => i.text).join(' ');
-        const minX = Math.min(...g.items.map(i => i.left));
-        const maxX = Math.max(...g.items.map(i => i.right));
-        const minY = Math.min(...g.items.map(i => i.top));
-        const maxY = Math.max(...g.items.map(i => i.bottom));
+        const colGapThreshold = Math.max(8, (g.fontH || 10) * 1.15);
+        const segments = [];
 
-        const ymin = Math.max(0, Math.min(1000, Math.round((minY / pageH) * 1000)));
-        const xmin = Math.max(0, Math.min(1000, Math.round((minX / pageW) * 1000)));
-        const ymax = Math.max(0, Math.min(1000, Math.round((maxY / pageH) * 1000)));
-        const xmax = Math.max(0, Math.min(1000, Math.round((maxX / pageW) * 1000)));
+        g.items.forEach(it => {
+            const trimmed = (it.text || '').trim();
+            if (!trimmed) return;
+            const prev = segments[segments.length - 1];
+            const sameFont = prev && prev.fontFamily === it.fontFamily && Math.abs(prev.fontH - it.fontH) <= 1.5;
+            if (prev && sameFont && (it.left - prev._right) <= colGapThreshold) {
+                prev.text = (prev.text + ' ' + trimmed).replace(/\s{2,}/g, ' ').trim();
+                prev._right = Math.max(prev._right, it.right);
+                prev._top = Math.min(prev._top, it.top);
+                prev._bottom = Math.max(prev._bottom, it.bottom);
+            } else {
+                segments.push({
+                    text: trimmed,
+                    _left: it.left,
+                    _right: it.right,
+                    _top: it.top,
+                    _bottom: it.bottom,
+                    fontH: it.fontH,
+                    fontFamily: it.fontFamily
+                });
+            }
+        });
 
-        return {
-            text: lineText,
-            box_2d: [ymin, xmin, ymax, xmax]
-        };
+        if (segments.length === 0) return;
+
+        rowTexts.push(segments.map(s => s.text).join('   '));
+
+        segments.forEach(seg => {
+            const ymin = Math.max(0, Math.min(1000, Math.round((seg._top / pageH) * 1000)));
+            const xmin = Math.max(0, Math.min(1000, Math.round((seg._left / pageW) * 1000)));
+            const ymax = Math.max(ymin + 5, Math.min(1000, Math.round((seg._bottom / pageH) * 1000)));
+            const xmax = Math.max(xmin + 8, Math.min(1000, Math.round((seg._right / pageW) * 1000)));
+
+            lines.push({
+                text: seg.text,
+                box_2d: [ymin, xmin, ymax, xmax],
+                topPercent: Number(((seg._top / pageH) * 100).toFixed(3)),
+                leftPercent: Number(((seg._left / pageW) * 100).toFixed(3)),
+                widthPercent: Number((((seg._right - seg._left) / pageW) * 100).toFixed(3)),
+                heightPercent: Number((((seg._bottom - seg._top) / pageH) * 100).toFixed(3)),
+                fontSizePct: Number(((seg.fontH / pageH) * 100).toFixed(4)),
+                fontFamily: seg.fontFamily,
+                isNative: true
+            });
+        });
     });
 
     return {
         pageNumber: pageNum,
-        text: lines.map(l => l.text).join('\n'),
+        text: rowTexts.join('\n'),
         lines,
         isDigital: true
     };
@@ -478,49 +527,339 @@ async function getLocalTesseractWorker() {
     return tesseractWorkerPromise;
 }
 
-function parseTsvToLines(tsvString) {
-    const lines = [];
-    const tsvLines = (tsvString || '').split('\n');
-    let imgW = 1000, imgH = 1000;
-    let currentLine = null;
+/**
+ * Ekstrak bitmap JPEG (/DCTDecode) langsung dari halaman PDF apabila tersedia tanpa perlu library canvas native.
+ */
+function extractSingleImageFromPdfPage(pdfDoc, pageIndex) {
+    try {
+        if (!pdfDoc) return null;
+        const page = pdfDoc.getPage(pageIndex);
+        if (!page || !page.node) return null;
 
-    for (let i = 0; i < tsvLines.length; i++) {
-        const row = tsvLines[i].split('\t');
+        // Skip embedded image shortcut when PDF page is rotated so orientation never mismatches
+        const rot = page.getRotation ? page.getRotation().angle : 0;
+        if (rot && (rot % 360) !== 0) return null;
+
+        const resources = page.node.lookupMaybe(PDFName.of('Resources'), PDFDict);
+        if (!resources) return null;
+        const xObject = resources.lookupMaybe(PDFName.of('XObject'), PDFDict);
+        if (!xObject) return null;
+
+        const entries = xObject.entries();
+        let bestImgBuf = null;
+        let bestPixelArea = 0;
+
+        for (const [, val] of entries) {
+            const obj = val instanceof PDFRef ? pdfDoc.context.lookup(val) : val;
+            if (!obj || !obj.dict) continue;
+            if (obj.dict.get(PDFName.of('Subtype')) !== PDFName.of('Image')) continue;
+
+            const filter = String(obj.dict.get(PDFName.of('Filter')) || '');
+            const wObj = obj.dict.get(PDFName.of('Width'));
+            const hObj = obj.dict.get(PDFName.of('Height'));
+            const w = Number(wObj && wObj.asNumber ? wObj.asNumber() : wObj || 0);
+            const h = Number(hObj && hObj.asNumber ? hObj.asNumber() : hObj || 0);
+            const area = w * h;
+
+            if (filter.includes('DCTDecode') && obj.contents && area > bestPixelArea && w >= 300 && h >= 300) {
+                bestPixelArea = area;
+                bestImgBuf = Buffer.from(obj.contents);
+            }
+        }
+        return bestImgBuf;
+    } catch (_) {
+        return null;
+    }
+}
+
+function parseTsvToLines(tsvString) {
+    const tsvRows = (tsvString || '').split('\n');
+    let imgW = 1000, imgH = 1000;
+    const words = [];
+
+    for (let i = 0; i < tsvRows.length; i++) {
+        const row = tsvRows[i].split('\t');
         if (row.length < 12) continue;
         const level = parseInt(row[0], 10);
         const left = parseInt(row[6], 10);
         const top = parseInt(row[7], 10);
         const width = parseInt(row[8], 10);
         const height = parseInt(row[9], 10);
+        const conf = parseFloat(row[10] || '0');
         const text = row[11] ? row[11].trim() : '';
 
         if (level === 1) {
             imgW = width || 1000;
             imgH = height || 1000;
-        } else if (level === 4) {
-            if (currentLine && currentLine.words.length > 0) {
-                lines.push(currentLine);
+        } else if (level === 5 && text) {
+            // Filter out vertical/horizontal border lines misread as | / i / : / _ / -
+            if (/^[|!;:,.\-_~=+*\\\/]+$/.test(text) && (width < 8 || height > width * 2.5 || width > height * 6)) {
+                continue;
             }
-            currentLine = { left, top, width, height, words: [] };
-        } else if (level === 5 && text && currentLine) {
-            currentLine.words.push(text);
+            if (conf < 18 && text.length <= 2) {
+                continue;
+            }
+            words.push({
+                text,
+                left,
+                top,
+                right: left + width,
+                bottom: top + height,
+                w: width,
+                h: height,
+                conf: Number.isFinite(conf) ? conf : 0
+            });
         }
     }
-    if (currentLine && currentLine.words.length > 0) {
-        lines.push(currentLine);
+
+    // Group words into horizontal visual lines by vertical center
+    const lineGroups = [];
+    words.forEach(wd => {
+        const cy = (wd.top + wd.bottom) / 2;
+        let group = lineGroups.find(g => Math.abs(g.cy - cy) <= Math.max(8, g.avgH * 0.65));
+        if (!group) {
+            group = { cy, avgH: wd.h, items: [] };
+            lineGroups.push(group);
+        } else {
+            group.avgH = (group.avgH + wd.h) / 2;
+        }
+        group.items.push(wd);
+    });
+
+    lineGroups.sort((a, b) => a.cy - b.cy);
+
+    // Split each visual line into tight visual column/cell segments whenever horizontal gap is large
+    const segments = [];
+    lineGroups.forEach(group => {
+        group.items.sort((a, b) => a.left - b.left);
+        const gapLimit = Math.max(14, group.avgH * 1.45);
+        let curWords = [];
+
+        const flushSegment = () => {
+            if (curWords.length === 0) return;
+
+            // Trim low-confidence graphic logo artifacts (e.g. "Ki mn " next to "TIGER TRANS")
+            const hasStrongWord = curWords.some(w => w.conf >= 65 && w.text.length >= 2);
+            if (hasStrongWord) {
+                while (curWords.length > 1 && curWords[0].conf < 42 && curWords[0].text.length <= 3) {
+                    curWords.shift();
+                }
+                while (curWords.length > 1 && curWords[curWords.length - 1].conf < 42 && curWords[curWords.length - 1].text.length <= 3) {
+                    curWords.pop();
+                }
+            }
+
+            const avgConf = curWords.reduce((s, w) => s + w.conf, 0) / curWords.length;
+            const segText = curWords.map(w => w.text).join(' ').trim();
+            if (!segText) return;
+            if (avgConf < 38 && segText.length <= 4) return;
+
+            const minL = Math.min(...curWords.map(w => w.left));
+            const maxR = Math.max(...curWords.map(w => w.right));
+            const minT = Math.min(...curWords.map(w => w.top));
+            const maxB = Math.max(...curWords.map(w => w.bottom));
+
+            const ymin = Math.max(0, Math.min(1000, Math.round((minT / imgH) * 1000)));
+            const xmin = Math.max(0, Math.min(1000, Math.round((minL / imgW) * 1000)));
+            const ymax = Math.max(ymin + 5, Math.min(1000, Math.round((maxB / imgH) * 1000)));
+            const xmax = Math.max(xmin + 8, Math.min(1000, Math.round((maxR / imgW) * 1000)));
+
+            segments.push({
+                text: segText,
+                box_2d: [ymin, xmin, ymax, xmax],
+                _conf: avgConf
+            });
+        };
+
+        group.items.forEach(wd => {
+            if (curWords.length > 0 && (wd.left - curWords[curWords.length - 1].right) > gapLimit) {
+                flushSegment();
+                curWords = [wd];
+            } else {
+                curWords.push(wd);
+            }
+        });
+        flushSegment();
+    });
+
+    return segments;
+}
+
+function bigramDiceSimilarity(strA, strB) {
+    const a = (strA || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const b = (strB || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (!a || !b) return 0;
+    if (a === b) return 1;
+    if (a.length < 2 || b.length < 2) return a === b ? 1 : 0;
+
+    const map = new Map();
+    for (let i = 0; i < a.length - 1; i++) {
+        const bg = a.slice(i, i + 2);
+        map.set(bg, (map.get(bg) || 0) + 1);
+    }
+    let matches = 0;
+    for (let i = 0; i < b.length - 1; i++) {
+        const bg = b.slice(i, i + 2);
+        const count = map.get(bg) || 0;
+        if (count > 0) {
+            matches++;
+            map.set(bg, count - 1);
+        }
+    }
+    return (2 * matches) / ((a.length - 1) + (b.length - 1));
+}
+
+/**
+ * Gabungkan presisi koordinat pixel Tesseract dengan kualitas teks bersih Gemini AI:
+ * - Pertahankan koordinat [ymin, xmin, ymax, xmax] pixel-exact dari Tesseract
+ * - Upgrade teks Tesseract yang typo dengan teks bersih Gemini jika cocok secara spasial & leksikal
+ * - Pertahankan seluruh baris yang mungkin terlewat oleh Gemini (misalnya paragraf rapat di bawah)
+ */
+function fuseTesseractAndGeminiLines(tessLines, geminiLines) {
+    const safeTess = Array.isArray(tessLines) ? tessLines.map(l => ({ ...l })) : [];
+    const safeGemini = Array.isArray(geminiLines) ? geminiLines.map(l => ({ ...l, _matched: false })) : [];
+
+    if (safeTess.length === 0) return safeGemini;
+    if (safeGemini.length === 0) return safeTess;
+
+    const boxOf = (l) => (Array.isArray(l.box_2d) && l.box_2d.length >= 4) ? l.box_2d : [0, 0, 1000, 1000];
+
+    const vOverlapRatio = (bA, bB) => {
+        const inter = Math.max(0, Math.min(bA[2], bB[2]) - Math.max(bA[0], bB[0]));
+        const minH = Math.max(1, Math.min(bA[2] - bA[0], bB[2] - bB[0]));
+        return inter / minH;
+    };
+
+    const hOverlapRatio = (bA, bB) => {
+        const inter = Math.max(0, Math.min(bA[3], bB[3]) - Math.max(bA[1], bB[1]));
+        const minW = Math.max(1, Math.min(bA[3] - bA[1], bB[3] - bB[1]));
+        return inter / minW;
+    };
+
+    const result = [];
+
+    for (const ts of safeTess) {
+        const tBox = boxOf(ts);
+        const tCy = (tBox[0] + tBox[2]) / 2;
+
+        // 1. Cari baris Gemini pada baris vertikal yang berdekatan / tumpang tindih
+        let bestGl = null;
+        let bestScore = 0;
+
+        for (const gl of safeGemini) {
+            const gBox = boxOf(gl);
+            const gCy = (gBox[0] + gBox[2]) / 2;
+            const vOv = vOverlapRatio(tBox, gBox);
+            if (vOv < 0.2 && Math.abs(tCy - gCy) > 22) continue;
+
+            const hOv = hOverlapRatio(tBox, gBox);
+            const hEdgeDist = Math.max(0, Math.max(tBox[1] - gBox[3], gBox[1] - tBox[3]));
+            if (hOv <= 0 && hEdgeDist > 120) continue;
+
+            // Skip 1-to-1 merge when Gemini line spans noticeably wider/longer text across multiple column segments; let Step 2 extract the matching sub-slice
+            if (gl.text.length > ts.text.length * 1.25 && (gBox[3] - gBox[1]) > (tBox[3] - tBox[1]) * 1.25) continue;
+
+            const sim = bigramDiceSimilarity(ts.text, gl.text);
+            const score = sim + (hOv * 0.25);
+            if (sim >= 0.52 && score > bestScore) {
+                bestScore = score;
+                bestGl = gl;
+            }
+        }
+
+        if (bestGl) {
+            bestGl._matched = true;
+            result.push({
+                text: bestGl.text,
+                box_2d: tBox // Strictly preserve Tesseract pixel-exact coordinates!
+            });
+            continue;
+        }
+
+        // 2. Cek apakah 1 baris Gemini menggabungkan beberapa segmen kolom Tesseract pada baris yang sama
+        let upgradedText = ts.text;
+        for (const gl of safeGemini) {
+            const gBox = boxOf(gl);
+            const gCy = (gBox[0] + gBox[2]) / 2;
+            if (vOverlapRatio(tBox, gBox) < 0.2 && Math.abs(tCy - gCy) > 22) continue;
+            if (hOverlapRatio(tBox, gBox) < 0.25) continue;
+            if (gl.text.length <= ts.text.length * 1.25) continue;
+
+            const gWords = gl.text.split(/\s+/).filter(Boolean);
+            const tWordsCount = Math.max(1, ts.text.split(/\s+/).filter(Boolean).length);
+            let bestSlice = null;
+            let bestSliceSim = 0;
+
+            for (let start = 0; start < gWords.length; start++) {
+                for (let winLen = Math.max(1, tWordsCount - 1); winLen <= Math.min(gWords.length - start, tWordsCount + 2); winLen++) {
+                    const candidateStr = gWords.slice(start, start + winLen).join(' ');
+                    const sim = bigramDiceSimilarity(ts.text, candidateStr);
+                    if (sim >= 0.68 && sim > bestSliceSim) {
+                        bestSliceSim = sim;
+                        bestSlice = candidateStr;
+                    }
+                }
+            }
+
+            if (bestSlice) {
+                upgradedText = bestSlice;
+                gl._matched = true;
+                break;
+            }
+        }
+
+        result.push({
+            text: upgradedText,
+            box_2d: tBox
+        });
     }
 
-    return lines.map(l => {
-        const lineText = l.words.join(' ');
-        const ymin = Math.max(0, Math.min(1000, Math.round((l.top / imgH) * 1000)));
-        const xmin = Math.max(0, Math.min(1000, Math.round((l.left / imgW) * 1000)));
-        const ymax = Math.max(0, Math.min(1000, Math.round(((l.top + l.height) / imgH) * 1000)));
-        const xmax = Math.max(0, Math.min(1000, Math.round(((l.left + l.width) / imgW) * 1000)));
-        return {
-            text: lineText,
-            box_2d: [ymin, xmin, ymax, xmax]
-        };
+    // 3. Tambahkan baris Gemini yang terlewat oleh Tesseract (jika memang tidak bertabrakan posisi dengan segmen manapun)
+    for (const gl of safeGemini) {
+        if (gl._matched || !gl.text || gl.text.trim().length < 2) continue;
+        const gBox = boxOf(gl);
+        const collides = result.some(r => {
+            const rBox = boxOf(r);
+            return vOverlapRatio(gBox, rBox) >= 0.35 && hOverlapRatio(gBox, rBox) >= 0.25;
+        });
+        if (!collides) {
+            result.push({
+                text: gl.text,
+                box_2d: gBox
+            });
+        }
+    }
+
+    result.sort((a, b) => {
+        const dy = a.box_2d[0] - b.box_2d[0];
+        return Math.abs(dy) <= 8 ? (a.box_2d[1] - b.box_2d[1]) : dy;
     });
+
+    return result;
+}
+
+function buildStructuredPageTextFromLines(lines) {
+    if (!Array.isArray(lines) || lines.length === 0) return '';
+    const sorted = lines.slice().sort((a, b) => {
+        const dy = a.box_2d[0] - b.box_2d[0];
+        return Math.abs(dy) <= 8 ? (a.box_2d[1] - b.box_2d[1]) : dy;
+    });
+
+    const rows = [];
+    for (const l of sorted) {
+        const cy = (l.box_2d[0] + l.box_2d[2]) / 2;
+        const prevRow = rows[rows.length - 1];
+        if (prevRow && Math.abs(prevRow.cy - cy) <= 10) {
+            prevRow.items.push(l);
+        } else {
+            rows.push({ cy, items: [l] });
+        }
+    }
+
+    return rows.map(r => {
+        r.items.sort((a, b) => a.box_2d[1] - b.box_2d[1]);
+        return r.items.map(i => i.text).join('   ');
+    }).join('\n');
 }
 
 /**
@@ -597,13 +936,13 @@ This file represents page ${pageNumber} of the document.
 Extract all visible text on this page image and output ONLY a valid JSON object matching this schema:
 {
   "pageNumber": ${pageNumber},
-  "text": "Clean structured text of this specific page preserving lines, whitespace, and table columns.",
   "lines": [
     {
       "text": "Extracted text line or heading or table cell",
       "box_2d": [ymin, xmin, ymax, xmax]
     }
   ],
+  "text": "Clean structured text of this specific page preserving lines, whitespace, and table columns.",
   "summary": {
     "documentType": "Invoice / Packing List / Bill of Lading / Surat Jalan / Kepabeanan / Other",
     "detectedLanguage": "Indonesian / English / etc"
@@ -612,14 +951,16 @@ Extract all visible text on this page image and output ONLY a valid JSON object 
 
 CRITICAL INSTRUCTIONS:
 1. "lines": Break text down into precise, individual visual lines or table cells. Every distinct visual line must be a separate entry in the "lines" array.
+   - NEVER omit, summarize, or skip ANY text, including dense small-print paragraphs, legal/data-privacy notices, terms, footers, header codes, or abbreviations.
    - NEVER group multiple lines, large paragraphs, or multi-row tables into a single line item.
+   - NEVER swap or shift columns: each line's [ymin, xmin, ymax, xmax] MUST strictly enclose that exact text in its true visual column (e.g. left-column Shipper text must stay on the left xmin, right-column B/L No. text must stay on the right xmin).
    - "box_2d": [ymin, xmin, ymax, xmax] MUST tightly wrap the exact visual bounds of that individual line of text.
    - Scale: Normalized 0 to 1000 integer coordinates:
      * ymin = top edge of text line (0 = very top of page, 1000 = bottom of page)
      * xmin = left edge of text line (0 = very left edge, 1000 = right edge)
      * ymax = bottom edge of text line
      * xmax = right edge of text line
-2. Extract all visible text on this page image. Output ONLY pure JSON.`;
+2. Extract ALL visible text on this page image. Output ONLY pure JSON.`;
 
         let result = null;
         let lastErr = null;
@@ -639,8 +980,9 @@ CRITICAL INSTRUCTIONS:
                         }
                     ],
                     config: {
+                        temperature: 0,
                         responseMimeType: 'application/json',
-                        maxOutputTokens: 8192
+                        maxOutputTokens: 16384
                     }
                 });
                 break;
@@ -668,18 +1010,113 @@ CRITICAL INSTRUCTIONS:
 }
 
 /**
- * Mengekstrak teks dan layout dokumen menggunakan Gemini API.
+ * Mesin Hybrid OCR per halaman:
+ * 1) Menjalankan Computer Vision (Tesseract TSV word-segment) pada bitmap halaman untuk koordinat 100% pixel-exact dan cakupan 100% baris.
+ * 2) Menjalankan Gemini Vision AI secara paralel untuk proofreading teks bersih bebas typo.
+ * 3) Menggabungkan keduanya dengan fuseTesseractAndGeminiLines sehingga seluruh paragraf rapat terbaca penuh dan posisi box tepat presisi.
+ */
+async function processScannedPageHybrid({
+    ai,
+    pageImageBuffer,
+    pdfSinglePageBuffer,
+    fileName,
+    mimeType,
+    pageNumber = 1,
+    candidateModels = ['gemini-3.5-flash', 'gemini-3.5-flash-lite', 'gemini-3.8-flash', 'gemini-flash-latest'],
+    onProgress = () => { }
+}) {
+    let tessPromise = Promise.resolve([]);
+    if (pageImageBuffer) {
+        tessPromise = (async () => {
+            try {
+                const worker = await getLocalTesseractWorker();
+                const ret = await worker.recognize(pageImageBuffer, {}, { tsv: true });
+                return parseTsvToLines(ret.data.tsv || '');
+            } catch (tessErr) {
+                console.warn(`[OCR SERVICE] Tesseract CV notice (hal ${pageNumber}):`, tessErr.message || tessErr);
+                return [];
+            }
+        })();
+    }
+
+    let geminiPromise = Promise.resolve(null);
+    if (ai) {
+        const useImageForGemini = !!pageImageBuffer;
+        const gemBuffer = useImageForGemini ? pageImageBuffer : pdfSinglePageBuffer;
+        const gemMime = useImageForGemini ? (mimeType && mimeType.startsWith('image/') ? mimeType : 'image/jpeg') : 'application/pdf';
+        const gemName = useImageForGemini ? `${path.basename(fileName || 'doc', '.pdf')}_hal_${pageNumber}.jpg` : `${path.basename(fileName || 'doc', '.pdf')}_hal_${pageNumber}.pdf`;
+
+        if (gemBuffer) {
+            geminiPromise = (async () => {
+                for (let attempt = 1; attempt <= 2; attempt++) {
+                    try {
+                        const singleData = await processSinglePageGemini({
+                            ai,
+                            fileBuffer: gemBuffer,
+                            fileName: gemName,
+                            mimeType: gemMime,
+                            pageNumber,
+                            candidateModels,
+                            onProgress
+                        });
+                        if (singleData && singleData.pages && singleData.pages[0]) {
+                            return singleData.pages[0];
+                        }
+                    } catch (err) {
+                        console.warn(`[OCR SERVICE] Gemini percobaan ${attempt} hal ${pageNumber} gagal:`, err.message || err);
+                        if (attempt < 2) await delay(1200);
+                    }
+                }
+                return null;
+            })();
+        }
+    }
+
+    const [tessLines, gemPage] = await Promise.all([tessPromise, geminiPromise]);
+    const gemLines = (gemPage && Array.isArray(gemPage.lines)) ? gemPage.lines : [];
+
+    let mergedRawLines = [];
+    let engineUsed = 'hybrid';
+    if (tessLines.length > 0 && gemLines.length > 0) {
+        mergedRawLines = fuseTesseractAndGeminiLines(tessLines, gemLines);
+        engineUsed = 'hybrid-cv-gemini';
+    } else if (tessLines.length > 0) {
+        mergedRawLines = tessLines;
+        engineUsed = 'tesseract-cv';
+    } else if (gemLines.length > 0) {
+        mergedRawLines = gemLines;
+        engineUsed = 'gemini-only';
+    }
+
+    if (mergedRawLines.length === 0) {
+        return gemPage || {
+            pageNumber,
+            text: `[Halaman ${pageNumber}: Teks tidak terdeteksi]`,
+            lines: [],
+            isDigital: false,
+            engine: engineUsed
+        };
+    }
+
+    const structuredText = buildStructuredPageTextFromLines(mergedRawLines) || (gemPage && gemPage.text) || '';
+    const norm = normalizeOcrData({
+        pages: [{
+            pageNumber,
+            text: structuredText,
+            lines: mergedRawLines
+        }]
+    }, fileName);
+
+    const outPage = (norm.pages && norm.pages[0]) ? norm.pages[0] : { pageNumber, text: structuredText, lines: [] };
+    outPage.pageNumber = pageNumber;
+    outPage.isDigital = false;
+    outPage.engine = engineUsed;
+    return outPage;
+}
+
+/**
+ * Mengekstrak teks dan layout dokumen menggunakan Hybrid CV (Tesseract) + Gemini AI.
  * Mendukung dokumen multi-halaman dengan ekstraksi per-halaman presisi 1:1.
- * 
- * @param {Object} options
- * @param {string} [options.filePath] Path file di disk (PDF atau Gambar)
- * @param {Buffer} [options.fileBuffer] Buffer file jika tidak disimpan di disk
- * @param {string} [options.fileName] Nama asli file
- * @param {string} [options.mimeType] MIME type file
- * @param {string} [options.customApiKey] Custom Gemini API key jika ada
- * @param {string} [options.modelName] Nama model spesifik (opsional)
- * @param {Function} [options.onProgress] Callback progres (opsional)
- * @returns {Promise<Object>} { success: true, fileName, fullText, pages, summary }
  */
 async function extractDocumentText({
     filePath,
@@ -688,6 +1125,7 @@ async function extractDocumentText({
     mimeType,
     customApiKey,
     modelName,
+    pageImagesMap = null,
     onProgress = () => { }
 }) {
     let tempCreated = false;
@@ -775,37 +1213,18 @@ async function extractDocumentText({
                     };
                 }
 
-                // Kasus 2: Dokumen campuran atau pindaian (halaman tanpa teks digital diproses OCR)
+                // Kasus 2: Dokumen campuran atau pindaian (Hybrid CV + Gemini per halaman)
                 let ai = null;
                 try {
                     ai = getAiClient(customApiKey);
-                } catch (keyErr) {
-                    // Jika tidak ada API Key tapi kita memiliki beberapa halaman digital, kembalikan halaman digital
-                    if (digitalPagesMap.size > 0) {
-                        const allPageObjects = Array.from(digitalPagesMap.values()).sort((a, b) => a.pageNumber - b.pageNumber);
-                        const fullText = allPageObjects.map(p => (totalPages > 1 ? `--- HALAMAN ${p.pageNumber} ---\n` : '') + (p.text || '')).join('\n\n');
-                        return {
-                            success: true,
-                            fileName: resolvedName,
-                            fullText,
-                            pages: allPageObjects,
-                            summary: {
-                                documentType: `Dokumen Digital Sebagian (${digitalPagesMap.size}/${totalPages} Hal)`,
-                                detectedLanguage: 'Indonesia / English',
-                                totalWords: (fullText.trim().match(/\S+/g) || []).length,
-                                totalCharacters: fullText.length,
-                                totalPages
-                            },
-                            warning: `GEMINI_API_KEY belum diset. Hanya ${digitalPagesMap.size} halaman digital yang diekstrak.`
-                        };
-                    }
-                    throw keyErr;
+                } catch (_) {
+                    ai = null;
                 }
 
                 const candidateModels = [];
                 if (modelName) candidateModels.push(modelName);
                 if (process.env.GEMINI_OCR_MODEL) candidateModels.push(process.env.GEMINI_OCR_MODEL);
-                candidateModels.push('gemini-3.5-flash-lite', 'gemini-3.5-flash', 'gemini-3.8-flash', 'gemini-flash-latest');
+                candidateModels.push('gemini-3.5-flash', 'gemini-3.5-flash-lite', 'gemini-3.8-flash', 'gemini-flash-latest');
                 const modelsToTry = [...new Set(candidateModels)];
 
                 onProgress({ step: 'ocr', message: `Memproses ${pagesNeedingOcr.length} halaman pindaian dari total ${totalPages} halaman...` });
@@ -825,54 +1244,34 @@ async function extractDocumentText({
                             singleBytes = await singleDoc.save();
                         }
 
-                        let pageObj = null;
-                        let lastErr = null;
+                        // Prioritaskan bitmap canvas dari browser (pageImagesMap) lalu embedded DCTDecode JPEG dari PDF
+                        const browserImg = (pageImagesMap && typeof pageImagesMap.get === 'function') ? pageImagesMap.get(pageNum) : null;
+                        const embeddedImg = (!browserImg && pdfDoc && pIdx < pdfDoc.getPageCount())
+                            ? extractSingleImageFromPdfPage(pdfDoc, pIdx)
+                            : null;
+                        const pageImageBuffer = browserImg || embeddedImg || null;
 
-                        // Percobaan ekstraksi per halaman dengan retry jika model sibuk (503/429)
-                        for (let attempt = 1; attempt <= 2; attempt++) {
-                            try {
-                                const singleData = await processSinglePageGemini({
-                                    ai,
-                                    fileBuffer: singleBytes ? Buffer.from(singleBytes) : fileBuf,
-                                    fileName: `${path.basename(resolvedName, '.pdf')}_hal_${pageNum}.pdf`,
-                                    mimeType: 'application/pdf',
-                                    pageNumber: pageNum,
-                                    candidateModels: modelsToTry,
-                                    onProgress
-                                });
-
-                                if (singleData.pages && singleData.pages[0]) {
-                                    const candidate = singleData.pages[0];
-                                    candidate.pageNumber = pageNum;
-                                    if ((candidate.lines && candidate.lines.length > 0) || (candidate.text && candidate.text.trim().length > 0)) {
-                                        pageObj = candidate;
-                                        break;
-                                    }
-                                }
-                            } catch (singleErr) {
-                                lastErr = singleErr;
-                                console.warn(`[OCR SERVICE] Percobaan ${attempt} hal ${pageNum} gagal: ${singleErr.message}`);
-                                if (attempt < 2) await delay(1500);
-                            }
+                        if (!ai && !pageImageBuffer) {
+                            throw new Error('GEMINI_API_KEY belum diset dan bitmap halaman tidak tersedia.');
                         }
 
-                        if (!pageObj) {
-                            console.warn(`[OCR SERVICE] Halaman ${pageNum} tidak menghasilkan baris teks (${lastErr ? lastErr.message : 'kosong'}).`);
-                            pageObj = {
-                                pageNumber: pageNum,
-                                text: `[Halaman ${pageNum}: Pindaian gambar - ${lastErr ? lastErr.message : 'tidak terdeteksi'}]`,
-                                lines: [],
-                                isDigital: false
-                            };
-                        }
-                        return pageObj;
+                        return await processScannedPageHybrid({
+                            ai,
+                            pageImageBuffer,
+                            pdfSinglePageBuffer: singleBytes ? Buffer.from(singleBytes) : fileBuf,
+                            fileName: resolvedName,
+                            mimeType: 'application/pdf',
+                            pageNumber: pageNum,
+                            candidateModels: modelsToTry,
+                            onProgress
+                        });
                     });
 
                     const batchResults = await Promise.all(batchPromises);
                     allPageObjects.push(...batchResults);
                     onProgress({ step: 'ocr', message: `Selesai ${Math.min(i + concurrency, pagesNeedingOcr.length)} dari ${pagesNeedingOcr.length} halaman pindaian...` });
                     if (i + concurrency < pagesNeedingOcr.length) {
-                        await delay(700);
+                        await delay(400);
                     }
                 }
 
@@ -895,7 +1294,7 @@ async function extractDocumentText({
             }
         }
 
-        // Dokumen Gambar (JPG, PNG, WebP) - Dukungan Hybrid: Coba Gemini AI jika tersedia, otomatis fallback ke OCR Lokal Offline (Tesseract)
+        // Dokumen Gambar (JPG, PNG, WebP) - Hybrid CV (Tesseract) + Gemini AI
         let ai = null;
         try {
             ai = getAiClient(customApiKey);
@@ -903,40 +1302,43 @@ async function extractDocumentText({
             ai = null;
         }
 
-        if (ai) {
-            try {
-                const candidateModels = [];
-                if (modelName) candidateModels.push(modelName);
-                if (process.env.GEMINI_OCR_MODEL) candidateModels.push(process.env.GEMINI_OCR_MODEL);
-                candidateModels.push('gemini-3.5-flash-lite', 'gemini-3.5-flash', 'gemini-3.8-flash', 'gemini-flash-latest');
-                const modelsToTry = [...new Set(candidateModels)];
-
-                onProgress({ step: 'ocr', message: `Mengekstrak teks gambar dengan Ray-OCR V.1...` });
-                const singleResult = await processSinglePageGemini({
-                    ai,
-                    fileBuffer,
-                    filePath: targetPath,
-                    fileName: resolvedName,
-                    mimeType: resolvedMime,
-                    pageNumber: 1,
-                    candidateModels: modelsToTry,
-                    onProgress
-                });
-
-                return singleResult;
-            } catch (geminiErr) {
-                console.warn('[OCR SERVICE] Gemini AI OCR gagal/offline, beralih otomatis ke OCR lokal (Tesseract):', geminiErr.message);
-            }
+        let imgBuf = fileBuffer;
+        if (!imgBuf && targetPath && fs.existsSync(targetPath)) {
+            imgBuf = fs.readFileSync(targetPath);
         }
 
-        // Jalankan OCR Lokal Offline (Tesseract) jika Gemini tidak tersedia atau gagal
-        return await extractImageWithLocalTesseract({
-            filePath: targetPath,
-            fileBuffer,
+        const candidateModels = [];
+        if (modelName) candidateModels.push(modelName);
+        if (process.env.GEMINI_OCR_MODEL) candidateModels.push(process.env.GEMINI_OCR_MODEL);
+        candidateModels.push('gemini-3.5-flash', 'gemini-3.5-flash-lite', 'gemini-3.8-flash', 'gemini-flash-latest');
+        const modelsToTry = [...new Set(candidateModels)];
+
+        onProgress({ step: 'ocr', message: `Mengekstrak teks gambar dengan Ray-OCR V.1...` });
+        const outPage = await processScannedPageHybrid({
+            ai,
+            pageImageBuffer: imgBuf,
+            pdfSinglePageBuffer: null,
             fileName: resolvedName,
+            mimeType: resolvedMime,
             pageNumber: 1,
+            candidateModels: modelsToTry,
             onProgress
         });
+
+        const fullText = outPage.text || '';
+        return {
+            success: true,
+            fileName: resolvedName,
+            fullText,
+            pages: [outPage],
+            summary: {
+                documentType: 'Dokumen Gambar / Pindaian',
+                detectedLanguage: 'Indonesia / English',
+                totalWords: (fullText.trim().match(/\S+/g) || []).length,
+                totalCharacters: fullText.length,
+                totalPages: 1
+            }
+        };
 
     } finally {
         // Bersihkan temp file jika dibuat sementara

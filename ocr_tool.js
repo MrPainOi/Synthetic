@@ -324,29 +324,70 @@ async function clearOcrDocumentFromDb() {
     }
 }
 
-function saveOcrSessionState() {
-    try {
-        if (!state.file && (!state.result || !state.result.fullText)) {
-            return;
-        }
-        const sessionData = {
-            fileName: state.file ? state.file.name : '',
-            fileSize: state.file ? state.file.size : 0,
-            fileType: state.file ? state.file.type : 'application/pdf',
-            fileLastModified: state.file ? state.file.lastModified : Date.now(),
-            zoom: state.zoom,
-            displayMode: state.displayMode,
-            currentPage: state.currentPage,
-            activeTab: state.activeTab,
-            hasNativeText: state.hasNativeText,
-            result: state.result,
-            editedFullText: el.fullTextEditor ? el.fullTextEditor.value : (state.result ? state.result.fullText : ''),
-            timestamp: Date.now()
-        };
-        localStorage.setItem(OCR_STATE_STORAGE_KEY, JSON.stringify(sessionData));
-    } catch (err) {
-        console.warn('[OCR TOOL] Gagal menyimpan state ke localStorage:', err.message);
+let _saveSessionTimer = null;
+
+function compactOcrResultForStorage(result) {
+    if (!result) return result;
+    const compactPages = Array.isArray(result.pages)
+        ? result.pages.map(pg => {
+            const cleanPg = { ...pg };
+            if (Array.isArray(pg.lines)) {
+                cleanPg.lines = pg.lines.map(ln => {
+                    if (!ln || typeof ln !== 'object') return ln;
+                    const { chars, words, ...rest } = ln;
+                    return rest;
+                });
+            }
+            return cleanPg;
+        })
+        : [];
+    return {
+        fullText: result.fullText || '',
+        pages: compactPages,
+        summary: result.summary || {}
+    };
+}
+
+function saveOcrSessionState(immediate = false) {
+    if (!state.file && (!state.result || !state.result.fullText)) {
+        return;
     }
+    const performSave = () => {
+        try {
+            const sessionData = {
+                fileName: state.file ? state.file.name : '',
+                fileSize: state.file ? state.file.size : 0,
+                fileType: state.file ? state.file.type : 'application/pdf',
+                fileLastModified: state.file ? state.file.lastModified : Date.now(),
+                zoom: state.zoom,
+                displayMode: state.displayMode,
+                currentPage: state.currentPage,
+                activeTab: state.activeTab,
+                hasNativeText: state.hasNativeText,
+                result: compactOcrResultForStorage(state.result),
+                editedFullText: el.fullTextEditor ? el.fullTextEditor.value : (state.result ? state.result.fullText : ''),
+                timestamp: Date.now()
+            };
+            localStorage.setItem(OCR_STATE_STORAGE_KEY, JSON.stringify(sessionData));
+        } catch (err) {
+            console.warn('[OCR TOOL] Gagal menyimpan state ke localStorage:', err.message);
+        }
+    };
+
+    if (immediate) {
+        if (_saveSessionTimer) {
+            clearTimeout(_saveSessionTimer);
+            _saveSessionTimer = null;
+        }
+        performSave();
+        return;
+    }
+
+    if (_saveSessionTimer) clearTimeout(_saveSessionTimer);
+    _saveSessionTimer = setTimeout(() => {
+        _saveSessionTimer = null;
+        performSave();
+    }, 220);
 }
 
 async function restoreLastOcrSession() {
@@ -389,9 +430,9 @@ async function restoreLastOcrSession() {
         // Render dokumen ke canvas
         await renderDocumentInHouse(file);
 
-        // Jika ada hasil teks / OCR yang tersimpan, pulihkan
+        // Jika ada hasil teks / OCR yang tersimpan, pulihkan (strip payload berat chars/words jika dari versi lama)
         if (savedState.result && (savedState.result.fullText || (savedState.result.pages && savedState.result.pages.length > 0))) {
-            state.result = savedState.result;
+            state.result = compactOcrResultForStorage(savedState.result);
             if (savedState.editedFullText) {
                 state.result.fullText = savedState.editedFullText;
             }
@@ -691,9 +732,9 @@ function calculateWordBoxes(lineText, topPct, leftPct, widthPct, heightPct) {
 /**
  * Ekstraksi teks digital native dari satu halaman PDF menggunakan PDF.js
  */
-async function extractNativePageContent(page, viewport, pageNum) {
+async function extractNativePageContent(page, viewport, pageNum, textContentOverride = null) {
     try {
-        const textContent = await page.getTextContent();
+        const textContent = textContentOverride || await page.getTextContent();
         if (!textContent || !textContent.items) return null;
 
         const validItems = textContent.items.filter(it => it.str && it.str.trim().length > 0);
@@ -701,21 +742,28 @@ async function extractNativePageContent(page, viewport, pageNum) {
 
         const pageW = viewport.width;
         const pageH = viewport.height;
+        const styles = textContent.styles || {};
+        const vpScale = viewport.scale || 1.0;
         const lineGroups = [];
 
         validItems.forEach(it => {
             const [x, y] = viewport.convertToViewportPoint(it.transform[4], it.transform[5]);
-            const rawH = Math.abs(it.height || it.transform[0] || it.transform[3] || 10);
-            const fontH = rawH * (viewport.scale / (viewport.rawDims?.scale || 1.0));
-            const rawW = (it.width || (it.str.length * (rawH * 0.55)));
-            const fontW = rawW * (viewport.scale / (viewport.rawDims?.scale || 1.0));
-            const top = y - fontH;
-            const bottom = y;
+            const rawEm = Math.abs(it.height || Math.hypot(it.transform[2], it.transform[3]) || it.transform[0] || 10);
+            const fontH = rawEm * vpScale;
+            const rawW = (it.width || (it.str.length * (rawEm * 0.55)));
+            const fontW = rawW * vpScale;
+            const st = (it.fontName && styles[it.fontName]) ? styles[it.fontName] : null;
+            const fontFamily = (st && st.fontFamily) ? st.fontFamily : 'sans-serif';
+            const ascent = (st && st.ascent) ? Math.min(1.15, Math.max(0.75, st.ascent)) : 0.88;
+            const descent = (st && st.descent !== undefined) ? Math.min(0.35, Math.abs(st.descent)) : 0.20;
+            // Align top to CSS baseline offset (0.88 * fontH) so overlay baseline matches canvas baseline
+            const top = y - (fontH * Math.max(0.84, Math.min(0.95, ascent)));
+            const bottom = y + (fontH * descent);
             const left = x;
             const right = x + fontW;
 
             // Pengelompokan baris berbasis ambang batas toleransi vertikal adaptif
-            const threshold = Math.max(6, fontH * 0.65);
+            const threshold = Math.max(5, fontH * 0.55);
             let group = lineGroups.find(g => Math.abs(g.baselineY - y) < threshold);
             if (!group) {
                 group = { baselineY: y, top, bottom, fontH, items: [] };
@@ -725,12 +773,12 @@ async function extractNativePageContent(page, viewport, pageNum) {
                 group.bottom = Math.max(group.bottom, bottom);
                 group.fontH = Math.max(group.fontH, fontH);
             }
-            group.items.push({ text: it.str, left, right, top, bottom, fontH, fontW });
+            group.items.push({ text: it.str, left, right, top, bottom, fontH, fontW, fontFamily });
         });
 
         lineGroups.sort((a, b) => a.top - b.top);
 
-        const lines = lineGroups.map((g, lIdx) => {
+        const lines = lineGroups.map((g) => {
             g.items.sort((a, b) => a.left - b.left);
             const lineText = g.items.map(i => i.text).join(' ').replace(/\s{2,}/g, ' ').trim();
             const minX = Math.min(...g.items.map(i => i.left));
@@ -747,44 +795,44 @@ async function extractNativePageContent(page, viewport, pageNum) {
             const leftPercent = (minX / pageW) * 100;
             const widthPercent = ((maxX - minX) / pageW) * 100;
             const heightPercent = ((maxY - minY) / pageH) * 100;
+            const fontSizePct = Number(((g.fontH / pageH) * 100).toFixed(4));
+            const lineFontFamily = (g.items[0] && g.items[0].fontFamily) || 'sans-serif';
 
-            // Ekstraksi koordinat presisi perkata (per-word) dan per-huruf (per-char) dari item digital native
-            const words = [];
-            const chars = [];
+            // Gabungkan item yang berdekatan menjadi segmen kolom rapat (mencegah spasi meregang pada tabel)
+            const segments = [];
+            const colGapThreshold = Math.max(8, g.fontH * 1.15);
             g.items.forEach(it => {
-                const itemStr = (it.text || '');
-                if (!itemStr) return;
-                const itTopPct = (it.top / pageH) * 100;
-                const itLeftPct = (it.left / pageW) * 100;
-                const itWidthPct = (it.fontW / pageW) * 100;
-                const itHeightPct = (it.fontH / pageH) * 100;
-
-                const itemChars = calculateCharBoxes(itemStr, itTopPct, itLeftPct, itWidthPct, itHeightPct);
-                chars.push(...itemChars);
-
-                const trimmedStr = itemStr.trim();
-                if (trimmedStr) {
-                    const tokens = trimmedStr.split(/\s+/).filter(Boolean);
-                    if (tokens.length <= 1) {
-                        words.push({
-                            text: tokens[0] || trimmedStr,
-                            topPercent: Number(itTopPct.toFixed(3)),
-                            leftPercent: Number(itLeftPct.toFixed(3)),
-                            widthPercent: Number(itWidthPct.toFixed(3)),
-                            heightPercent: Number(itHeightPct.toFixed(3))
-                        });
-                    } else {
-                        const subWords = calculateWordBoxes(
-                            trimmedStr,
-                            itTopPct,
-                            itLeftPct,
-                            itWidthPct,
-                            itHeightPct
-                        );
-                        words.push(...subWords);
-                    }
+                const trimmed = (it.text || '').trim();
+                if (!trimmed) return;
+                const prev = segments[segments.length - 1];
+                const sameFont = prev && prev.fontFamily === it.fontFamily && Math.abs(prev.fontH - it.fontH) <= 1.5;
+                if (prev && sameFont && (it.left - prev._right) <= colGapThreshold) {
+                    prev.text = (prev.text + ' ' + trimmed).replace(/\s{2,}/g, ' ').trim();
+                    prev._right = Math.max(prev._right, it.right);
+                    prev._top = Math.min(prev._top, it.top);
+                    prev._bottom = Math.max(prev._bottom, it.bottom);
+                } else {
+                    segments.push({
+                        text: trimmed,
+                        _left: it.left,
+                        _right: it.right,
+                        _top: it.top,
+                        _bottom: it.bottom,
+                        fontH: it.fontH,
+                        fontFamily: it.fontFamily
+                    });
                 }
             });
+
+            const compactSegments = segments.map(seg => ({
+                text: seg.text,
+                topPercent: Number(((seg._top / pageH) * 100).toFixed(3)),
+                leftPercent: Number(((seg._left / pageW) * 100).toFixed(3)),
+                widthPercent: Number((((seg._right - seg._left) / pageW) * 100).toFixed(3)),
+                heightPercent: Number((((seg._bottom - seg._top) / pageH) * 100).toFixed(3)),
+                fontSizePct: Number(((seg.fontH / pageH) * 100).toFixed(4)),
+                fontFamily: seg.fontFamily
+            }));
 
             return {
                 text: lineText,
@@ -793,9 +841,10 @@ async function extractNativePageContent(page, viewport, pageNum) {
                 leftPercent,
                 widthPercent,
                 heightPercent,
-                fontSizePt: Math.max(9, Math.round(maxY - minY)),
-                words: words.length > 0 ? words : undefined,
-                chars: chars.length > 0 ? chars : undefined,
+                fontSizePct,
+                fontFamily: lineFontFamily,
+                fontSizePt: Math.max(6, Math.round(g.fontH)),
+                segments: compactSegments.length > 0 ? compactSegments : undefined,
                 isNative: true
             };
         });
@@ -930,27 +979,11 @@ async function renderPdfPages(file, renderId = null) {
             textLayer.id = `ocrTextLayer-${p}`;
             pageWrapper.appendChild(textLayer);
 
-            // Render Mozilla official TextLayer for digital text fidelity if native text support is available
-            if (pdfLib && typeof pdfLib.TextLayer === 'function') {
-                try {
-                    const textContentSource = await page.getTextContent();
-                    if (thisRenderId !== currentRenderToken) return;
-                    if (textContentSource && textContentSource.items && textContentSource.items.length > 0) {
-                        const tl = new pdfLib.TextLayer({
-                            textContentSource,
-                            container: nativeTextLayer,
-                            viewport
-                        });
-                        await tl.render();
-                    }
-                } catch (tlErr) {
-                    console.warn(`[OCR TOOL] Mozilla TextLayer native render notice (hal ${p}):`, tlErr.message);
-                }
-            }
-
-            // Extract digital text only on initial file load if not already extracted
+            // Extract digital text only on initial file load if not already extracted (single pass, no redundant TextLayer DOM bloat)
             if (!hasExistingPages) {
-                const nativePage = await extractNativePageContent(page, viewport, p);
+                const textContentSource = await page.getTextContent();
+                if (thisRenderId !== currentRenderToken) return;
+                const nativePage = await extractNativePageContent(page, viewport, p, textContentSource);
                 if (thisRenderId !== currentRenderToken) return;
                 if (nativePage && nativePage.lines && nativePage.lines.length > 0) {
                     nativeExtractedPages.push(nativePage);
@@ -1071,7 +1104,200 @@ async function renderImagePage(file, renderId = null) {
     });
 }
 
-// In-Place Text Layer Overlay Populator (Accurate Coordinate Mapping)
+let _measureCtx = null;
+let _measureChecked = false;
+function resolveCssFontFamily(familyHint) {
+    if (familyHint === 'monospace') return '"Courier New", Courier, monospace';
+    if (familyHint === 'serif') return '"Times New Roman", Times, serif';
+    return 'Arial, Helvetica, sans-serif';
+}
+
+function measureTextWidthPx(text, fontPx, cssFamily) {
+    if (!text) return 0;
+    if (!_measureChecked && typeof document !== 'undefined') {
+        _measureChecked = true;
+        try {
+            const c = document.createElement('canvas');
+            const ctx = c.getContext ? c.getContext('2d') : null;
+            _measureCtx = (ctx && typeof ctx.measureText === 'function') ? ctx : null;
+        } catch (_) {
+            _measureCtx = null;
+        }
+    }
+    if (!_measureCtx) {
+        return text.length * fontPx * 0.55;
+    }
+    _measureCtx.font = `500 ${fontPx}px ${cssFamily || 'Arial, Helvetica, sans-serif'}`;
+    return _measureCtx.measureText(text).width;
+}
+
+// High-precision per-character hit-testing within a line/segment span
+function getCharAtPoint(span, clientX, clientY) {
+    if (!span) return null;
+    const text = span.textContent || '';
+    if (!text) return null;
+
+    const textNode = span.firstChild;
+    if (textNode && textNode.nodeType === 3 && typeof document !== 'undefined' && typeof document.caretRangeFromPoint === 'function') {
+        try {
+            const range = document.caretRangeFromPoint(clientX, clientY);
+            if (range && range.startContainer === textNode) {
+                const len = textNode.nodeValue.length;
+                const base = Math.min(len - 1, Math.max(0, range.startOffset));
+                const candidates = [base - 1, base, base + 1];
+                for (let i = 0; i < candidates.length; i++) {
+                    const idx = candidates[i];
+                    if (idx < 0 || idx >= len) continue;
+                    const r = document.createRange();
+                    r.setStart(textNode, idx);
+                    r.setEnd(textNode, idx + 1);
+                    const rect = r.getBoundingClientRect();
+                    if (clientX >= rect.left - 1 && clientX <= rect.right + 1 &&
+                        clientY >= rect.top - 6 && clientY <= rect.bottom + 6) {
+                        return { char: text[idx], index: idx, rect };
+                    }
+                }
+                const fallbackIdx = Math.min(len - 1, Math.max(0, base));
+                const r = document.createRange();
+                r.setStart(textNode, fallbackIdx);
+                r.setEnd(textNode, fallbackIdx + 1);
+                return { char: text[fallbackIdx], index: fallbackIdx, rect: r.getBoundingClientRect() };
+            }
+        } catch (_) { }
+    }
+
+    // Spatial proportional fallback using getCharWeight
+    const spanRect = span.getBoundingClientRect();
+    if (!spanRect || spanRect.width <= 0) {
+        return { char: text[0], index: 0, rect: spanRect };
+    }
+    const relX = Math.max(0, Math.min(1, (clientX - spanRect.left) / spanRect.width));
+    let totalW = 0;
+    const weights = new Array(text.length);
+    for (let i = 0; i < text.length; i++) {
+        const w = getCharWeight(text[i]);
+        weights[i] = w;
+        totalW += w;
+    }
+    if (totalW <= 0) totalW = text.length || 1;
+
+    let accum = 0;
+    for (let i = 0; i < text.length; i++) {
+        const nextAccum = accum + weights[i];
+        if (relX <= (nextAccum / totalW) || i === text.length - 1) {
+            const cLeft = spanRect.left + (accum / totalW) * spanRect.width;
+            const cWidth = (weights[i] / totalW) * spanRect.width;
+            return {
+                char: text[i],
+                index: i,
+                rect: { left: cLeft, top: spanRect.top, width: cWidth, height: spanRect.height }
+            };
+        }
+        accum = nextAccum;
+    }
+    return null;
+}
+
+let _charHoverBox = null;
+let _charPulseBox = null;
+let _charPulseTimer = null;
+let _hoverRafPending = false;
+let _lastHoverEvent = null;
+
+function ensureFloatingCharBox(kind) {
+    if (typeof document === 'undefined') return null;
+    if (kind === 'hover') {
+        if (!_charHoverBox) {
+            _charHoverBox = document.createElement('div');
+            _charHoverBox.className = 'ocr-char-hover-box';
+        }
+        return _charHoverBox;
+    }
+    if (!_charPulseBox) {
+        _charPulseBox = document.createElement('div');
+        _charPulseBox.className = 'ocr-char-pulse-box';
+    }
+    return _charPulseBox;
+}
+
+function positionFloatingBox(box, textLayer, rect) {
+    if (!box || !textLayer || !rect) return false;
+    const tlRect = textLayer.getBoundingClientRect();
+    if (!tlRect || tlRect.width <= 0) return false;
+    if (box.parentNode !== textLayer) {
+        textLayer.appendChild(box);
+    }
+    box.style.left = `${(rect.left - tlRect.left).toFixed(1)}px`;
+    box.style.top = `${(rect.top - tlRect.top).toFixed(1)}px`;
+    box.style.width = `${Math.max(4, rect.width).toFixed(1)}px`;
+    box.style.height = `${Math.max(10, rect.height).toFixed(1)}px`;
+    return true;
+}
+
+function handleOverlayCharClick(e) {
+    const span = e.target && e.target.closest ? e.target.closest('.ocr-text-line') : null;
+    if (!span) return;
+
+    const sel = window.getSelection ? window.getSelection().toString() : '';
+    if (sel && sel.trim().length > 0) return; // User is performing drag text selection
+
+    const hit = getCharAtPoint(span, e.clientX, e.clientY);
+    const charText = hit && hit.char ? hit.char : (span.textContent || '').trim().charAt(0);
+    if (!charText || !charText.trim()) return;
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(charText).then(() => {
+            const textLayer = span.closest('.ocr-text-layer');
+            const pulseBox = ensureFloatingCharBox('pulse');
+            if (pulseBox && textLayer && hit && hit.rect && positionFloatingBox(pulseBox, textLayer, hit.rect)) {
+                pulseBox.classList.remove('active');
+                void pulseBox.offsetWidth;
+                pulseBox.classList.add('active');
+                if (_charPulseTimer) clearTimeout(_charPulseTimer);
+                _charPulseTimer = setTimeout(() => {
+                    if (_charPulseBox) _charPulseBox.classList.remove('active');
+                }, 580);
+            } else {
+                span.classList.add('copied-pulse');
+                setTimeout(() => span.classList.remove('copied-pulse'), 600);
+            }
+            showToast(`Tersalin: "${charText}"`, 'success');
+        }).catch(() => { });
+    }
+}
+
+function handleOverlayCharHover(e) {
+    _lastHoverEvent = { target: e.target, clientX: e.clientX, clientY: e.clientY };
+    if (_hoverRafPending) return;
+    _hoverRafPending = true;
+
+    const schedule = typeof requestAnimationFrame === 'function' ? requestAnimationFrame : (fn) => setTimeout(fn, 16);
+    schedule(() => {
+        _hoverRafPending = false;
+        const ev = _lastHoverEvent;
+        if (!ev) return;
+
+        const span = ev.target && ev.target.closest ? ev.target.closest('.ocr-text-line') : null;
+        if (!span || state.displayMode === 'readable') {
+            if (_charHoverBox) _charHoverBox.style.display = 'none';
+            return;
+        }
+
+        const hit = getCharAtPoint(span, ev.clientX, ev.clientY);
+        const textLayer = span.closest('.ocr-text-layer');
+        if (!hit || !hit.char || !hit.char.trim() || !textLayer || !hit.rect || hit.rect.width <= 0) {
+            if (_charHoverBox) _charHoverBox.style.display = 'none';
+            return;
+        }
+
+        const hoverBox = ensureFloatingCharBox('hover');
+        if (positionFloatingBox(hoverBox, textLayer, hit.rect)) {
+            hoverBox.style.display = 'block';
+        }
+    });
+}
+
+// In-Place Text Layer Overlay Populator (Batched Zero-Reflow Sub-Pixel Line Spans)
 function populateTextOverlay() {
     const pages = state.result.pages || [];
     if (pages.length === 0 && state.result.fullText) {
@@ -1091,7 +1317,64 @@ function populateTextOverlay() {
         textLayer.className = `ocr-text-layer mode-${state.displayMode}` +
             (state.showBoxes ? ' show-boxes' : '') +
             (pg.isDigital ? ' is-digital' : '');
+
+        // Read layer dimensions ONCE per page to avoid layout thrashing
+        const layerW = textLayer.clientWidth || 760;
+        const layerH = textLayer.clientHeight || 1050;
+        const frag = document.createDocumentFragment();
         const lines = pg.lines || [];
+
+        const appendAlignedSpan = (textStr, topP, leftP, widthP, heightP, lineId, isFallback = false, opts = null) => {
+            if (!textStr) return;
+            const span = document.createElement('span');
+            span.className = 'ocr-text-line' + (isFallback ? ' is-fallback-line' : '');
+            span.setAttribute('data-line', String(lineId));
+            span.title = 'Klik untuk salin huruf/angka ini, atau blok dengan kursor mouse untuk seleksi';
+
+            const cssFamily = resolveCssFontFamily(opts && opts.fontFamily);
+            const rawHeightPct = Math.max(0.6, Math.min(14, Number(heightP) || 1.5));
+            let exactFontPx;
+            let adjustedTopP = Number(topP) || 0;
+            let spanHeightPct = rawHeightPct;
+
+            if (opts && opts.fontSizePct > 0) {
+                exactFontPx = Math.max(6, Math.min(120, (opts.fontSizePct / 100) * layerH));
+            } else {
+                const boxHeightPx = (rawHeightPct / 100) * layerH;
+                const hasDescender = /[gjpqy,;_()\[\]{}]/.test(textStr);
+                const hasAscenderOrCap = /[A-Z0-9bdfhklt!?:\/\\@#$%&*+=]/.test(textStr);
+                let ratio = 0.88;
+                if (hasAscenderOrCap && !hasDescender) {
+                    ratio = 0.72;
+                } else if (!hasAscenderOrCap && hasDescender) {
+                    ratio = 0.72;
+                } else if (!hasAscenderOrCap && !hasDescender) {
+                    ratio = 0.53;
+                }
+                exactFontPx = Math.max(6, Math.min(120, boxHeightPx / ratio));
+                const topLeadRatio = hasAscenderOrCap ? 0.11 : 0.28;
+                const topAdjustPct = ((topLeadRatio * exactFontPx) / layerH) * 100;
+                adjustedTopP = Math.max(0, adjustedTopP - topAdjustPct);
+                spanHeightPct = Math.max(0.7, Math.min(14, ((exactFontPx * 1.05) / layerH) * 100));
+            }
+
+            const targetWpx = (Math.max(0.3, Number(widthP) || 1) / 100) * layerW;
+            const naturalWpx = measureTextWidthPx(textStr, exactFontPx, cssFamily);
+            const scaleX = (naturalWpx > 0 && targetWpx > 0) ? (targetWpx / naturalWpx) : 1;
+
+            span.style.top = `${adjustedTopP.toFixed(3)}%`;
+            span.style.left = `${Number(leftP).toFixed(3)}%`;
+            span.style.height = `${spanHeightPct.toFixed(3)}%`;
+            span.style.fontFamily = cssFamily;
+            span.style.fontSize = `${exactFontPx.toFixed(2)}px`;
+            span.style.lineHeight = `${exactFontPx.toFixed(2)}px`;
+            const clampedScaleX = Math.max(0.55, Math.min(1.28, scaleX));
+            span.style.transform = `scaleX(${clampedScaleX.toFixed(4)})`;
+
+            span.textContent = textStr;
+            frag.appendChild(span);
+            frag.appendChild(document.createTextNode(' '));
+        };
 
         if (lines.length === 0 && pg.text) {
             // Guard: Cegah raw JSON string bocor ke baris tampilan kanvas
@@ -1108,71 +1391,42 @@ function populateTextOverlay() {
                 }
             }
 
-            // Generate lines from text paragraphs
             const rawLines = cleanText.split('\n').filter(Boolean);
             const stepY = 100 / Math.max(1, rawLines.length);
             rawLines.forEach((t, lIdx) => {
                 const trimmed = t.trim();
                 if (!trimmed || trimmed === '{' || trimmed === '}' || trimmed === ']' || trimmed === '[') return;
-                const fbChars = calculateCharBoxes(trimmed, lIdx * stepY, 5, 90, 2.5);
-                fbChars.forEach((fc, cIdx) => {
-                    const span = document.createElement('span');
-                    const isSpace = fc.isSpace || fc.char === ' ' || fc.char === '\t';
-                    span.className = 'ocr-text-line ocr-text-char is-fallback-line' + (isSpace ? ' ocr-text-space' : '');
-                    span.setAttribute('data-line', `${lIdx}_${cIdx}`);
-                    span.setAttribute('data-char', fc.char);
-                    span.setAttribute('data-text', fc.char);
-                    span.setAttribute('data-line-text', trimmed);
-                    span.setAttribute('data-char-idx', String(cIdx));
-                    span.setAttribute('data-line-key', String(lIdx));
-
-                    span.style.top = `${fc.topPercent}%`;
-                    span.style.left = `${fc.leftPercent}%`;
-                    span.style.width = `${fc.widthPercent}%`;
-                    span.style.height = `${fc.heightPercent}%`;
-                    span.style.fontSize = '13px';
-                    span.textContent = fc.char;
-                    attachLineCopyHandler(span);
-                    textLayer.appendChild(span);
-                });
+                appendAlignedSpan(trimmed, lIdx * stepY, 5, 90, 2.5, lIdx, true);
             });
+            textLayer.appendChild(frag);
             return;
         }
-
-        const createCharSpanElement = (ch, isSpace, topP, leftP, widthP, heightP, charId, lineFullText, charIdxInLine, lineIndex) => {
-            const span = document.createElement('span');
-            span.className = 'ocr-text-line ocr-text-char' + (isSpace ? ' ocr-text-space' : '');
-            span.setAttribute('data-line', String(charId));
-            span.setAttribute('data-char', ch);
-            span.setAttribute('data-text', ch);
-            span.setAttribute('data-line-text', lineFullText || '');
-            span.setAttribute('data-char-idx', String(charIdxInLine || 0));
-            span.setAttribute('data-line-key', String(lineIndex !== undefined ? lineIndex : 0));
-
-            span.style.top = `${topP}%`;
-            span.style.left = `${leftP}%`;
-            span.style.width = `${Math.max(0.1, widthP)}%`;
-            span.style.height = `${Math.max(1.2, Math.min(12, heightP))}%`;
-
-            const parentH = textLayer.clientHeight || 800;
-            const calcFont = Math.max(9, Math.min(24, Math.round((heightP / 100) * parentH * 0.82)));
-            span.style.fontSize = `${calcFont}px`;
-            span.style.lineHeight = `${Math.max(10, Math.round((heightP / 100) * parentH))}px`;
-
-            span.textContent = ch;
-            attachLineCopyHandler(span);
-            textLayer.appendChild(span);
-        };
 
         lines.forEach((line, lIdx) => {
             const lineText = (line.text || '').toString();
             if (!lineText.trim()) return;
 
+            if (Array.isArray(line.segments) && line.segments.length > 0) {
+                line.segments.forEach((seg, sIdx) => {
+                    if (!seg.text) return;
+                    appendAlignedSpan(
+                        seg.text,
+                        seg.topPercent,
+                        seg.leftPercent,
+                        seg.widthPercent,
+                        seg.heightPercent,
+                        `${lIdx}_${sIdx}`,
+                        false,
+                        { fontSizePct: seg.fontSizePct, fontFamily: seg.fontFamily }
+                    );
+                });
+                return;
+            }
+
             let box = Array.isArray(line.box_2d) ? line.box_2d :
                 (Array.isArray(line.bbox) ? line.bbox :
                     (Array.isArray(line.box) ? line.box : null));
 
-            // Buka kemasan nested array jika ada
             if (Array.isArray(box) && box.length > 0 && Array.isArray(box[0])) {
                 box = box[0];
             }
@@ -1200,7 +1454,6 @@ function populateTextOverlay() {
                     heightPct = ((ymax - ymin) / 1000) * 100;
                 }
             } else {
-                // Fallback sequential distribution
                 const stepY = 100 / Math.max(1, lines.length);
                 topPct = lIdx * stepY;
                 leftPct = 5;
@@ -1208,61 +1461,33 @@ function populateTextOverlay() {
                 heightPct = 2.5;
             }
 
-            // Batasi tinggi kotak jika abnormal (> 10% halaman untuk 1 baris)
             if (heightPct > 10) {
                 heightPct = 2.8;
             }
 
-            // Character-level extraction: Gunakan line.chars jika ada, atau hitung proporsional per-huruf presisi tinggi
-            let charList = [];
-            if (Array.isArray(line.chars) && line.chars.length > 0) {
-                charList = line.chars;
+            const spanOpts = { fontSizePct: line.fontSizePct, fontFamily: line.fontFamily };
+
+            // Anti-Bongkahan: Jika ada teks berbaris banyak dalam satu kotak, pecah per baris
+            const subLines = lineText.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+            if (subLines.length > 1 && heightPct > 4) {
+                const subStepH = heightPct / subLines.length;
+                subLines.forEach((sText, sIdx) => {
+                    appendAlignedSpan(sText, topPct + sIdx * subStepH, leftPct, widthPct, subStepH, `${lIdx}_${sIdx}`, false, spanOpts);
+                });
             } else {
-                // Anti-Bongkahan: Jika ada teks berbaris banyak dalam satu kotak, pecah per baris dahulu
-                const subLines = lineText.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
-                if (subLines.length > 1 && heightPct > 4) {
-                    const subStepH = heightPct / subLines.length;
-                    subLines.forEach((sText, sIdx) => {
-                        const sTop = topPct + sIdx * subStepH;
-                        const subChars = calculateCharBoxes(sText, sTop, leftPct, widthPct, subStepH);
-                        charList.push(...subChars);
-                    });
-                } else {
-                    charList = calculateCharBoxes(lineText, topPct, leftPct, widthPct, heightPct);
-                }
+                appendAlignedSpan(lineText, topPct, leftPct, widthPct, heightPct, lIdx, false, spanOpts);
             }
-
-            charList.forEach((cObj, cIdx) => {
-                const ch = cObj.char !== undefined ? cObj.char : (cObj.text || '');
-                if (!ch) return;
-                const isSpace = cObj.isSpace || ch === ' ' || ch === '\t';
-                const cTop = cObj.topPercent !== undefined ? cObj.topPercent : topPct;
-                const cLeft = cObj.leftPercent !== undefined ? cObj.leftPercent : leftPct;
-                const cWidth = cObj.widthPercent !== undefined ? cObj.widthPercent : widthPct;
-                const cHeight = cObj.heightPercent !== undefined ? cObj.heightPercent : heightPct;
-
-                createCharSpanElement(ch, isSpace, cTop, cLeft, cWidth, cHeight, `${lIdx}_${cIdx}`, lineText, cIdx, lIdx);
-            });
         });
+
+        textLayer.appendChild(frag);
     });
 }
 
-// Quick click-to-copy handler on individual characters / lines
+// Compatibility helper for tests; click-to-copy per character uses event delegation on documentPages
 function attachLineCopyHandler(span) {
+    if (!span) return;
     span.title = 'Klik untuk salin huruf/angka ini, atau blok dengan kursor mouse untuk seleksi';
-    span.addEventListener('click', () => {
-        const sel = window.getSelection ? window.getSelection().toString() : '';
-        if (sel && sel.trim().length > 0) return; // User is performing drag text selection
-        const charText = span.getAttribute('data-char') || span.getAttribute('data-text') || span.textContent || '';
-        if (!charText || !charText.trim()) return;
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(charText).then(() => {
-                span.classList.add('copied-pulse');
-                setTimeout(() => span.classList.remove('copied-pulse'), 600);
-                showToast(`Tersalin: "${charText}"`, 'success');
-            }).catch(() => { });
-        }
-    });
+    span.addEventListener('click', handleOverlayCharClick);
 }
 
 // Layer display mode switcher
@@ -1414,6 +1639,33 @@ async function startOcrProcess() {
 
     const formData = new FormData();
     formData.append('document', state.file);
+
+    // Attach crisp rendered canvas page bitmaps for 1:1 pixel-exact CV bounding boxes
+    const isPdfFile = state.file.type === 'application/pdf' || state.file.name.toLowerCase().endsWith('.pdf');
+    if (isPdfFile && state.totalPages > 0) {
+        const maxAttached = Math.min(state.totalPages, 30);
+        const canvasBlobPromises = [];
+        for (let p = 1; p <= maxAttached; p++) {
+            const canvasEl = document.getElementById(`ocrCanvasPage-${p}`);
+            if (canvasEl && typeof canvasEl.toBlob === 'function') {
+                canvasBlobPromises.push(new Promise((resolve) => {
+                    try {
+                        canvasEl.toBlob((blob) => resolve({ pageNum: p, blob }), 'image/jpeg', 0.88);
+                    } catch (_) {
+                        resolve({ pageNum: p, blob: null });
+                    }
+                }));
+            }
+        }
+        if (canvasBlobPromises.length > 0) {
+            const pageBlobs = await Promise.all(canvasBlobPromises);
+            pageBlobs.forEach(({ pageNum, blob }) => {
+                if (blob && blob.size > 0) {
+                    formData.append('pageImages', blob, `page_${pageNum}.jpg`);
+                }
+            });
+        }
+    }
 
     // Progress timeline simulation while waiting for Ray-OCR V.1
     let progressVal = 20;
@@ -1792,46 +2044,13 @@ function handleLiveSearch() {
     }
 
     const queryLower = rawQuery.toLowerCase();
-    const charSpans = document.querySelectorAll('.ocr-text-line.ocr-text-char');
-    if (charSpans.length > 0) {
-        const linesMap = new Map();
-        charSpans.forEach(span => {
-            const lineKey = span.getAttribute('data-line-key') || (span.getAttribute('data-line') || '').split('_')[0] || '0';
-            const layerId = span.closest('.ocr-text-layer')?.id || '0';
-            const fullKey = `${layerId}_${lineKey}`;
-            if (!linesMap.has(fullKey)) {
-                linesMap.set(fullKey, []);
-            }
-            linesMap.get(fullKey).push(span);
-        });
-
-        linesMap.forEach(spans => {
-            if (spans.length === 0) return;
-            const lineText = spans[0].getAttribute('data-line-text') || spans.map(s => s.getAttribute('data-char') || s.textContent || '').join('');
-            const lowerLineText = lineText.toLowerCase();
-            const qLen = queryLower.length;
-            let startPos = 0;
-            while ((startPos = lowerLineText.indexOf(queryLower, startPos)) !== -1) {
-                const matchSpans = spans.filter(s => {
-                    const cIdx = parseInt(s.getAttribute('data-char-idx'), 10);
-                    return cIdx >= startPos && cIdx < startPos + qLen;
-                });
-                if (matchSpans.length > 0) {
-                    matchSpans.forEach(s => s.classList.add('search-match'));
-                    state.searchMatches.push(matchSpans[0]);
-                }
-                startPos += qLen;
-            }
-        });
-    } else {
-        allLines.forEach(ln => {
-            const text = (ln.textContent || '').toLowerCase();
-            if (text.includes(queryLower)) {
-                ln.classList.add('search-match');
-                state.searchMatches.push(ln);
-            }
-        });
-    }
+    allLines.forEach(ln => {
+        const text = (ln.textContent || '').toLowerCase();
+        if (text.includes(queryLower)) {
+            ln.classList.add('search-match');
+            state.searchMatches.push(ln);
+        }
+    });
 
     const matchCount = state.searchMatches.length;
 
@@ -2000,9 +2219,22 @@ function setupEventListeners() {
         el.btnDownloadTxt.addEventListener('click', downloadTxtFile);
     }
 
-    // Search events
+    // Delegated per-character hover & click-to-copy overlay handlers (O(1) listeners)
+    if (el.documentPages) {
+        el.documentPages.addEventListener('click', handleOverlayCharClick);
+        el.documentPages.addEventListener('mousemove', handleOverlayCharHover);
+        el.documentPages.addEventListener('mouseleave', () => {
+            if (_charHoverBox) _charHoverBox.style.display = 'none';
+        });
+    }
+
+    // Search events (debounced 120ms for smooth typing)
+    let _searchDebounceTimer = null;
     if (el.searchInput) {
-        el.searchInput.addEventListener('input', handleLiveSearch);
+        el.searchInput.addEventListener('input', () => {
+            if (_searchDebounceTimer) clearTimeout(_searchDebounceTimer);
+            _searchDebounceTimer = setTimeout(handleLiveSearch, 120);
+        });
     }
 
     if (el.searchClear) {
@@ -2146,6 +2378,7 @@ if (typeof window !== 'undefined') {
         calculateWordBoxes,
         calculateCharBoxes,
         getCharWeight,
+        getCharAtPoint,
         setLayerMode,
         setZoom,
         startOcrProcess,
@@ -2167,6 +2400,7 @@ export {
     calculateWordBoxes,
     calculateCharBoxes,
     getCharWeight,
+    getCharAtPoint,
     setLayerMode,
     setZoom,
     startOcrProcess,

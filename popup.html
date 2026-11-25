@@ -157,6 +157,46 @@
                         </label>
                     </div>
                 </div>
+
+                <!-- Baris Sumber Data LAN & Host Web Terpisah -->
+                <div class="ai-host-strip" id="aiHostConfigDeck">
+                    <div class="ai-host-summary">
+                        <span class="ai-host-dot" id="dotDraftHostStatus" title="Status koneksi sumber draft"></span>
+                        <span class="ai-host-label">Sumber Draft:</span>
+                        <strong class="ai-host-value" id="lblActiveDraftHost">localhost:5005</strong>
+                    </div>
+                    <button type="button" class="ai-btn-host-toggle" id="btnToggleHostPanel" title="Atur IP PC Sumber Draft & Host Web Dashboard">Atur IP / Host</button>
+                </div>
+
+                <div class="ai-host-panel" id="aiHostPanel" style="display: none;">
+                    <div class="ai-host-field">
+                        <label for="inputDraftSourceHost" class="ai-host-field-label">IP / Host PC Sumber Draft (mis. 192.168.100.15):</label>
+                        <div class="ai-host-input-row">
+                            <input type="text" id="inputDraftSourceHost" class="ai-host-input" placeholder="192.168.100.15 atau localhost:5005" spellcheck="false">
+                            <button type="button" class="ai-btn-host-apply" id="btnSaveDraftSourceHost">Hubungkan</button>
+                            <button type="button" class="ai-btn-host-reset" id="btnResetDraftSourceLocal" title="Kembalikan ke localhost:5005">Lokal</button>
+                        </div>
+                        <span class="ai-host-hint" id="lblDraftHostConnectInfo">Mengambil draft dari PC lokal atau PC rekan di jaringan LAN.</span>
+                    </div>
+
+                    <div class="ai-host-field">
+                        <label for="selectRemoteDraft" class="ai-host-field-label">Pilih File Draft dari Sumber:</label>
+                        <div class="ai-host-input-row">
+                            <select id="selectRemoteDraft" class="ai-host-select">
+                                <option value="">Terbaru (Otomatis)</option>
+                            </select>
+                            <button type="button" class="ai-btn-host-reset" id="btnRefreshRemoteDraftList" title="Muat ulang daftar draft dari host">Segarkan</button>
+                        </div>
+                    </div>
+
+                    <div class="ai-host-field">
+                        <label for="inputWebHost" class="ai-host-field-label">Host Web Dashboard Anda (terpisah dari sumber draft):</label>
+                        <div class="ai-host-input-row">
+                            <input type="text" id="inputWebHost" class="ai-host-input" placeholder="http://localhost:5005" spellcheck="false">
+                            <button type="button" class="ai-btn-host-reset" id="btnOpenWebDashboardAuto" title="Buka Web Dashboard di host Anda">Buka Web</button>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- CARD 2: KARTU IDENTITAS DRAFT (DOCKET PASSPORT) -->
@@ -476,8 +516,10 @@
 
     </div>
 
+    <script src="module_config.js"></script>
     <script src="config.js"></script>
     <script src="sync.js"></script>
+    <script src="draft_source_client.js"></script>
     <script src="popup.js"></script>
 </body>
 

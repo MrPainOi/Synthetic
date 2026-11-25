@@ -167,7 +167,10 @@
     }
 
 
-    injectPageHook();
+    if ((typeof globalThis === "undefined" || globalThis.__CEISA_MODULE_MODE__ !== "autoinput") &&
+        typeof chrome !== "undefined" && chrome.runtime && typeof chrome.runtime.getURL === "function") {
+        injectPageHook();
+    }
 
 
     // ========================================================
@@ -2015,7 +2018,11 @@
         } catch (_) {}
     }
 
-    if (typeof document !== 'undefined') {
+    const __CEISA_MODULE_MODE__ = (typeof globalThis !== "undefined" && globalThis.__CEISA_MODULE_MODE__) || "full";
+    const __IS_SCANNER_MODULE__ = __CEISA_MODULE_MODE__ !== "autoinput";
+    const __IS_AUTOINPUT_MODULE__ = __CEISA_MODULE_MODE__ !== "scanner";
+
+    if (typeof document !== 'undefined' && __IS_AUTOINPUT_MODULE__) {
         document.addEventListener('click', (e) => {
             const tabEl = e.target?.closest?.('.ant-tabs-tab, [role="tab"], .ceisa-tab-btn, .nav-tabs .nav-link, .tab-item');
             if (tabEl) {
@@ -3942,60 +3949,63 @@
         });
 
 
-    observer.observe(
-        document.documentElement,
-        {
-            childList: true,
-            subtree: true
-        }
-    );
-
-
-    // ========================================================
-    // STORAGE CHANGES
-    // ========================================================
-
-    // Debounce timer for storage changes to prevent rapid-fire recolors when
-    // multiple storage keys are written simultaneously (e.g. by pushExactStateToSupabase)
-    chrome.storage.onChanged.addListener(async changes => {
-        if (changes.ceisa_last_scan_date && changes.ceisa_last_scan_date.newValue) {
-            scanDate = changes.ceisa_last_scan_date.newValue;
-        }
-
-        const hasRelevantChange = Object.keys(changes).some(k =>
-            k.includes("ceisa_completed_numbers") ||
-            k.includes("ceisa_pibpeb_numbers") ||
-            k.includes("ceisa_scan_cache") ||
-            k.includes("ceisa_last_scan_date")
+    if (__IS_SCANNER_MODULE__) {
+        observer.observe(
+            document.documentElement,
+            {
+                childList: true,
+                subtree: true
+            }
         );
 
-        if (!hasRelevantChange) return;
 
-        // Debounce: wait for all related storage writes to settle before recoloring
-        if (_storageRecolorTimer) clearTimeout(_storageRecolorTimer);
-        _storageRecolorTimer = setTimeout(async () => {
-            _storageRecolorTimer = null;
-            await Promise.all([
-                loadCompletedNumbers(),
-                loadPibPebNumbers(),
-                loadScanCache()
-            ]);
+        // ========================================================
+        // STORAGE CHANGES
+        // ========================================================
+
+        // Debounce timer for storage changes to prevent rapid-fire recolors when
+        // multiple storage keys are written simultaneously (e.g. by pushExactStateToSupabase)
+        chrome.storage.onChanged.addListener(async changes => {
+            if (changes.ceisa_last_scan_date && changes.ceisa_last_scan_date.newValue) {
+                scanDate = changes.ceisa_last_scan_date.newValue;
+            }
+
+            const hasRelevantChange = Object.keys(changes).some(k =>
+                k.includes("ceisa_completed_numbers") ||
+                k.includes("ceisa_pibpeb_numbers") ||
+                k.includes("ceisa_scan_cache") ||
+                k.includes("ceisa_last_scan_date")
+            );
+
+            if (!hasRelevantChange) return;
+
+            // Debounce: wait for all related storage writes to settle before recoloring
+            if (_storageRecolorTimer) clearTimeout(_storageRecolorTimer);
+            _storageRecolorTimer = setTimeout(async () => {
+                _storageRecolorTimer = null;
+                await Promise.all([
+                    loadCompletedNumbers(),
+                    loadPibPebNumbers(),
+                    loadScanCache()
+                ]);
+                recolorExistingRows();
+            }, 150);
+        });
+
+
+        // Periodic background auto-sync date from CEISA portal filter and recolor
+        setInterval(() => {
+            autoSyncDateFromCeisaPortal();
             recolorExistingRows();
-        }, 150);
-    });
-
-
-    // Periodic background auto-sync date from CEISA portal filter and recolor
-    setInterval(() => {
-        autoSyncDateFromCeisaPortal();
-        recolorExistingRows();
-    }, 3000);
+        }, 3000);
+    }
 
     // ========================================================
     // INITIAL
     // ========================================================
 
     async function initContentScript() {
+        if (!__IS_SCANNER_MODULE__) return;
         await autoSyncDateFromCeisaPortal();
         await Promise.all([
             loadCompletedNumbers(),

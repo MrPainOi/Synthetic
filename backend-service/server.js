@@ -23,7 +23,18 @@ const {
 const app = express();
 const PORT = process.env.PORT || 5005;
 
-// Middleware
+// Middleware (termasuk dukungan CORS & Chrome Private Network Access untuk akses LAN IP antar PC)
+// Penting: Header PNA + OPTIONS handler HARUS berada sebelum cors() agar preflight Chrome LAN lolos
+app.use((req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-gemini-key, Access-Control-Request-Private-Network');
+    res.setHeader('Access-Control-Allow-Private-Network', 'true');
+    if (req.method === 'OPTIONS') {
+        return res.sendStatus(204);
+    }
+    next();
+});
 app.use(cors({ origin: '*' }));
 app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ extended: true, limit: '100mb' }));
@@ -278,18 +289,92 @@ app.post('/api/save-draft', (req, res) => {
     }
 });
 
+function resolveDraftModeDir(rawMode) {
+    const mode = String(rawMode || '').toLowerCase() === 'impor' ? 'impor' : 'ekspor';
+    return {
+        mode,
+        targetDir: path.join(__dirname, '..', 'drafts', mode)
+    };
+}
+
+function listDraftFilesSorted(targetDir) {
+    if (!fs.existsSync(targetDir)) return [];
+    return fs.readdirSync(targetDir)
+        .filter(f => f.endsWith('.json'))
+        .map(f => {
+            const fullPath = path.join(targetDir, f);
+            const stat = fs.statSync(fullPath);
+            return { name: f, fullPath, mtime: stat.mtime, size: stat.size };
+        })
+        .sort((a, b) => b.mtime - a.mtime);
+}
+
+// Health check untuk koneksi modular Auto Input LAN / host check
+app.get('/api/health', (req, res) => {
+    res.json({
+        ok: true,
+        service: 'ceisa-backend',
+        hostIp: printService.getPrimaryIp(),
+        port: Number(PORT) || 5005,
+        timestamp: new Date().toISOString()
+    });
+});
+
+// Daftar semua draft tersimpan (urut terbaru) agar PC lain bisa memilih draft spesifik
+app.get('/api/list-drafts', (req, res) => {
+    try {
+        const { mode, targetDir } = resolveDraftModeDir(req.query.mode);
+        const files = listDraftFilesSorted(targetDir);
+        const drafts = files.slice(0, 50).map(file => {
+            let parsed = {};
+            try {
+                parsed = JSON.parse(fs.readFileSync(file.fullPath, 'utf8'));
+            } catch (_) {}
+            return {
+                filename: file.name,
+                mode,
+                mtime: file.mtime.toISOString(),
+                size: file.size,
+                nomorAju: parsed.nomorAju || parsed.noAju || '',
+                invoiceNumber: parsed.invoiceNumber || parsed.invoices?.[0]?.invoiceNumber || '',
+                shipperName: parsed.shipperName || parsed.supplierName || parsed.eksportirNama || '',
+                consigneeName: parsed.consigneeName || parsed.importirName || parsed.pembeliNama || '',
+                itemCount: Array.isArray(parsed.items) ? parsed.items.length : 0,
+                currency: parsed.currency || parsed.valuta || 'USD'
+            };
+        });
+        res.json({ ok: true, mode, hostIp: printService.getPrimaryIp(), drafts });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Ambil satu draft spesifik berdasarkan filename
+app.get('/api/get-draft', (req, res) => {
+    try {
+        const { targetDir } = resolveDraftModeDir(req.query.mode);
+        const safeName = path.basename(String(req.query.filename || ''));
+        if (!safeName || !safeName.endsWith('.json')) {
+            return res.status(400).json({ error: 'Nama file draft tidak valid.' });
+        }
+        const targetPath = path.join(targetDir, safeName);
+        if (!fs.existsSync(targetPath)) {
+            return res.status(404).json({ error: 'Draft tidak ditemukan.' });
+        }
+        const content = fs.readFileSync(targetPath, 'utf8');
+        res.json(JSON.parse(content));
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // Endpoint untuk mengambil draft terbaru (misal untuk pemulihan otomatis data barang)
 app.get('/api/get-latest-draft', (req, res) => {
     try {
-        const mode = req.query.mode === 'impor' ? 'impor' : 'ekspor';
-        const targetDir = path.join(__dirname, '..', 'drafts', mode);
-        if (!fs.existsSync(targetDir)) return res.json(null);
-        const files = fs.readdirSync(targetDir)
-            .filter(f => f.endsWith('.json'))
-            .map(f => ({ name: f, mtime: fs.statSync(path.join(targetDir, f)).mtime }))
-            .sort((a, b) => b.mtime - a.mtime);
+        const { targetDir } = resolveDraftModeDir(req.query.mode);
+        const files = listDraftFilesSorted(targetDir);
         if (files.length === 0) return res.json(null);
-        const latestContent = fs.readFileSync(path.join(targetDir, files[0].name), 'utf8');
+        const latestContent = fs.readFileSync(files[0].fullPath, 'utf8');
         res.json(JSON.parse(latestContent));
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -488,13 +573,15 @@ app.post('/api/doc-searcher/create-zip', async (req, res) => {
 const uploadOcr = (req, res, next) => {
     upload.fields([
         { name: 'document', maxCount: 1 },
-        { name: 'file', maxCount: 1 }
+        { name: 'file', maxCount: 1 },
+        { name: 'pageImages', maxCount: 60 }
     ])(req, res, (err) => {
         if (err) return res.status(400).json({ success: false, error: err.message });
         if (req.files) {
             req.file = (req.files['document'] && req.files['document'][0]) ||
                        (req.files['file'] && req.files['file'][0]) ||
                        null;
+            req.pageImageFiles = req.files['pageImages'] || [];
         }
         next();
     });
@@ -502,6 +589,7 @@ const uploadOcr = (req, res, next) => {
 
 // POST /api/ocr/extract-text (Multipart upload 'document' or fallback JSON)
 app.post('/api/ocr/extract-text', uploadOcr, async (req, res) => {
+    const tempPageImagePaths = Array.isArray(req.pageImageFiles) ? req.pageImageFiles.map(f => f.path).filter(Boolean) : [];
     try {
         const file = req.file;
         let filePath = file ? file.path : (req.body && req.body.filePath ? req.body.filePath : null);
@@ -522,12 +610,27 @@ app.post('/api/ocr/extract-text', uploadOcr, async (req, res) => {
 
         const customApiKey = (req.body && req.body.apiKey) || req.headers['x-gemini-key'] || null;
 
+        // Read optional browser-rendered page images (exact 1:1 canvas bitmaps)
+        const pageImagesMap = new Map();
+        if (Array.isArray(req.pageImageFiles)) {
+            req.pageImageFiles.forEach((imgFile, idx) => {
+                try {
+                    const match = (imgFile.originalname || '').match(/page_(\d+)/i);
+                    const pgNum = match ? parseInt(match[1], 10) : (idx + 1);
+                    if (imgFile.path && fs.existsSync(imgFile.path)) {
+                        pageImagesMap.set(pgNum, fs.readFileSync(imgFile.path));
+                    }
+                } catch (_) { }
+            });
+        }
+
         const result = await extractDocumentText({
             filePath,
             fileBuffer,
             fileName,
             mimeType,
-            customApiKey
+            customApiKey,
+            pageImagesMap
         });
 
         res.json({
@@ -542,6 +645,10 @@ app.post('/api/ocr/extract-text', uploadOcr, async (req, res) => {
         res.status(500).json({
             success: false,
             error: err.message || 'Gagal mengekstrak teks dokumen dengan OCR.'
+        });
+    } finally {
+        tempPageImagePaths.forEach(p => {
+            try { if (fs.existsSync(p)) fs.unlinkSync(p); } catch (_) { }
         });
     }
 });
@@ -755,12 +862,13 @@ app.post('/api/shutdown', (req, res) => {
     }, 500);
 });
 
-const server = app.listen(PORT, () => {
+const server = app.listen(PORT, '0.0.0.0', () => {
     const primaryIp = printService.getPrimaryIp();
     console.log(`=======================================================`);
     console.log(`CEISA Document Parser & Print Hub AKTIF di port ${PORT}`);
     console.log(`Desktop Portal: http://localhost:${PORT}/print_hub.html`);
     console.log(`Mobile Wi-Fi:   http://${primaryIp}:${PORT}/print_hub.html`);
+    console.log(`LAN Draft API:  http://${primaryIp}:${PORT}/api/get-latest-draft`);
     console.log(`Status API Key: ${process.env.GEMINI_API_KEY ? 'Terpasang' : 'BELUM DISET'}`);
     console.log(`=======================================================`);
 });

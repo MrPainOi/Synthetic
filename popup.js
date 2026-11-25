@@ -363,6 +363,9 @@ async function checkWifiStatus() {
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
+    const modMode = (typeof globalThis !== 'undefined' && globalThis.__CEISA_MODULE_MODE__) || 'full';
+    if (modMode === 'autoinput') return;
+
     await checkWifiStatus();
     await loadLastDate();
     const activeDate = dateInput ? dateInput.value || todayISO() : todayISO();
@@ -427,10 +430,108 @@ if (toggleInfoBtn && infoContent) {
     };
 }
 
+async function openWebDashboardWithAutoStart(triggerBtn, customHostOverride = null) {
+    const modMode = (typeof globalThis !== 'undefined' && globalThis.__CEISA_MODULE_MODE__) || 'full';
+    const hasBundledDashboard = modMode === 'full';
+    const draftClient = typeof CeisaDraftSourceClient !== 'undefined' ? CeisaDraftSourceClient : null;
+
+    let cfg = draftClient
+        ? await draftClient.readHostConfigFromStorage()
+        : { webHostUrl: 'http://localhost:5005', hasCustomWebHost: false };
+
+    if (customHostOverride !== null && draftClient) {
+        const saved = await draftClient.saveHostConfigToStorage({ webHostUrl: customHostOverride });
+        cfg = Object.assign({}, cfg, saved, {
+            hasCustomWebHost: Boolean(String(customHostOverride || '').trim())
+        });
+    }
+
+    const baseWebUrl = draftClient
+        ? draftClient.normalizeHostUrl(cfg.webHostUrl, 5005, draftClient.DEFAULT_WEB_HOST_URL)
+        : 'http://localhost:5005';
+
+    let targetUrl = draftClient
+        ? draftClient.resolveDashboardUrl(cfg, hasBundledDashboard)
+        : (hasBundledDashboard && typeof chrome !== 'undefined' && chrome.runtime?.getURL
+            ? chrome.runtime.getURL('dashboard.html')
+            : `${baseWebUrl}/dashboard.html`);
+
+    const isHttpTarget = /^https?:\/\//i.test(targetUrl);
+    const isLocalHostTarget = isHttpTarget && !(draftClient && draftClient.isRemoteSource(baseWebUrl));
+
+    if (isLocalHostTarget && draftClient) {
+        const prevBtnText = triggerBtn ? triggerBtn.textContent : '';
+        let health = await draftClient.checkDraftServerHealth(baseWebUrl);
+
+        if (!health.ok && modMode !== 'autoinput' && typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+            if (triggerBtn) {
+                triggerBtn.disabled = true;
+                triggerBtn.textContent = 'Menyalakan Server...';
+            }
+            setStatus('STARTING SERVER...');
+
+            const startResp = await new Promise((resolve) => {
+                let settled = false;
+                const finish = (val) => {
+                    if (settled) return;
+                    settled = true;
+                    resolve(val);
+                };
+                const timer = setTimeout(() => finish({ ok: false, error: 'timeout' }), 1500);
+                try {
+                    chrome.runtime.sendMessage({ type: 'START_BACKEND_SERVER' }, (res) => {
+                        clearTimeout(timer);
+                        const errMsg = chrome.runtime?.lastError?.message;
+                        finish(errMsg ? { ok: false, error: errMsg } : (res || { ok: false }));
+                    });
+                } catch (_) {
+                    clearTimeout(timer);
+                    finish({ ok: false });
+                }
+            });
+
+            if (startResp && startResp.ok) {
+                for (let attempt = 0; attempt < 8; attempt++) {
+                    await new Promise(r => setTimeout(r, 450));
+                    health = await draftClient.checkDraftServerHealth(baseWebUrl);
+                    if (health.ok) break;
+                }
+            }
+
+            if (triggerBtn) {
+                triggerBtn.disabled = false;
+                triggerBtn.textContent = prevBtnText;
+            }
+            setStatus(health.ok ? 'SIAP' : 'SERVER OFF');
+        }
+
+        if (!health.ok) {
+            if (hasBundledDashboard && typeof chrome !== 'undefined' && chrome.runtime?.getURL) {
+                targetUrl = chrome.runtime.getURL('dashboard.html');
+            } else {
+                const msg = `Server Web lokal (${baseWebUrl}) belum menyala. Jalankan START_SERVER.bat terlebih dahulu.`;
+                const aiLog = document.getElementById('autoInputLogBody');
+                if (aiLog) {
+                    const div = document.createElement('div');
+                    div.className = 'log-entry log-err';
+                    div.textContent = `[Web Host] ${msg}`;
+                    aiLog.appendChild(div);
+                    aiLog.scrollTop = aiLog.scrollHeight;
+                } else {
+                    setStatus('SERVER OFF');
+                }
+            }
+        }
+    }
+
+    if (typeof chrome !== 'undefined' && chrome.tabs?.create) {
+        chrome.tabs.create({ url: targetUrl });
+    }
+    return targetUrl;
+}
+
 if (openDashboardButton) {
-    openDashboardButton.onclick = () => {
-        chrome.tabs.create({ url: chrome.runtime.getURL("dashboard.html") });
-    };
+    openDashboardButton.onclick = () => openWebDashboardWithAutoStart(openDashboardButton);
 }
 
 if (dateInput) {
@@ -607,9 +708,24 @@ if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onMessage)
 
     if (!btnModeScanner || !btnModeAutoInput || !viewScanner || !viewAutoInput) return;
 
-    // 1. Tab Switching Function
+    // 1. Tab Switching Function & Modular Mode Handling
+    const moduleMode = (typeof globalThis !== 'undefined' && globalThis.__CEISA_MODULE_MODE__) || 'full';
+    const modeSwitcher = document.querySelector(".popup-mode-switcher");
+    const popupHeaderTitle = document.querySelector(".header .title");
+
+    if (moduleMode === 'autoinput') {
+        if (modeSwitcher) modeSwitcher.style.display = 'none';
+        if (popupHeaderTitle) popupHeaderTitle.textContent = 'CEISA 4.0 Auto Input';
+    } else if (moduleMode === 'scanner') {
+        if (modeSwitcher) modeSwitcher.style.display = 'none';
+        if (popupHeaderTitle) popupHeaderTitle.textContent = 'CEISA 4.0 Scanner Status';
+    }
+
     function switchMode(mode) {
-        if (mode === 'autoinput') {
+        const effectiveMode = moduleMode === 'autoinput'
+            ? 'autoinput'
+            : (moduleMode === 'scanner' ? 'scanner' : mode);
+        if (effectiveMode === 'autoinput') {
             btnModeAutoInput.classList.add('active');
             btnModeAutoInput.setAttribute('aria-selected', 'true');
             btnModeScanner.classList.remove('active');
@@ -628,22 +744,13 @@ if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onMessage)
             viewScanner.style.display = 'flex';
             viewAutoInput.style.display = 'none';
         }
-        if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.local) {
-            chrome.storage.local.set({ popup_active_tab: mode }).catch(() => {});
+        if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.local && (moduleMode === 'full' || moduleMode === 'extension')) {
+            chrome.storage.local.set({ popup_active_tab: effectiveMode }).catch(() => {});
         }
     }
 
     btnModeScanner.addEventListener('click', () => switchMode('scanner'));
     btnModeAutoInput.addEventListener('click', () => switchMode('autoinput'));
-
-    // Restore last active mode from storage
-    if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.local) {
-        chrome.storage.local.get("popup_active_tab").then(res => {
-            if (res && res.popup_active_tab === 'autoinput') {
-                switchMode('autoinput');
-            }
-        }).catch(() => {});
-    }
 
     // 2. CEISA Portal Tab Detection & Focus
     const portalDot = document.getElementById("ceisaPortalDot");
@@ -651,6 +758,62 @@ if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onMessage)
     const btnFocusCeisaTab = document.getElementById("btnFocusCeisaTab");
 
     let activeCeisaTab = null;
+    const pendingContentInjections = new Map();
+
+    async function sendMessageToCeisaTab(tabId, message, allowAutoInject = true) {
+        if (!tabId || typeof chrome === "undefined" || !chrome.tabs) {
+            return { __sendError: "Tab CEISA tidak tersedia." };
+        }
+
+        const sendOnce = () => new Promise((resolve) => {
+            try {
+                chrome.tabs.sendMessage(tabId, message, (res) => {
+                    const errMsg = chrome.runtime?.lastError?.message;
+                    if (errMsg) return resolve({ __sendError: errMsg });
+                    resolve(res);
+                });
+            } catch (err) {
+                resolve({ __sendError: err?.message || "Gagal mengirim pesan ke tab CEISA." });
+            }
+        });
+
+        const firstRes = await sendOnce();
+        if (!firstRes || !firstRes.__sendError) {
+            return firstRes;
+        }
+
+        const isMissingReceiver = /Receiving end does not exist|Could not establish connection/i.test(firstRes.__sendError);
+        if (!allowAutoInject || !isMissingReceiver || !chrome.scripting?.executeScript) {
+            return firstRes;
+        }
+
+        try {
+            let injectPromise = pendingContentInjections.get(tabId);
+            if (!injectPromise) {
+                const manifest = chrome.runtime?.getManifest?.();
+                const manifestScripts = manifest?.content_scripts?.[0]?.js;
+                const filesToInject = Array.isArray(manifestScripts) && manifestScripts.length > 0
+                    ? manifestScripts
+                    : (moduleMode === 'autoinput'
+                        ? ["module_config.js", "config.js", "draft_source_client.js", "content.js"]
+                        : ["module_config.js", "config.js", "sync.js", "content.js"]);
+
+                injectPromise = chrome.scripting.executeScript({
+                    target: { tabId },
+                    files: filesToInject
+                }).then(() => new Promise(r => setTimeout(r, 120)))
+                  .finally(() => pendingContentInjections.delete(tabId));
+
+                pendingContentInjections.set(tabId, injectPromise);
+            }
+            await injectPromise;
+            return await sendOnce();
+        } catch (injectErr) {
+            return {
+                __sendError: `${firstRes.__sendError} (Auto-inject gagal: ${injectErr?.message || 'coba muat ulang tab CEISA'})`
+            };
+        }
+    }
 
     async function checkCeisaPortalTab() {
         if (typeof chrome === "undefined" || !chrome.tabs) return;
@@ -668,7 +831,7 @@ if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onMessage)
                     btnFocusCeisaTab.textContent = "Buka Tab";
                 }
                 appendLog("Terhubung ke tab CEISA 4.0 (ID: " + activeCeisaTab.id + ").", "log-success");
-                queryActiveCeisaSection();
+                queryActiveCeisaSection(true);
             } else {
                 activeCeisaTab = null;
                 if (portalDot) {
@@ -712,49 +875,335 @@ if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onMessage)
     const btnLoadLatestDraft = document.getElementById("btnLoadLatestDraft");
     const autoInputJsonFile = document.getElementById("autoInputJsonFile");
 
-    if (btnSelectTypePib && btnSelectTypePeb) {
-        btnSelectTypePib.addEventListener('click', () => {
-            btnSelectTypePib.classList.add('active');
-            btnSelectTypePeb.classList.remove('active');
-            currentDraftType = 'impor';
-            loadLatestDraftAuto();
+    // Remote Draft Host & Separate Web Host Controls
+    const lblActiveDraftHost = document.getElementById("lblActiveDraftHost");
+    const dotDraftHostStatus = document.getElementById("dotDraftHostStatus");
+    const btnToggleHostPanel = document.getElementById("btnToggleHostPanel");
+    const aiHostPanel = document.getElementById("aiHostPanel");
+    const inputDraftSourceHost = document.getElementById("inputDraftSourceHost");
+    const btnSaveDraftSourceHost = document.getElementById("btnSaveDraftSourceHost");
+    const btnResetDraftSourceLocal = document.getElementById("btnResetDraftSourceLocal");
+    const lblDraftHostConnectInfo = document.getElementById("lblDraftHostConnectInfo");
+    const selectRemoteDraft = document.getElementById("selectRemoteDraft");
+    const btnRefreshRemoteDraftList = document.getElementById("btnRefreshRemoteDraftList");
+    const inputWebHost = document.getElementById("inputWebHost");
+    const btnOpenWebDashboardAuto = document.getElementById("btnOpenWebDashboardAuto");
+
+    const draftClient = typeof CeisaDraftSourceClient !== 'undefined' ? CeisaDraftSourceClient : null;
+    let currentDraftSourceUrl = draftClient ? draftClient.DEFAULT_DRAFT_SOURCE_URL : 'http://localhost:5005';
+    let currentWebHostUrl = draftClient ? draftClient.DEFAULT_WEB_HOST_URL : 'http://localhost:5005';
+    let selectedRemoteFilename = '';
+
+    function updateDraftHostIndicator(statusState, infoText = '') {
+        const shortLabel = draftClient ? draftClient.formatShortHostLabel(currentDraftSourceUrl) : currentDraftSourceUrl.replace(/^https?:\/\//i, '');
+        const isRemote = draftClient ? draftClient.isRemoteSource(currentDraftSourceUrl) : false;
+
+        if (lblActiveDraftHost) {
+            lblActiveDraftHost.textContent = isRemote ? `${shortLabel} (LAN)` : `${shortLabel} (Lokal)`;
+        }
+        if (dotDraftHostStatus) {
+            dotDraftHostStatus.className = 'ai-host-dot';
+            if (statusState === 'error') {
+                dotDraftHostStatus.classList.add('error');
+            } else if (statusState === 'ok') {
+                dotDraftHostStatus.classList.add(isRemote ? 'remote' : 'connected');
+            }
+        }
+        if (lblDraftHostConnectInfo && infoText) {
+            lblDraftHostConnectInfo.textContent = infoText;
+        }
+        const pillEl = document.querySelector('#autoInputDraftSummaryCard .ai-draft-status-pill');
+        if (pillEl) {
+            pillEl.textContent = isRemote ? `LAN: ${shortLabel}` : 'Draft Aktif';
+        }
+    }
+
+    let hostInputsDirty = false;
+    let hostInputSaveTimer = null;
+
+    function applyDraftTypeButtonsUI(draftType) {
+        currentDraftType = draftType === 'ekspor' ? 'ekspor' : 'impor';
+        if (btnSelectTypePib && btnSelectTypePeb) {
+            if (currentDraftType === 'ekspor') {
+                btnSelectTypePeb.classList.add('active');
+                btnSelectTypePib.classList.remove('active');
+            } else {
+                btnSelectTypePib.classList.add('active');
+                btnSelectTypePeb.classList.remove('active');
+            }
+        }
+    }
+
+    async function persistPendingHostInputs() {
+        if (!draftClient) return;
+        if (!hostInputsDirty) return;
+        const saved = await draftClient.saveHostConfigToStorage({
+            draftSourceUrl: inputDraftSourceHost ? inputDraftSourceHost.value : currentDraftSourceUrl,
+            webHostUrl: inputWebHost ? inputWebHost.value : currentWebHostUrl
         });
-        btnSelectTypePeb.addEventListener('click', () => {
-            btnSelectTypePeb.classList.add('active');
-            btnSelectTypePib.classList.remove('active');
-            currentDraftType = 'ekspor';
-            loadLatestDraftAuto();
+        currentDraftSourceUrl = saved.draftSourceUrl;
+        currentWebHostUrl = saved.webHostUrl;
+        hostInputsDirty = false;
+    }
+
+    async function syncHostInputsFromStorage() {
+        if (!draftClient) return;
+        if (hostInputsDirty) {
+            await persistPendingHostInputs();
+        }
+        const cfg = await draftClient.readHostConfigFromStorage();
+        currentDraftSourceUrl = cfg.draftSourceUrl;
+        currentWebHostUrl = cfg.webHostUrl;
+        selectedRemoteFilename = cfg.selectedDraftFilename || '';
+        applyDraftTypeButtonsUI(cfg.draftType);
+
+        if (cfg.lastSection && sectionSelect) {
+            const validSections = ['header', 'entitas', 'dokumen', 'pengangkut', 'kemasan', 'transaksi', 'barang', 'pungutan', 'pernyataan'];
+            if (validSections.includes(cfg.lastSection)) {
+                currentSection = cfg.lastSection;
+                sectionSelect.value = cfg.lastSection;
+            }
+        }
+        if (aiHostPanel && btnToggleHostPanel) {
+            aiHostPanel.style.display = cfg.hostPanelOpen ? 'flex' : 'none';
+            btnToggleHostPanel.textContent = cfg.hostPanelOpen ? 'Tutup Pengaturan' : 'Atur IP / Host';
+        }
+        if (inputDraftSourceHost && (typeof document === 'undefined' || document.activeElement !== inputDraftSourceHost)) {
+            inputDraftSourceHost.value = currentDraftSourceUrl;
+        }
+        if (inputWebHost && (typeof document === 'undefined' || document.activeElement !== inputWebHost)) {
+            inputWebHost.value = currentWebHostUrl;
+        }
+        updateDraftHostIndicator('');
+    }
+
+    async function refreshRemoteDraftDropdown(targetBaseUrl = currentDraftSourceUrl) {
+        if (!draftClient || !selectRemoteDraft) return;
+        const listRes = await draftClient.fetchDraftList(targetBaseUrl, currentDraftType);
+        const prevSelected = selectedRemoteFilename;
+        selectRemoteDraft.innerHTML = '<option value="">Terbaru (Otomatis)</option>';
+
+        if (listRes.ok && Array.isArray(listRes.drafts)) {
+            listRes.drafts.forEach(item => {
+                const opt = document.createElement('option');
+                opt.value = item.filename;
+                const refLabel = item.nomorAju || item.invoiceNumber || item.filename;
+                const countInfo = item.itemCount ? ` (${item.itemCount} brg)` : '';
+                opt.textContent = `${refLabel}${countInfo} - ${item.filename}`;
+                selectRemoteDraft.appendChild(opt);
+            });
+            if (prevSelected && listRes.drafts.some(d => d.filename === prevSelected)) {
+                selectRemoteDraft.value = prevSelected;
+            } else {
+                selectedRemoteFilename = '';
+                selectRemoteDraft.value = '';
+            }
+        }
+    }
+
+    if (btnToggleHostPanel && aiHostPanel) {
+        btnToggleHostPanel.addEventListener('click', async () => {
+            const isHidden = aiHostPanel.style.display === 'none';
+            aiHostPanel.style.display = isHidden ? 'flex' : 'none';
+            btnToggleHostPanel.textContent = isHidden ? 'Tutup Pengaturan' : 'Atur IP / Host';
+            if (draftClient) {
+                await draftClient.saveHostConfigToStorage({ hostPanelOpen: isHidden });
+            }
         });
     }
 
-    // Load Draft from Backend or Storage
-    async function loadLatestDraftAuto() {
-        appendLog(`Memuat draft terbaru (${currentDraftType.toUpperCase()})...`, "log-info");
+    if (btnSaveDraftSourceHost) {
+        btnSaveDraftSourceHost.addEventListener('click', async () => {
+            if (!draftClient) return;
+            hostInputsDirty = false;
+            const rawHost = inputDraftSourceHost ? inputDraftSourceHost.value : '';
+            const rawWeb = inputWebHost ? inputWebHost.value : '';
+            const saved = await draftClient.saveHostConfigToStorage({
+                draftSourceUrl: rawHost,
+                webHostUrl: rawWeb,
+                selectedDraftFilename: ''
+            });
+            currentDraftSourceUrl = saved.draftSourceUrl;
+            currentWebHostUrl = saved.webHostUrl;
+            selectedRemoteFilename = '';
+            if (inputDraftSourceHost) inputDraftSourceHost.value = currentDraftSourceUrl;
+            if (inputWebHost) inputWebHost.value = currentWebHostUrl;
+
+            const health = await draftClient.checkDraftServerHealth(currentDraftSourceUrl);
+            if (health.ok) {
+                updateDraftHostIndicator('ok', `Terhubung ke ${currentDraftSourceUrl}${health.hostIp ? ` (IP PC: ${health.hostIp})` : ''}`);
+                appendLog(`Terhubung ke sumber draft: ${currentDraftSourceUrl}`, 'log-success');
+                await refreshRemoteDraftDropdown(currentDraftSourceUrl);
+                await loadLatestDraftAuto('');
+            } else {
+                updateDraftHostIndicator('error', `Gagal menghubungi ${currentDraftSourceUrl}: ${health.error || 'Cek server & firewall port 5005'}`);
+                appendLog(`Gagal menjangkau sumber draft ${currentDraftSourceUrl} (${health.error || 'offline'}).`, 'log-err');
+            }
+        });
+    }
+
+    if (inputDraftSourceHost) {
+        inputDraftSourceHost.addEventListener('input', () => {
+            hostInputsDirty = true;
+            if (!draftClient) return;
+            if (hostInputSaveTimer) clearTimeout(hostInputSaveTimer);
+            hostInputSaveTimer = setTimeout(() => {
+                persistPendingHostInputs().catch(() => {});
+            }, 180);
+        });
+        inputDraftSourceHost.addEventListener('change', async () => {
+            hostInputsDirty = true;
+            await persistPendingHostInputs();
+            if (inputDraftSourceHost) inputDraftSourceHost.value = currentDraftSourceUrl;
+            updateDraftHostIndicator('');
+        });
+        if (btnSaveDraftSourceHost) {
+            inputDraftSourceHost.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    btnSaveDraftSourceHost.click();
+                }
+            });
+        }
+    }
+
+    if (btnResetDraftSourceLocal) {
+        btnResetDraftSourceLocal.addEventListener('click', async () => {
+            if (!draftClient) return;
+            hostInputsDirty = false;
+            const saved = await draftClient.saveHostConfigToStorage({
+                draftSourceUrl: draftClient.DEFAULT_DRAFT_SOURCE_URL,
+                selectedDraftFilename: ''
+            });
+            currentDraftSourceUrl = saved.draftSourceUrl;
+            selectedRemoteFilename = '';
+            if (inputDraftSourceHost) inputDraftSourceHost.value = currentDraftSourceUrl;
+            updateDraftHostIndicator('', 'Sumber draft dikembalikan ke PC lokal (localhost:5005).');
+            await refreshRemoteDraftDropdown(currentDraftSourceUrl);
+            await loadLatestDraftAuto('');
+        });
+    }
+
+    if (btnRefreshRemoteDraftList) {
+        btnRefreshRemoteDraftList.addEventListener('click', async () => {
+            await persistPendingHostInputs();
+            await refreshRemoteDraftDropdown(currentDraftSourceUrl);
+            appendLog(`Daftar draft dari ${currentDraftSourceUrl} diperbarui.`, 'log-info');
+        });
+    }
+
+    if (selectRemoteDraft) {
+        selectRemoteDraft.addEventListener('change', async () => {
+            selectedRemoteFilename = selectRemoteDraft.value || '';
+            if (draftClient) {
+                await draftClient.saveHostConfigToStorage({ selectedDraftFilename: selectedRemoteFilename });
+            }
+            await loadLatestDraftAuto(selectedRemoteFilename);
+        });
+    }
+
+    if (btnOpenWebDashboardAuto) {
+        btnOpenWebDashboardAuto.addEventListener('click', async () => {
+            const rawWeb = inputWebHost ? inputWebHost.value : null;
+            await openWebDashboardWithAutoStart(btnOpenWebDashboardAuto, rawWeb);
+            if (draftClient && inputWebHost) {
+                const cfg = await draftClient.readHostConfigFromStorage();
+                currentWebHostUrl = cfg.webHostUrl;
+                inputWebHost.value = currentWebHostUrl;
+                hostInputsDirty = false;
+            }
+        });
+    }
+
+    if (inputWebHost) {
+        inputWebHost.addEventListener('input', () => {
+            hostInputsDirty = true;
+            if (!draftClient) return;
+            if (hostInputSaveTimer) clearTimeout(hostInputSaveTimer);
+            hostInputSaveTimer = setTimeout(() => {
+                persistPendingHostInputs().catch(() => {});
+            }, 180);
+        });
+        inputWebHost.addEventListener('change', async () => {
+            hostInputsDirty = true;
+            await persistPendingHostInputs();
+            if (inputWebHost) inputWebHost.value = currentWebHostUrl;
+        });
+    }
+
+    if (btnSelectTypePib && btnSelectTypePeb) {
+        btnSelectTypePib.addEventListener('click', async () => {
+            applyDraftTypeButtonsUI('impor');
+            selectedRemoteFilename = '';
+            if (draftClient) {
+                await draftClient.saveHostConfigToStorage({ draftType: 'impor', selectedDraftFilename: '' });
+            }
+            await loadLatestDraftAuto('');
+        });
+        btnSelectTypePeb.addEventListener('click', async () => {
+            applyDraftTypeButtonsUI('ekspor');
+            selectedRemoteFilename = '';
+            if (draftClient) {
+                await draftClient.saveHostConfigToStorage({ draftType: 'ekspor', selectedDraftFilename: '' });
+            }
+            await loadLatestDraftAuto('');
+        });
+    }
+
+    // Load Draft from Configured Backend (Local / LAN Peer IP) or Storage
+    async function loadLatestDraftAuto(overrideFilename) {
+        await syncHostInputsFromStorage();
+        const targetFilename = overrideFilename !== undefined ? overrideFilename : selectedRemoteFilename;
+        const sourceLabel = draftClient ? draftClient.formatShortHostLabel(currentDraftSourceUrl) : currentDraftSourceUrl;
+        const isRemote = draftClient ? draftClient.isRemoteSource(currentDraftSourceUrl) : false;
+
+        appendLog(`Memuat draft ${currentDraftType.toUpperCase()} dari ${sourceLabel}...`, "log-info");
         try {
-            const resp = await fetch(`http://localhost:5005/api/get-latest-draft?mode=${currentDraftType}`);
-            if (resp.ok) {
-                const draft = await resp.json();
-                if (draft && typeof draft === 'object' && (draft.invoiceNumber || draft.nomorAju || draft.invoices)) {
-                    setDraftData(draft);
-                    appendLog(`Draft berhasil dimuat dari sistem lokal!`, "log-success");
+            if (draftClient) {
+                const res = await draftClient.fetchDraftData(currentDraftSourceUrl, currentDraftType, targetFilename);
+                if (res.ok && res.draft) {
+                    setDraftData(res.draft);
+                    updateDraftHostIndicator('ok', `Draft dimuat dari ${res.sourceUrl}${targetFilename ? ` (${targetFilename})` : ''}`);
+                    appendLog(`Draft berhasil dimuat dari ${isRemote ? 'PC LAN ' + sourceLabel : 'sistem lokal'}!`, "log-success");
+                    refreshRemoteDraftDropdown(currentDraftSourceUrl).catch(() => {});
                     return;
                 }
+                updateDraftHostIndicator('ok', `Terhubung ke ${res.sourceUrl}, belum ada draft ${currentDraftType.toUpperCase()}.`);
+            } else {
+                const resp = await fetch(`${currentDraftSourceUrl}/api/get-latest-draft?mode=${currentDraftType}`);
+                if (resp.ok) {
+                    const draft = await resp.json();
+                    if (draft && typeof draft === 'object' && (draft.invoiceNumber || draft.nomorAju || draft.invoices)) {
+                        setDraftData(draft);
+                        updateDraftHostIndicator('ok');
+                        appendLog(`Draft berhasil dimuat dari ${sourceLabel}!`, "log-success");
+                        return;
+                    }
+                }
             }
-        } catch (_) {}
-
-        // Fallback to chrome.storage
-        if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.local) {
-            const storageKey = currentDraftType === 'impor' ? 'ceisa_pib_draft' : 'ceisa_peb_draft';
-            const data = await chrome.storage.local.get(storageKey);
-            if (data[storageKey]) {
-                setDraftData(data[storageKey]);
-                appendLog(`Draft berhasil dimuat dari memori browser.`, "log-success");
+        } catch (err) {
+            updateDraftHostIndicator('error', `Tidak dapat menghubungi ${currentDraftSourceUrl}: ${err?.message || 'Offline'}`);
+            if (isRemote) {
+                appendLog(`Gagal memuat draft dari PC rekan (${sourceLabel}). Pastikan backend di PC tersebut aktif & port 5005 terbuka.`, "log-err");
                 return;
             }
         }
 
-        appendLog(`Belum ada draft ${currentDraftType.toUpperCase()} aktif. Buka Web Dashboard atau unggah file JSON.`, "log-warn");
+        // Fallback to chrome.storage (hanya jika mode lokal agar tidak tertukar dengan draft LAN)
+        if (!isRemote && typeof chrome !== "undefined" && chrome.storage && chrome.storage.local) {
+            const storageKey = currentDraftType === 'impor' ? 'ceisa_pib_draft' : 'ceisa_peb_draft';
+            const data = await chrome.storage.local.get(storageKey);
+            if (data[storageKey]) {
+                setDraftData(data[storageKey]);
+                appendLog(`Draft berhasil dimuat dari memori browser lokal.`, "log-success");
+                return;
+            }
+        }
+
+        appendLog(`Belum ada draft ${currentDraftType.toUpperCase()} aktif pada ${sourceLabel}. Buat di Web Dashboard atau unggah file JSON.`, "log-warn");
     }
+
+    syncHostInputsFromStorage();
 
     if (btnLoadLatestDraft) {
         btnLoadLatestDraft.addEventListener('click', () => loadLatestDraftAuto());
@@ -1117,16 +1566,12 @@ if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onMessage)
         }
     }
 
-    function queryActiveCeisaSection() {
+    async function queryActiveCeisaSection(allowAutoInject = false) {
         if (!activeCeisaTab?.id) return;
-        try {
-            chrome.tabs.sendMessage(activeCeisaTab.id, { type: "GET_CEISA_ACTIVE_TAB" }, (res) => {
-                if (chrome.runtime?.lastError) return;
-                if (res && res.ok && res.activeSection) {
-                    applyActiveSectionFromCeisa(res.activeSection);
-                }
-            });
-        } catch (_) {}
+        const res = await sendMessageToCeisaTab(activeCeisaTab.id, { type: "GET_CEISA_ACTIVE_TAB" }, allowAutoInject);
+        if (res && !res.__sendError && res.ok && res.activeSection) {
+            applyActiveSectionFromCeisa(res.activeSection);
+        }
     }
 
     if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onMessage) {
@@ -1170,15 +1615,16 @@ if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onMessage)
             currentSection = sectionSelect.value;
             currentItemIndex = 0;
             updateSectionUI();
+            if (draftClient) {
+                draftClient.saveHostConfigToStorage({ lastSection: currentSection }).catch(() => {});
+            }
 
             // Bidirectional: also switch tab on portal CEISA if connected
             if (activeCeisaTab?.id) {
-                chrome.tabs.sendMessage(activeCeisaTab.id, {
+                sendMessageToCeisaTab(activeCeisaTab.id, {
                     type: "CEISA_SWITCH_TAB",
                     section: currentSection
-                }, () => {
-                    if (chrome.runtime?.lastError) {}
-                });
+                }, true).catch(() => {});
             }
         });
     }
@@ -1307,7 +1753,7 @@ if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onMessage)
         appendLog(`Mengirim baris ${currentItemIndex + 1}/${items.length} ke tab CEISA...`, "log-info");
 
         try {
-            chrome.tabs.sendMessage(activeCeisaTab.id, {
+            const res = await sendMessageToCeisaTab(activeCeisaTab.id, {
                 type: "CEISA_AUTO_INPUT_ROW",
                 section: currentSection,
                 draftType: currentDraftType,
@@ -1315,25 +1761,25 @@ if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onMessage)
                 index: currentItemIndex,
                 total: items.length,
                 autofillConfig: currentAutofillConfig
-            }, (res) => {
-                if (chrome.runtime.lastError) {
-                    appendLog(`Error: ${chrome.runtime.lastError.message}`, "log-err");
-                    return;
+            }, true);
+
+            if (res && res.__sendError) {
+                appendLog(`Error: ${res.__sendError}`, "log-err");
+                return;
+            }
+            if (res && res.skipped) {
+                appendLog(`[LEWATI] ${res.message || 'Bagian dilewati sesuai toggle.'}`, "log-info");
+                return;
+            }
+            if (res && res.ok) {
+                appendLog(`[SUKSES] ${res.message || 'Baris berhasil diinput ke CEISA!'}`, "log-success");
+                if (advanceAfter && currentItemIndex < items.length - 1) {
+                    currentItemIndex++;
+                    updateSectionUI();
                 }
-                if (res && res.skipped) {
-                    appendLog(`[LEWATI] ${res.message || 'Bagian dilewati sesuai toggle.'}`, "log-info");
-                    return;
-                }
-                if (res && res.ok) {
-                    appendLog(`[SUKSES] ${res.message || 'Baris berhasil diinput ke CEISA!'}`, "log-success");
-                    if (advanceAfter && currentItemIndex < items.length - 1) {
-                        currentItemIndex++;
-                        updateSectionUI();
-                    }
-                } else {
-                    appendLog(`[PERINGATAN] ${(res && res.message) || 'Halaman CEISA belum siap atau field tidak ditemukan.'}`, "log-warn");
-                }
-            });
+            } else {
+                appendLog(`[PERINGATAN] ${(res && res.message) || 'Halaman CEISA belum siap atau field tidak ditemukan.'}`, "log-warn");
+            }
         } catch (e) {
             appendLog(`Kesalahan komunikasi: ${e.message}`, "log-err");
         }
@@ -1466,5 +1912,18 @@ if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onMessage)
         btnClearLog.addEventListener('click', () => {
             logBody.innerHTML = '';
         });
+    }
+
+    // Restore last active mode or force standalone module mode AFTER all state variables are initialized
+    if (moduleMode === 'autoinput') {
+        switchMode('autoinput');
+    } else if (moduleMode === 'scanner') {
+        switchMode('scanner');
+    } else if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.local) {
+        chrome.storage.local.get("popup_active_tab").then(res => {
+            if (res && res.popup_active_tab === 'autoinput') {
+                switchMode('autoinput');
+            }
+        }).catch(() => {});
     }
 })();
