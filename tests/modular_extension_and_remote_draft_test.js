@@ -966,6 +966,168 @@ function collectManifestAssetPaths(manifest) {
         dom.window.close();
     });
 
+    await runTest('17. Visual proximity plain-div grid (live CEISA layout) + checkbox-gated Salin Seri with async Simpan spinner', async () => {
+        const modDir = path.join(ROOT_DIR, 'extensions', 'ceisa-auto-input');
+        const dom = new JSDOM(`<!doctype html><html><body>
+            <div class="ant-tabs-tabpane-active" id="rootPane"></div>
+        </body></html>`, { url: 'https://portal.beacukai.go.id/', runScripts: 'outside-only' });
+
+        const doc = dom.window.document;
+        const rootPane = doc.getElementById('rootPane');
+        const mockRect = (el, x, y, w, h) => {
+            if (!el) return;
+            el.getBoundingClientRect = () => ({ left: x, top: y, right: x + w, bottom: y + h, width: w, height: h });
+        };
+
+        const savedRows = [{ seri: 1, qty: '1', netto: '32', bruto: '37', amount: '80800', selected: false }];
+        let pickedSatuan = false;
+
+        function renderTable() {
+            rootPane.innerHTML = `
+                <button type="button" id="btnCopyToolbar" disabled>Salin Seri</button>
+                <table><tbody id="tbRows">
+                    ${savedRows.map((r, i) => `
+                        <tr data-row="${i}">
+                            <td><input type="checkbox" class="ant-checkbox-input" data-idx="${i}" ${r.selected ? 'checked' : ''} /></td>
+                            <td>${r.seri}</td>
+                            <td><button type="button" class="btn-ubah" data-idx="${i}">Ubah</button></td>
+                        </tr>
+                    `).join('')}
+                </tbody></table>
+            `;
+            rootPane.querySelectorAll('.ant-checkbox-input').forEach(cb => {
+                cb.addEventListener('change', () => {
+                    const idx = parseInt(cb.getAttribute('data-idx'), 10);
+                    savedRows[idx].selected = cb.checked;
+                    doc.getElementById('btnCopyToolbar').disabled = !savedRows.some(r => r.selected);
+                });
+            });
+            doc.getElementById('btnCopyToolbar').addEventListener('click', () => {
+                const newSeri = savedRows.length + 1;
+                savedRows.push({ seri: newSeri, qty: '1', netto: '32', bruto: '37', amount: '80800', selected: false });
+                renderForm(newSeri);
+            });
+            rootPane.querySelectorAll('.btn-ubah').forEach(b => {
+                b.addEventListener('click', () => renderForm(parseInt(b.getAttribute('data-idx'), 10) + 1));
+            });
+        }
+
+        function renderForm(seriNo) {
+            // Plain <div> grid WITHOUT .ant-col / .ant-row / .ant-form-item wrappers, plus nested containers to exercise visual proximity!
+            rootPane.innerHTML = `
+                <button type="button" id="btnSimpan">Simpan</button>
+                <div class="custom-two-col">
+                    <div class="left-labels">
+                        <div id="lSeri">Seri</div>
+                        <div id="lUraian">Uraian Jenis Barang</div>
+                    </div>
+                    <div class="left-inputs">
+                        <input id="fSeri" disabled value="${seriNo}" />
+                        <textarea id="fUraian"></textarea>
+                    </div>
+                    <div class="right-labels">
+                        <div id="lQty">Jumlah dan Satuan Barang</div>
+                        <div id="lPkg">Kemasan</div>
+                        <div id="lNetto">Berat Bersih (Kg)</div>
+                        <div id="lBruto">Berat Kotor (Kg)</div>
+                        <div id="lAmt">Amount FCA</div>
+                    </div>
+                    <div class="right-inputs">
+                        <input id="fQty" type="text" />
+                        <div class="ant-select" id="selSatWrap"><input id="fSat" type="search" /></div>
+                        <input id="fPkgQty" type="text" />
+                        <input id="fNetto" type="text" />
+                        <input id="fBruto" type="text" />
+                        <input id="fAmt" type="text" />
+                    </div>
+                </div>
+                <div id="ddHost"></div>
+            `;
+            mockRect(doc.getElementById('lSeri'), 50, 50, 120, 24);
+            mockRect(doc.getElementById('fSeri'), 200, 48, 220, 28);
+            mockRect(doc.getElementById('lUraian'), 50, 110, 140, 24);
+            mockRect(doc.getElementById('fUraian'), 200, 108, 220, 60);
+
+            mockRect(doc.getElementById('lQty'), 500, 50, 140, 24);
+            mockRect(doc.getElementById('fQty'), 660, 48, 120, 28);
+            mockRect(doc.getElementById('selSatWrap'), 790, 48, 160, 28);
+            mockRect(doc.getElementById('fSat'), 790, 48, 160, 28);
+
+            mockRect(doc.getElementById('lPkg'), 500, 90, 140, 24);
+            mockRect(doc.getElementById('fPkgQty'), 660, 88, 120, 28);
+
+            mockRect(doc.getElementById('lNetto'), 500, 130, 140, 24);
+            mockRect(doc.getElementById('fNetto'), 660, 128, 290, 28);
+
+            mockRect(doc.getElementById('lBruto'), 500, 170, 140, 24);
+            mockRect(doc.getElementById('fBruto'), 660, 168, 290, 28);
+
+            mockRect(doc.getElementById('lAmt'), 500, 210, 140, 24);
+            mockRect(doc.getElementById('fAmt'), 660, 208, 290, 28);
+
+            doc.getElementById('fSat').addEventListener('input', () => {
+                doc.getElementById('ddHost').innerHTML = `<div class="ant-select-dropdown"><div id="optKgm" class="ant-select-item-option" title="KGM - KILOGRAM">KGM - KILOGRAM</div></div>`;
+                doc.getElementById('optKgm').addEventListener('click', () => { pickedSatuan = true; });
+            });
+
+            doc.getElementById('btnSimpan').addEventListener('click', () => {
+                const spin = doc.createElement('div');
+                spin.className = 'ant-spin-spinning';
+                rootPane.appendChild(spin);
+                const snap = {
+                    seri: seriNo,
+                    uraian: doc.getElementById('fUraian').value,
+                    qty: doc.getElementById('fQty').value,
+                    netto: doc.getElementById('fNetto').value,
+                    bruto: doc.getElementById('fBruto').value,
+                    amount: doc.getElementById('fAmt').value,
+                    selected: false
+                };
+                setTimeout(() => {
+                    savedRows[seriNo - 1] = snap;
+                    renderTable();
+                }, 420);
+            });
+        }
+
+        renderForm(1);
+        dom.window.chrome = {
+            runtime: { onMessage: { addListener: () => {} }, sendMessage: () => {} },
+            storage: { local: { get: () => {}, set: () => {} }, onChanged: { addListener: () => {} } }
+        };
+        dom.window.eval(fs.readFileSync(path.join(modDir, 'module_config.js'), 'utf8'));
+        dom.window.eval(fs.readFileSync(path.join(modDir, 'content.js'), 'utf8'));
+
+        const res1 = await dom.window.handleCeisaAutoInputRowAsync({
+            type: 'CEISA_AUTO_INPUT_ROW',
+            section: 'barang',
+            index: 0,
+            total: 2,
+            saveAfterFill: true,
+            item: { hsCode: '39073090', uraianJenisBarang: 'EPOXY RESIN', jumlahDanSatuanBarang: '32 KGM', kemasanQty: 3, beratBersih: 16, beratKotor: 18.5, amount: 80800 }
+        });
+        assert.strictEqual(res1.ok, true);
+        assert.strictEqual(pickedSatuan, true, 'Visual proximity must pick the right-hand Ant Select for Satuan');
+        assert.strictEqual(savedRows[0].qty, '32');
+        assert.strictEqual(savedRows[0].netto, '16');
+        assert.strictEqual(savedRows[0].bruto, '18.5');
+        assert.strictEqual(savedRows[0].amount, '80800');
+
+        // Seri 2 arrives while table is displayed with disabled toolbar Salin Seri until row checkbox checked
+        const res2 = await dom.window.handleCeisaAutoInputRowAsync({
+            type: 'CEISA_AUTO_INPUT_ROW',
+            section: 'barang',
+            index: 1,
+            total: 2,
+            saveAfterFill: true,
+            item: { hsCode: '39073090', uraianJenisBarang: 'RESIN ME-255', jumlahDanSatuanBarang: '10 KGM', kemasanQty: 3, beratBersih: 10, beratKotor: 23, amount: 65000 }
+        });
+        assert.strictEqual(res2.ok, true);
+        assert.strictEqual(savedRows.length, 2, 'Checkbox-gated Salin Seri + async Simpan spinner must create Seri 2');
+        assert.deepStrictEqual([savedRows[1].seri, savedRows[1].uraian, savedRows[1].qty, savedRows[1].netto, savedRows[1].bruto, savedRows[1].amount], [2, 'RESIN ME-255', '10', '10', '23', '65000']);
+        dom.window.close();
+    });
+
     console.log(`\n============================================================`);
     console.log(`  TOTAL: ${passed + failed} | PASSED: ${passed} | FAILED: ${failed}`);
     console.log(`============================================================\n`);

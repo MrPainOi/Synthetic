@@ -2048,12 +2048,26 @@
         const attrHit = findAttrMatch(candidates);
         if (attrHit) return attrHit;
 
-        // 2. Match by Label / Heading association (urutan ketat dari pembungkus terdalam agar tidak mencuri field kolom luar)
+        // 2. Match by Label / Heading association (urutan ketat dari leaf label -> DOM sibling/row -> visual bounding-box)
+        const isGenericContainerTag = (el) => {
+            const tag = el.tagName;
+            if (tag !== "DIV" && tag !== "TD") return false;
+            if (el.classList && (el.classList.contains("ant-form-item-label") || el.classList.contains("ceisa-item-label") || el.classList.contains("ant-descriptions-item-label") || el.classList.contains("ant-col"))) {
+                return false;
+            }
+            return true;
+        };
+
         const labelEls = Array.from(parent.querySelectorAll(
-            ".ant-form-item-label label, .ant-form-item-label, .form-group label, label, .ceisa-item-label, .ant-descriptions-item-label, th, span, p, div.ant-col, strong"
+            ".ant-form-item-label label, .ant-form-item-label, .form-group label, label, .ceisa-item-label, .ant-descriptions-item-label, th, td, div, span, p, strong, b, h4, h5, h6"
         )).filter(el => {
             if (isElementHiddenOrInactive(el)) return false;
             if (el.querySelector && el.querySelector("input, textarea, select")) return false;
+            if (isGenericContainerTag(el) && el.querySelector && el.querySelector("div, td, p, label, table, ul, ol, h4, h5, h6")) {
+                return false;
+            }
+            const rawTxt = (el.innerText || el.textContent || "").replace(/\s+/g, " ").trim();
+            if (!rawTxt || rawTxt.length > 90) return false;
             return true;
         });
 
@@ -2077,12 +2091,75 @@
             return cnt >= 1 && cnt <= 4;
         };
 
+        const findControlByVisualProximity = (lbl, controlList) => {
+            if (!lbl || typeof lbl.getBoundingClientRect !== "function" || !controlList || controlList.length === 0) return null;
+            const lblRect = lbl.getBoundingClientRect();
+            if (!lblRect || lblRect.width <= 0 || lblRect.height <= 0) return null;
+
+            const lblMidY = lblRect.top + lblRect.height / 2;
+            let bestHorizontal = null;
+            let bestHorizontalScore = Infinity;
+            let bestBelow = null;
+            let bestBelowScore = Infinity;
+
+            for (const ctrl of controlList) {
+                const anchorEl = (ctrl.closest && ctrl.closest(".ant-select, .ant-input-number, .ant-input-affix-wrapper, .ant-picker")) || ctrl;
+                let r = typeof anchorEl.getBoundingClientRect === "function" ? anchorEl.getBoundingClientRect() : null;
+                if ((!r || r.width <= 0 || r.height <= 0) && anchorEl !== ctrl && typeof ctrl.getBoundingClientRect === "function") {
+                    r = ctrl.getBoundingClientRect();
+                }
+                if (!r || r.width <= 0 || r.height <= 0) continue;
+
+                const ctrlMidY = r.top + r.height / 2;
+                const dy = Math.abs(ctrlMidY - lblMidY);
+                const maxSameRowDy = Math.max(24, lblRect.height * 0.9, r.height * 0.75);
+                const dx = r.left - lblRect.right;
+
+                // Prioritas 1: Sejajar horizontal di sebelah kanan label ([Label] [Input] [Select])
+                if (dy <= maxSameRowDy && dx >= -24 && dx <= 460 && r.right > lblRect.left) {
+                    const score = dy * 4 + Math.max(0, dx);
+                    if (score < bestHorizontalScore) {
+                        bestHorizontalScore = score;
+                        bestHorizontal = ctrl;
+                    }
+                    continue;
+                }
+
+                // Prioritas 2: Bertumpuk vertikal tepat di bawah label
+                const vGap = r.top - lblRect.bottom;
+                const xAlignDiff = Math.abs(r.left - lblRect.left);
+                const horizOverlap = r.left < lblRect.right + 40 && r.right > lblRect.left - 24;
+                if (vGap >= -8 && vGap <= 48 && (xAlignDiff <= 140 || horizOverlap)) {
+                    const score = Math.max(0, vGap) * 2 + xAlignDiff * 0.5;
+                    if (score < bestBelowScore) {
+                        bestBelowScore = score;
+                        bestBelow = ctrl;
+                    }
+                }
+            }
+
+            return bestHorizontal || bestBelow || null;
+        };
+
         for (const kw of keywords) {
             const lowerKw = kw.toLowerCase();
+            const matchingLabels = [];
             for (const lbl of labelEls) {
                 const text = (lbl.innerText || lbl.textContent || "").toLowerCase().replace(/\s+/g, " ").trim();
                 if (!text || text.length > 90 || !text.includes(lowerKw)) continue;
+                const cleanText = text.replace(/[*:\s]+$/g, "").trim();
+                const isExact = cleanText === lowerKw || text === lowerKw;
+                const isExplicitLabel = Boolean(lbl.tagName === "LABEL" || (lbl.classList && (lbl.classList.contains("ant-form-item-label") || lbl.classList.contains("ceisa-item-label") || lbl.classList.contains("ant-descriptions-item-label"))));
+                matchingLabels.push({ lbl, text, isExact, isExplicitLabel, len: text.length });
+            }
 
+            matchingLabels.sort((a, b) =>
+                (a.isExact !== b.isExact ? (a.isExact ? -1 : 1) : 0) ||
+                (a.isExplicitLabel !== b.isExplicitLabel ? (a.isExplicitLabel ? -1 : 1) : 0) ||
+                (a.len - b.len)
+            );
+
+            for (const { lbl } of matchingLabels) {
                 const forAttr = lbl.getAttribute("for") || lbl.querySelector?.("label[for]")?.getAttribute("for");
                 if (forAttr) {
                     let byId = null;
@@ -2102,8 +2179,18 @@
                     if (inp) return inp;
                 }
 
-                // B. Horizontal Ant Design / grid siblings: [Label Col] [Control Col 1] [Control Col 2]
-                const colEl = lbl.closest(".ant-col") || lbl.parentElement;
+                // B1. Sibling langsung dari leaf label (mis. <div>Label</div><div><input></div>)
+                let directSib = lbl.nextElementSibling;
+                let directHops = 0;
+                while (directSib && directHops < 3) {
+                    const directInp = pickFirstControlIn(directSib);
+                    if (directInp) return directInp;
+                    directSib = directSib.nextElementSibling;
+                    directHops++;
+                }
+
+                // B2. Horizontal Ant Design / grid column siblings: [Label Col] [Control Col 1] [Control Col 2]
+                const colEl = lbl.closest(".ant-form-item-label, .ant-col");
                 if (colEl) {
                     let sib = colEl.nextElementSibling;
                     let hops = 0;
@@ -2121,6 +2208,12 @@
                     const rowInp = pickFirstControlIn(localRow);
                     if (rowInp) return rowInp;
                 }
+            }
+
+            // 3. Visual bounding-box proximity fallback (ketika struktur DOM grid custom tidak memakai .ant-col/.ant-row standar)
+            for (const { lbl } of matchingLabels) {
+                const visualInp = findControlByVisualProximity(lbl, candidates);
+                if (visualInp) return visualInp;
             }
         }
 
@@ -2624,12 +2717,15 @@
             if (val !== undefined && val !== null && String(val).trim() !== "") val = formatNumVal(val);
             const fobStr = (fobVal !== undefined && fobVal !== null && String(fobVal).trim() !== "") ? formatNumVal(fobVal) : "";
 
-            const fillBarangSection = (scope) => {
+            const missedFields = [];
+            const fillBarangSection = (scope, recordMissing = false) => {
                 const tryFill = (kws, value, label, fieldOpts = {}) => {
                     if (value === undefined || value === null || String(value).trim() === "") return;
                     const inp = findFieldByKeywords(kws, scope, fieldOpts);
                     if (inp && setNativeInputValue(inp, value)) {
                         filledFields.push(label + ': ' + String(value).slice(0, 18));
+                    } else if (recordMissing) {
+                        missedFields.push(label);
                     }
                 };
 
@@ -2671,9 +2767,10 @@
                 }
             };
 
-            fillBarangSection(container);
+            fillBarangSection(container, true);
             if (filledFields.length === 0 && container !== document) {
-                fillBarangSection(document);
+                missedFields.length = 0;
+                fillBarangSection(document, true);
             }
 
             if (filledFields.length === 0) {
@@ -2691,11 +2788,13 @@
             }
 
             const successMsg = 'Barang [' + (index + 1) + '/' + total + '] HS ' + hs + ': ' + desc.substring(0, 25) + ' dimasukkan.';
+            const missingSuffix = missedFields.length > 0 ? ' | Tidak cocok: ' + missedFields.join(', ') : '';
             showCeisaAutoInputToast('Auto Input Barang (' + (index + 1) + '/' + total + ')', 'HS ' + hs + ' | Qty: ' + qty + ' ' + uom + ' | Val: ' + val, 'success');
 
             return {
                 ok: true,
-                message: successMsg + ' (' + filledFields.join(', ') + ')'
+                missedFields,
+                message: successMsg + ' (' + filledFields.join(', ') + ')' + missingSuffix
             };
         }
 
@@ -3290,6 +3389,38 @@
         }
     }
 
+    async function clickToolbarCopyWithRowSelect(rows) {
+        const targetRow = rows && rows.length > 0 ? rows[rows.length - 1] : null;
+        if (targetRow) {
+            const cb = targetRow.querySelector('.ant-checkbox-input:not(:disabled), input[type="checkbox"]:not(:disabled)');
+            if (cb && !cb.checked) {
+                cb.click();
+                await sleepMs(160);
+            }
+        }
+        const globalCopy = findVisibleActionButton([/salin\s*seri/i, /^\s*salin\b/i]);
+        if (globalCopy && !globalCopy.disabled) {
+            globalCopy.click();
+            return true;
+        }
+        const prevRowCopy = targetRow ? findRowActionBtn(targetRow, "copy") : null;
+        if (prevRowCopy && !prevRowCopy.disabled) {
+            prevRowCopy.click();
+            return true;
+        }
+        return false;
+    }
+
+    async function waitBarangSaveSettled(targetNextSeri) {
+        await waitUntilCondition(() => {
+            const spinning = Boolean(document.querySelector(".ant-spin-spinning"));
+            if (spinning) return false;
+            const nowSeri = readDisabledOrActiveSeriInput(findCeisaTargetContainer()) || readDisabledOrActiveSeriInput(document);
+            return !isBarangDetailFormOpen() || (targetNextSeri && nowSeri && nowSeri >= targetNextSeri);
+        }, 4500, 120);
+        await sleepMs(180);
+    }
+
     async function prepareBarangFormForTargetSeri(targetSeri) {
         // 1. Jika form belum terbuka, buka otomatis (Edit baris ada atau Tambah / Salin Seri)
         if (!isBarangDetailFormOpen()) {
@@ -3302,7 +3433,7 @@
                 } else if (addBtn) {
                     addBtn.click();
                 }
-                await waitUntilCondition(() => isBarangDetailFormOpen(), 1800, 100);
+                await waitUntilCondition(() => isBarangDetailFormOpen(), 2200, 100);
                 return;
             }
 
@@ -3311,33 +3442,27 @@
                 const targetEdit = findRowActionBtn(rows[targetSeri - 1], "edit");
                 if (targetEdit) {
                     targetEdit.click();
-                    await waitUntilCondition(() => isBarangDetailFormOpen(), 1800, 100);
+                    await waitUntilCondition(() => isBarangDetailFormOpen(), 2200, 100);
                     return;
                 }
             }
 
-            const prevRowCopy = rows[rows.length - 1] ? findRowActionBtn(rows[rows.length - 1], "copy") : null;
-            const globalCopy = findVisibleActionButton([/salin\s*seri/i, /^\s*salin\b/i]);
-            const addBtn = findVisibleActionButton([/^\s*\+?\s*tambah\b/i, /tambah\s*barang/i]);
-
-            if (globalCopy) {
-                globalCopy.click();
-            } else if (prevRowCopy) {
-                prevRowCopy.click();
-            } else if (addBtn) {
-                addBtn.click();
+            const copied = await clickToolbarCopyWithRowSelect(rows);
+            if (!copied) {
+                const addBtn = findVisibleActionButton([/^\s*\+?\s*tambah\b/i, /tambah\s*barang/i]);
+                if (addBtn) addBtn.click();
             }
             await handleConfirmModalIfAny();
 
             // Tunggu sampai form terbuka langsung ATAU baris tabel bertambah jadi targetSeri lalu klik Edit baris baru
-            await waitUntilCondition(() => isBarangDetailFormOpen() || findBarangTableRows().length >= targetSeri, 1800, 100);
+            await waitUntilCondition(() => !document.querySelector(".ant-spin-spinning") && (isBarangDetailFormOpen() || findBarangTableRows().length >= targetSeri), 3000, 120);
             if (!isBarangDetailFormOpen()) {
                 const updatedRows = findBarangTableRows();
                 if (updatedRows.length >= targetSeri) {
                     const newEditBtn = findRowActionBtn(updatedRows[targetSeri - 1], "edit") || findRowActionBtn(updatedRows[updatedRows.length - 1], "edit");
                     if (newEditBtn) {
                         newEditBtn.click();
-                        await waitUntilCondition(() => isBarangDetailFormOpen(), 1800, 100);
+                        await waitUntilCondition(() => isBarangDetailFormOpen(), 2200, 100);
                     }
                 }
             }
@@ -3352,11 +3477,7 @@
                 findVisibleActionButton([/^\s*simpan\b/i, /simpan/i], document);
             if (saveBtn) {
                 saveBtn.click();
-                await waitUntilCondition(() => {
-                    const nowSeri = readDisabledOrActiveSeriInput(findCeisaTargetContainer()) || readDisabledOrActiveSeriInput(document);
-                    return !isBarangDetailFormOpen() || (nowSeri && nowSeri >= targetSeri);
-                }, 1500, 100);
-                await sleepMs(150);
+                await waitBarangSaveSettled(targetSeri);
             }
 
             // Re-evaluasi setelah Simpan: jika kembali ke tabel atau masih di Seri lama, buka/buat Seri targetSeri
@@ -3367,23 +3488,22 @@
                     const targetEdit = findRowActionBtn(rows[targetSeri - 1], "edit");
                     if (targetEdit) {
                         targetEdit.click();
-                        await waitUntilCondition(() => isBarangDetailFormOpen(), 1800, 100);
+                        await waitUntilCondition(() => isBarangDetailFormOpen(), 2200, 100);
                         return;
                     }
                 }
-                const globalCopy = findVisibleActionButton([/salin\s*seri/i, /^\s*salin\b/i]);
-                const prevRowCopy = rows[rows.length - 1] ? findRowActionBtn(rows[rows.length - 1], "copy") : null;
-                const addBtn = findVisibleActionButton([/^\s*\+?\s*tambah\b/i, /tambah\s*barang/i]);
-
-                if (globalCopy) globalCopy.click();
-                else if (prevRowCopy) prevRowCopy.click();
-                else if (addBtn) addBtn.click();
+                const copied = await clickToolbarCopyWithRowSelect(rows);
+                if (!copied) {
+                    const addBtn = findVisibleActionButton([/^\s*\+?\s*tambah\b/i, /tambah\s*barang/i]);
+                    if (addBtn) addBtn.click();
+                }
 
                 await handleConfirmModalIfAny();
                 await waitUntilCondition(() => {
+                    if (document.querySelector(".ant-spin-spinning")) return false;
                     const s = readDisabledOrActiveSeriInput(findCeisaTargetContainer()) || readDisabledOrActiveSeriInput(document);
                     return (isBarangDetailFormOpen() && (!s || s >= targetSeri)) || (!isBarangDetailFormOpen() && findBarangTableRows().length >= targetSeri);
-                }, 1800, 100);
+                }, 3000, 120);
 
                 if (!isBarangDetailFormOpen()) {
                     const updatedRows = findBarangTableRows();
@@ -3392,7 +3512,7 @@
                         : (updatedRows.length > 0 ? findRowActionBtn(updatedRows[updatedRows.length - 1], "edit") : null);
                     if (newEditBtn) {
                         newEditBtn.click();
-                        await waitUntilCondition(() => isBarangDetailFormOpen(), 1800, 100);
+                        await waitUntilCondition(() => isBarangDetailFormOpen(), 2200, 100);
                     }
                 }
             }
@@ -3463,7 +3583,12 @@
                 findVisibleActionButton([/^\s*simpan\b/i, /simpan/i], document);
             if (saveBtn) {
                 saveBtn.click();
-                await sleepMs(350);
+                if (section === "barang") {
+                    await waitBarangSaveSettled(null);
+                } else {
+                    await waitUntilCondition(() => !document.querySelector(".ant-spin-spinning"), 2500, 120);
+                    await sleepMs(200);
+                }
             }
         }
 
