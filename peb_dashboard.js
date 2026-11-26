@@ -3,6 +3,11 @@
 // peb_dashboard.js - 100% External, Chrome Extension CSP Compliant
 // ====================================================================
 
+// Normalisasi HS Code Tab Barang PEB agar hanya digit tanpa titik ("7326.90.99" -> "73269099")
+function normalizePebHsCode(val) {
+    return String(val || '').replace(/\./g, '').replace(/[^0-9]/g, '').trim();
+}
+
 // Helper resolver URL backend dinamis (Localhost vs WiFi IP / HP)
 function getBackendUrl(path = '') {
     if (typeof window.getCeisaBackendUrl === 'function') {
@@ -264,7 +269,11 @@ function collectFormData() {
 
     rows.forEach(r => {
         if (r.querySelector('td[colspan]')) return;
-        const hsCode = r.querySelector('.item-hscode')?.value.trim() || '';
+        const hsCodeEl = r.querySelector('.item-hscode');
+        const hsCode = normalizePebHsCode(hsCodeEl?.value);
+        if (hsCodeEl && hsCodeEl.value !== hsCode) {
+            hsCodeEl.value = hsCode;
+        }
         const desc = r.querySelector('.item-desc')?.value.trim();
         const qtyVal = r.querySelector('.item-qty-val')?.value.trim();
         const qtyUnit = r.querySelector('.item-qty-unit')?.value || 'PCE';
@@ -1292,11 +1301,12 @@ function appendItemRow(item = {}, rowNum = null) {
     const qtyInfo = parseQtyAndUnit(item.jumlahDanSatuanBarang || item.jumlahBarang, item.satuanBarang);
     const packInfo = parsePackaging(item);
 
+    const cleanHs = normalizePebHsCode(item.hsCode || item.posTarif || '');
     const tr = document.createElement('tr');
     tr.innerHTML = `
         <td style="text-align: center; font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--text-muted); vertical-align: top; padding-top: 10px;" class="row-num-cell">${index}</td>
         <td style="vertical-align: top;">
-            <input type="text" class="table-input-mono item-hscode" value="${escapeHtml(item.hsCode || item.posTarif || '')}" placeholder="Pos Tarif..." maxlength="15" title="Pos Tarif / HS Code">
+            <input type="text" class="table-input-mono item-hscode" value="${escapeHtml(cleanHs)}" placeholder="Pos Tarif..." maxlength="15" title="Pos Tarif / HS Code">
         </td>
         <td style="vertical-align: top;">
             <textarea class="table-input-text item-desc" rows="2" placeholder="Uraian jenis barang...">${escapeHtml(item.uraianJenisBarang || '')}</textarea>
@@ -1381,6 +1391,15 @@ function appendItemRow(item = {}, rowNum = null) {
         </td>
     `;
     tbody.appendChild(tr);
+    const hsField = tr.querySelector('.item-hscode');
+    if (hsField) {
+        hsField.addEventListener('input', () => {
+            const clean = normalizePebHsCode(hsField.value);
+            if (hsField.value !== clean) {
+                hsField.value = clean;
+            }
+        });
+    }
     autoGrow(tr.querySelector('.item-desc'));
 }
 
@@ -1923,7 +1942,7 @@ const SAMPLE_DATA = {
     "totalNetWeightKGM": "1,345.60 KG",
     "items": [
         {
-            "hsCode": "8512.40.00",
+            "hsCode": "85124000",
             "uraianJenisBarang": "FG AC Delco US Gold Hybrid 21\" 525mm",
             "jumlahDanSatuanBarang": "960 PCS",
             "kemasan": "816 BX",
@@ -1932,7 +1951,7 @@ const SAMPLE_DATA = {
             "amount": "1,929.60"
         },
         {
-            "hsCode": "8512.40.00",
+            "hsCode": "85124000",
             "uraianJenisBarang": "FG AC Delco US Silver SVB 21\" 525mm",
             "jumlahDanSatuanBarang": "960 PCS",
             "kemasan": "816 BX",
@@ -1941,7 +1960,7 @@ const SAMPLE_DATA = {
             "amount": "1,545.60"
         },
         {
-            "hsCode": "8512.40.00",
+            "hsCode": "85124000",
             "uraianJenisBarang": "FG AC Delco US Silver SVB 26\" 650mm",
             "jumlahDanSatuanBarang": "800 PCS",
             "kemasan": "816 BX",
@@ -1950,7 +1969,7 @@ const SAMPLE_DATA = {
             "amount": "1,520.00"
         },
         {
-            "hsCode": "8512.40.00",
+            "hsCode": "85124000",
             "uraianJenisBarang": "FG AC Delco US Silver SVB 18\" 450mm",
             "jumlahDanSatuanBarang": "5,440 PCS",
             "kemasan": "816 BX",
@@ -3508,9 +3527,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 switchCeisaTab('tab-barang');
                 const hsInput = document.querySelector('#tab-barang input[placeholder*="Pos Tarif"], #tab-barang input[name*="hs"], #tab-barang .hs-code-input');
                 const descInput = document.querySelector('#tab-barang textarea[placeholder*="Uraian"], #tab-barang input[placeholder*="Uraian"]');
-                if (hsInput) hsInput.value = hsPayload.hsCode;
+                const cleanAppliedHs = normalizePebHsCode(hsPayload.hsCode);
+                if (hsInput) hsInput.value = cleanAppliedHs;
                 if (descInput) descInput.value = hsPayload.uraian;
-                showToast(`Pos Tarif ${hsPayload.hsCode} berhasil diterapkan ke Draft PEB!`, 'success');
+                showToast(`Pos Tarif ${cleanAppliedHs} berhasil diterapkan ke Draft PEB!`, 'success');
             }
         } catch (e) {}
     }

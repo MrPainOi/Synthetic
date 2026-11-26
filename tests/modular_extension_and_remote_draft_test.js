@@ -89,6 +89,8 @@ function collectManifestAssetPaths(manifest) {
             if (manifest.host_permissions) {
                 assert(manifest.host_permissions.includes('http://*/*'), `${modName} must permit LAN http://*/* fetches`);
             }
+            const csp = manifest.content_security_policy?.extension_pages || '';
+            assert(csp.includes("script-src 'self'") && !csp.includes('upgrade-insecure-requests'), `${modName} CSP must allow plain HTTP LAN fetches without upgrade-insecure-requests`);
         });
     });
 
@@ -545,6 +547,422 @@ function collectManifestAssetPaths(manifest) {
         await window.document.getElementById('openDashboard').onclick();
         assert.strictEqual(serverStarted, true, 'Must attempt START_BACKEND_SERVER when localhost:5005 is down');
         assert.strictEqual(openedUrls[0], 'http://localhost:5005/dashboard.html');
+        dom.window.close();
+    });
+
+    await runTest('11. HS Code di Tab Barang PIB/PEB, Auto Input preview & backend parser bebas titik (7326.90.99 -> 73269099)', async () => {
+        // 1) PIB Dashboard: loadPibDraftData & table/input rendering
+        const pibHtml = fs.readFileSync(path.join(ROOT_DIR, 'pib.html'), 'utf8');
+        const pibJs = fs.readFileSync(path.join(ROOT_DIR, 'pib_dashboard.js'), 'utf8');
+        const pibDom = new JSDOM(pibHtml, { url: 'http://localhost:5005/pib.html', runScripts: 'outside-only' });
+        pibDom.window.Element.prototype.scrollIntoView = () => {};
+        pibDom.window.showToast = () => {};
+        pibDom.window.fetch = async () => ({ ok: true, json: async () => null });
+        pibDom.window.eval(pibJs);
+
+        assert.strictEqual(pibDom.window.normalizePibHsCode('7326.90.99'), '73269099');
+        pibDom.window.loadPibDraftData({
+            nomorAju: '000020-HS-TEST',
+            items: [{ hsCode: '7326.90.99', uraianJenisBarang: 'Bracket Besi', jumlahDanSatuanBarang: '10 PCE', amount: '100' }]
+        });
+        const pibTableHs = pibDom.window.document.querySelector('#pibItemsTableBody .cell-pib-hscode')?.textContent?.trim();
+        assert.strictEqual(pibTableHs, '73269099');
+        pibDom.window.openPibItemEditor(0);
+        assert.strictEqual(pibDom.window.document.getElementById('pibItemHsCode').value, '73269099');
+        pibDom.window.close();
+
+        // 2) PEB Dashboard: appendItemRow & collectFormData
+        const pebHtml = fs.readFileSync(path.join(ROOT_DIR, 'peb.html'), 'utf8');
+        const pebJs = fs.readFileSync(path.join(ROOT_DIR, 'peb_dashboard.js'), 'utf8');
+        const pebDom = new JSDOM(pebHtml, { url: 'http://localhost:5005/peb.html', runScripts: 'outside-only' });
+        pebDom.window.showToast = () => {};
+        pebDom.window.fetch = async () => ({ ok: true, json: async () => null });
+        pebDom.window.eval(pebJs);
+
+        assert.strictEqual(pebDom.window.normalizePebHsCode('7326.90.99'), '73269099');
+        const tbody = pebDom.window.document.getElementById('itemsTableBody');
+        tbody.innerHTML = '';
+        pebDom.window.appendItemRow({ hsCode: '7326.90.99', uraianJenisBarang: 'Bracket Ekspor', jumlahDanSatuanBarang: '5 PCE', amount: '50' }, 1);
+        assert.strictEqual(pebDom.window.document.querySelector('.item-hscode').value, '73269099');
+        const collected = pebDom.window.collectFormData();
+        assert.strictEqual(collected.items[0].hsCode, '73269099');
+        pebDom.window.close();
+
+        // 3) Auto Input preview strips dots even from legacy dotted JSON
+        const modDir = path.join(ROOT_DIR, 'extensions', 'ceisa-auto-input');
+        const popDom = new JSDOM(fs.readFileSync(path.join(modDir, 'popup.html'), 'utf8'), { url: 'chrome-extension://id/popup.html', runScripts: 'outside-only' });
+        popDom.window.chrome = {
+            runtime: { getManifest: () => ({ version: '2.1.2' }), onMessage: { addListener: () => {} }, sendMessage: () => {} },
+            storage: { local: { get: async () => ({ ceisa_autoinput_last_section: 'barang' }), set: async () => {}, remove: async () => {} }, onChanged: { addListener: () => {} } },
+            tabs: { query: async () => [], create: () => {}, sendMessage: () => {} }
+        };
+        popDom.window.fetch = async (url) => {
+            if (url.includes('/api/get-latest-draft')) {
+                return { ok: true, json: async () => ({ nomorAju: 'AJU-HS-DOT', items: [{ hsCode: '7326.90.99', description: 'Bracket' }] }) };
+            }
+            return { ok: true, json: async () => ({ ok: true, drafts: [] }) };
+        };
+        popDom.window.eval(fs.readFileSync(path.join(modDir, 'module_config.js'), 'utf8'));
+        popDom.window.eval(fs.readFileSync(path.join(modDir, 'config.js'), 'utf8'));
+        popDom.window.eval(fs.readFileSync(path.join(modDir, 'draft_source_client.js'), 'utf8'));
+        popDom.window.eval(fs.readFileSync(path.join(modDir, 'popup.js'), 'utf8'));
+        await new Promise(r => setTimeout(r, 80));
+        assert.strictEqual(popDom.window.document.getElementById('lblItemPreviewTitle').textContent, '[HS 73269099] Bracket');
+        popDom.window.close();
+
+        // 4) Backend document_parser.js must not format hsCode with dots
+        const parserCode = fs.readFileSync(path.join(ROOT_DIR, 'backend-service', 'document_parser.js'), 'utf8');
+        assert(!parserCode.includes('it.hsCode.slice(0, 4)}.${it.hsCode.slice(4, 6)}'), 'document_parser.js must not re-insert dots into hsCode');
+    });
+
+    await runTest('12. Hubungkan requests origin permission when missing (Firefox MV3) & guards concurrent clicks', async () => {
+        const modDir = path.join(ROOT_DIR, 'extensions', 'ceisa-auto-input');
+        const dom = new JSDOM(fs.readFileSync(path.join(modDir, 'popup.html'), 'utf8'), {
+            url: 'moz-extension://fake-firefox-id/popup.html',
+            runScripts: 'outside-only'
+        });
+        const { window } = dom;
+
+        let permRequested = null;
+        let hasPerm = false;
+        window.chrome = {
+            runtime: { getManifest: () => ({ version: '2.1.2' }), onMessage: { addListener: () => {} }, sendMessage: () => {} },
+            permissions: {
+                contains: async () => hasPerm,
+                request: async ({ origins }) => {
+                    permRequested = origins;
+                    hasPerm = true;
+                    return true;
+                }
+            },
+            storage: { local: { get: async () => ({}), set: async () => {}, remove: async () => {} }, onChanged: { addListener: () => {} } },
+            tabs: { query: async () => [], create: () => {}, sendMessage: () => {} }
+        };
+
+        window.fetch = async (url) => {
+            if (!hasPerm && url.includes('192.168.100.15')) {
+                throw new TypeError('NetworkError when attempting to fetch resource.');
+            }
+            if (url.includes('/api/health')) {
+                return { ok: true, json: async () => ({ ok: true, hostIp: '192.168.100.15' }) };
+            }
+            if (url.includes('/api/get-latest-draft')) {
+                return { ok: true, json: async () => ({ nomorAju: 'AJU-FF-OK', items: [{ hsCode: '73269099', description: 'Clip' }] }) };
+            }
+            return { ok: true, json: async () => ({ ok: true, drafts: [] }) };
+        };
+
+        window.eval(fs.readFileSync(path.join(modDir, 'module_config.js'), 'utf8'));
+        window.eval(fs.readFileSync(path.join(modDir, 'config.js'), 'utf8'));
+        window.eval(fs.readFileSync(path.join(modDir, 'draft_source_client.js'), 'utf8'));
+        window.eval(fs.readFileSync(path.join(modDir, 'popup.js'), 'utf8'));
+
+        await new Promise(r => setTimeout(r, 40));
+        window.document.getElementById('inputDraftSourceHost').value = '192.168.100.15';
+        window.document.getElementById('btnSaveDraftSourceHost').click();
+        await new Promise(r => setTimeout(r, 120));
+
+        assert.deepStrictEqual(Array.from(permRequested || []), ['http://192.168.100.15/*']);
+        assert.strictEqual(window.document.getElementById('lblDraftAjuNo').textContent, 'AJU-FF-OK');
+        dom.window.close();
+    });
+
+    await runTest('13. content.js fills real Ant Design CEISA 4.0 PEB Barang form (nested active pane, horizontal ant-row, ant-select readonly combobox)', () => {
+        const modDir = path.join(ROOT_DIR, 'extensions', 'ceisa-auto-input');
+        const dom = new JSDOM(`<!doctype html><html><body>
+            <div class="ant-tabs-tabpane ant-tabs-tabpane-active" id="outerShell">
+                <div class="ant-tabs-nav" role="tablist">
+                    <div class="ant-tabs-tab" role="tab">Header</div>
+                    <div class="ant-tabs-tab ant-tabs-tab-active" role="tab">Barang</div>
+                </div>
+                <div class="ant-tabs-tabpane ant-tabs-tabpane-hidden">
+                    <input id="hidden_hs" name="posTarif" />
+                </div>
+                <div class="ant-tabs-tabpane ant-tabs-tabpane-active" id="innerBarangPane">
+                    <div class="ant-row"><div class="ant-col"><span>Pos Tarif/HS</span></div><div class="ant-col"><input id="ceisa_hs" type="text" /></div></div>
+                    <div class="ant-row"><div class="ant-col"><span>Uraian</span></div><div class="ant-col"><textarea id="ceisa_uraian"></textarea></div></div>
+                    <div class="ant-row"><div class="ant-col"><span>Jumlah Satuan</span></div><div class="ant-col"><input id="ceisa_qty" type="text" /></div></div>
+                    <div class="ant-row"><div class="ant-col"><span>Satuan</span></div><div class="ant-col"><div class="ant-select"><div class="ant-select-selector"><input id="ceisa_uom" role="combobox" readonly class="ant-select-selection-search-input" /></div></div></div></div>
+                    <div class="ant-row"><div class="ant-col"><span>Nilai Ekspor</span></div><div class="ant-col"><input id="ceisa_val" type="text" /></div></div>
+                    <div class="ant-row"><div class="ant-col"><span>Berat Bersih (Kg)</span></div><div class="ant-col"><input id="ceisa_netto" type="text" /></div></div>
+                </div>
+            </div>
+            <div class="ant-select-dropdown"><div class="ant-select-item-option" title="KGM - KILOGRAM" id="optKgm">KGM - KILOGRAM</div></div>
+        </body></html>`, { url: 'https://portal.beacukai.go.id/', runScripts: 'outside-only' });
+
+        let clickedKgmOption = false;
+        dom.window.document.getElementById('optKgm').addEventListener('click', () => {
+            clickedKgmOption = true;
+        });
+        dom.window.chrome = {
+            runtime: { onMessage: { addListener: () => {} }, sendMessage: () => {} },
+            storage: { local: { get: () => {}, set: () => {} }, onChanged: { addListener: () => {} } }
+        };
+        dom.window.eval(fs.readFileSync(path.join(modDir, 'module_config.js'), 'utf8'));
+        dom.window.eval(fs.readFileSync(path.join(modDir, 'content.js'), 'utf8'));
+
+        const res = dom.window.handleCeisaAutoInputRow({
+            type: 'CEISA_AUTO_INPUT_ROW',
+            section: 'barang',
+            draftType: 'ekspor',
+            index: 0,
+            total: 3,
+            item: {
+                hsCode: '3907.30.90',
+                uraianJenisBarang: 'EPOXY RESIN P/N:G01285801',
+                jumlahDanSatuanBarang: '10 KGM',
+                amount: '500.00',
+                beratBersih: '10.00 KG'
+            }
+        });
+
+        assert.strictEqual(res.ok, true);
+        assert.strictEqual(dom.window.document.getElementById('hidden_hs').value, '', 'Hidden tab input must NOT be modified');
+        assert.strictEqual(dom.window.document.getElementById('ceisa_hs').value, '39073090');
+        assert.strictEqual(dom.window.document.getElementById('ceisa_uraian').value, 'EPOXY RESIN P/N:G01285801');
+        assert.strictEqual(dom.window.document.getElementById('ceisa_qty').value, '10');
+        assert.strictEqual(clickedKgmOption, true, 'Ant Design readonly Select option KGM must be clicked');
+        assert.strictEqual(dom.window.document.getElementById('ceisa_val').value, '500.00');
+        assert.strictEqual(dom.window.document.getElementById('ceisa_netto').value, '10.00');
+        dom.window.close();
+    });
+
+    await runTest('14. content.js returns ok=false (not fake SUKSES) when CEISA Barang form inputs are not open yet', () => {
+        const modDir = path.join(ROOT_DIR, 'extensions', 'ceisa-auto-input');
+        const dom = new JSDOM(`<!doctype html><html><body>
+            <div class="ant-tabs-tabpane-active"><button type="button">Tambah</button><table><tr><td>Belum ada barang</td></tr></table></div>
+        </body></html>`, { url: 'https://portal.beacukai.go.id/', runScripts: 'outside-only' });
+        dom.window.chrome = {
+            runtime: { onMessage: { addListener: () => {} }, sendMessage: () => {} },
+            storage: { local: { get: () => {}, set: () => {} }, onChanged: { addListener: () => {} } }
+        };
+        dom.window.eval(fs.readFileSync(path.join(modDir, 'module_config.js'), 'utf8'));
+        dom.window.eval(fs.readFileSync(path.join(modDir, 'content.js'), 'utf8'));
+
+        const res = dom.window.handleCeisaAutoInputRow({
+            type: 'CEISA_AUTO_INPUT_ROW',
+            section: 'barang',
+            item: { hsCode: '39073090', uraianJenisBarang: 'EPOXY RESIN' }
+        });
+
+        assert.strictEqual(res.ok, false);
+        assert.strictEqual(res.noFieldsMatched, true);
+        assert(res.message.includes('Tambah'), 'Hint should mention clicking Tambah button');
+        dom.window.close();
+    });
+
+    await runTest('15. content.js fills ALL CEISA 4.0 PEB Barang screenshot fields inside outer .row/.col & async Pos Tarif/HS', async () => {
+        const modDir = path.join(ROOT_DIR, 'extensions', 'ceisa-auto-input');
+        const dom = new JSDOM(`<!doctype html><html><body>
+            <div class="row">
+                <div class="col">
+                    <div class="ant-row"><div class="ant-col"><span>Seri</span></div><div class="ant-col"><input id="ceisa_seri" disabled value="1" /></div></div>
+                    <div class="ant-row"><div class="ant-col"><span>Pos Tarif/HS</span></div><div class="ant-col"><div class="ant-select"><div class="ant-select-selector"><input id="ceisa_hs" role="combobox" class="ant-select-selection-search-input" /></div></div></div></div>
+                    <div class="ant-row"><div class="ant-col"><span>Pernyataan Lartas</span></div><div class="ant-col"><label><input type="radio" id="radYa" name="lartas" />Terkena Lartas</label><label><input type="radio" id="radTidak" name="lartas" />Tidak Terkena Lartas</label></div></div>
+                    <div class="ant-row"><div class="ant-col"><span>Kode Barang</span></div><div class="ant-col"><input id="ceisa_kode" type="text" /></div></div>
+                    <div class="ant-row"><div class="ant-col"><span>Uraian Jenis Barang</span></div><div class="ant-col"><textarea id="uraian" name="uraian"></textarea></div></div>
+                    <div class="ant-row"><div class="ant-col"><span>Merek</span></div><div class="ant-col"><input id="ceisa_merek" type="text" /></div></div>
+                    <div class="ant-row"><div class="ant-col"><span>Tipe</span></div><div class="ant-col"><input id="ceisa_tipe" type="text" /></div></div>
+                    <div class="ant-row"><div class="ant-col"><span>Spesifikasi Lain</span></div><div class="ant-col"><input id="ceisa_spek" type="text" /></div></div>
+                </div>
+                <div class="col">
+                    <div class="ant-row"><div class="ant-col"><span>Jumlah dan Satuan Barang</span></div><div class="ant-col"><input id="ceisa_qty" type="text" value="1.0000" /></div><div class="ant-col"><div class="ant-select"><div class="ant-select-selector"><input id="ceisa_uom" role="combobox" readonly class="ant-select-selection-search-input" /></div></div></div></div>
+                    <div class="ant-row"><div class="ant-col"><span>Kemasan</span></div><div class="ant-col"><input id="ceisa_pkg_qty" type="text" value="1" /></div><div class="ant-col"><div class="ant-select"><div class="ant-select-selector"><input id="ceisa_pkg_type" role="combobox" readonly class="ant-select-selection-search-input" /></div></div></div></div>
+                    <div class="ant-row"><div class="ant-col"><span>Berat Bersih (Kg)</span></div><div class="ant-col"><input id="ceisa_netto" type="text" value="0" /></div></div>
+                    <div class="ant-row"><div class="ant-col"><span>Berat Kotor (Kg)</span></div><div class="ant-col"><input id="ceisa_bruto" type="text" value="0" /></div></div>
+                    <div class="ant-row"><div class="ant-col"><span>Volume (M3)</span></div><div class="ant-col"><input id="ceisa_vol" type="text" value="" /></div></div>
+                    <div class="ant-row"><div class="ant-col"><span>Amount FCA</span></div><div class="ant-col"><input id="ceisa_amt" type="text" value="0" /></div></div>
+                    <div class="ant-row"><div class="ant-col"><span>(Biaya Tambahan - Diskon)</span></div><div class="ant-col"><input id="ceisa_biaya" type="text" value="" /></div></div>
+                    <div class="ant-row"><div class="ant-col"><span>FOB</span></div><div class="ant-col"><input id="ceisa_fob" type="text" value="0" /></div></div>
+                    <div class="ant-row"><div class="ant-col"><span>Harga Satuan</span></div><div class="ant-col"><input id="ceisa_unit_price" type="text" value="0" /></div></div>
+                    <div class="ant-row"><div class="ant-col"><span>Freight</span></div><div class="ant-col"><input id="ceisa_freight" type="text" value="" /></div></div>
+                    <div class="ant-row"><div class="ant-col"><span>Asuransi</span></div><div class="ant-col"><input id="ceisa_asuransi" type="text" value="" /></div></div>
+                </div>
+            </div>
+            <div class="ant-select-dropdown" id="dd">
+                <div class="ant-select-item-option" id="optKgs">KGS - KILOGRAM PER SECOND</div>
+                <div class="ant-select-item-option" id="optPk">PK - PACKAGE</div>
+            </div>
+        </body></html>`, { url: 'https://portal.beacukai.go.id/', runScripts: 'outside-only' });
+
+        let selectedHsAsync = false;
+        let selectedKgs = false;
+        let selectedPk = false;
+        dom.window.document.getElementById('optKgs').addEventListener('click', () => { selectedKgs = true; });
+        dom.window.document.getElementById('optPk').addEventListener('click', () => { selectedPk = true; });
+        // Simulasikan Pos Tarif/HS dropdown muncul asinkron 150ms setelah user mengetik 39073090
+        dom.window.document.getElementById('ceisa_hs').addEventListener('input', () => {
+            setTimeout(() => {
+                const opt = dom.window.document.createElement('div');
+                opt.className = 'ant-select-item-option';
+                opt.textContent = '39073090 - - - LAIN-LAIN';
+                opt.addEventListener('click', () => { selectedHsAsync = true; });
+                dom.window.document.getElementById('dd').appendChild(opt);
+            }, 100);
+        });
+
+        dom.window.chrome = {
+            runtime: { onMessage: { addListener: () => {} }, sendMessage: () => {} },
+            storage: { local: { get: () => {}, set: () => {} }, onChanged: { addListener: () => {} } }
+        };
+        dom.window.eval(fs.readFileSync(path.join(modDir, 'module_config.js'), 'utf8'));
+        dom.window.eval(fs.readFileSync(path.join(modDir, 'content.js'), 'utf8'));
+
+        const res = await dom.window.handleCeisaAutoInputRowAsync({
+            type: 'CEISA_AUTO_INPUT_ROW',
+            section: 'barang',
+            index: 0,
+            total: 1,
+            item: {
+                hsCode: '39073090',
+                lartas: 'tidak',
+                kodeBarang: 'KB-01',
+                uraianJenisBarang: 'EPOXY RESIN P/N:G01285801XM01',
+                merek: 'PELUCURE',
+                tipe: 'ME105',
+                spesifikasi: 'WHITE 4KG',
+                jumlahDanSatuanBarang: '32 KGS',
+                kemasanQty: 3,
+                kemasanJenis: 'PK - PACKAGE',
+                beratBersih: 16,
+                beratKotor: 18.5,
+                volume: 0,
+                amount: 80800,
+                biayaTambahan: 0,
+                fob: 80800,
+                hargaSatuan: 2525,
+                freight: 0,
+                asuransi: 0
+            }
+        });
+
+        assert.strictEqual(res.ok, true);
+        assert.strictEqual(selectedHsAsync, true, 'Async Pos Tarif/HS dropdown must resolve and click');
+        assert.strictEqual(dom.window.document.getElementById('radTidak').checked, true);
+        assert.strictEqual(dom.window.document.getElementById('ceisa_kode').value, 'KB-01');
+        assert.strictEqual(dom.window.document.getElementById('uraian').value, 'EPOXY RESIN P/N:G01285801XM01');
+        assert.strictEqual(dom.window.document.getElementById('ceisa_merek').value, 'PELUCURE');
+        assert.strictEqual(dom.window.document.getElementById('ceisa_tipe').value, 'ME105');
+        assert.strictEqual(dom.window.document.getElementById('ceisa_spek').value, 'WHITE 4KG');
+        assert.strictEqual(dom.window.document.getElementById('ceisa_qty').value, '32');
+        assert.strictEqual(selectedKgs, true, 'Satuan KGS dropdown must be selected cleanly');
+        assert.strictEqual(dom.window.document.getElementById('ceisa_pkg_qty').value, '3');
+        assert.strictEqual(selectedPk, true, 'Kemasan PK dropdown must be selected cleanly');
+        assert.strictEqual(dom.window.document.getElementById('ceisa_netto').value, '16');
+        assert.strictEqual(dom.window.document.getElementById('ceisa_bruto').value, '18.5');
+        assert.strictEqual(dom.window.document.getElementById('ceisa_vol').value, '0');
+        assert.strictEqual(dom.window.document.getElementById('ceisa_amt').value, '80800');
+        assert.strictEqual(dom.window.document.getElementById('ceisa_biaya').value, '0');
+        assert.strictEqual(dom.window.document.getElementById('ceisa_fob').value, '80800');
+        assert.strictEqual(dom.window.document.getElementById('ceisa_unit_price').value, '2525');
+        assert.strictEqual(dom.window.document.getElementById('ceisa_freight').value, '0');
+        assert.strictEqual(dom.window.document.getElementById('ceisa_asuransi').value, '0');
+        dom.window.close();
+    });
+
+    await runTest('16. Multi-Seri Barang (3 items): auto-switches tab, opens Edit/Tambah, Simpan & Salin Seri across Seri 1->2->3 without overwriting', async () => {
+        const modDir = path.join(ROOT_DIR, 'extensions', 'ceisa-auto-input');
+        const dom = new JSDOM(`<!doctype html><html><body>
+            <div class="ant-tabs-nav" role="tablist">
+                <div class="ant-tabs-tab ant-tabs-tab-active" role="tab" id="tabHeader">Header</div>
+                <div class="ant-tabs-tab" role="tab" id="tabBarang">Barang</div>
+            </div>
+            <div id="paneHost"></div>
+        </body></html>`, { url: 'https://portal.beacukai.go.id/', runScripts: 'outside-only' });
+
+        const doc = dom.window.document;
+        const paneHost = doc.getElementById('paneHost');
+        const savedRecords = [];
+        let editingSeri = 1;
+
+        function renderBarangTable() {
+            paneHost.innerHTML = `
+                <div class="ant-tabs-tabpane-active">
+                    <button type="button" id="btnTambahBarang">Tambah</button>
+                    <button type="button" id="btnSalinSeri">Salin Seri</button>
+                    <table><tbody id="barangRows">
+                        ${(savedRecords.length > 0 ? savedRecords : [{ seri: 1, uraian: 'Initial', qty: '1' }]).map((r, idx) => `
+                            <tr>
+                                <td>${idx + 1}</td>
+                                <td>${r.uraian}</td>
+                                <td><button type="button" class="btn-edit-row" data-seri="${idx + 1}">Ubah</button></td>
+                            </tr>
+                        `).join('')}
+                    </tbody></table>
+                </div>`;
+            doc.getElementById('btnTambahBarang').addEventListener('click', () => {
+                editingSeri = savedRecords.length + 1;
+                renderBarangForm(editingSeri);
+            });
+            doc.getElementById('btnSalinSeri').addEventListener('click', () => {
+                editingSeri = savedRecords.length + 1;
+                renderBarangForm(editingSeri);
+            });
+            paneHost.querySelectorAll('.btn-edit-row').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    editingSeri = parseInt(btn.getAttribute('data-seri'), 10);
+                    renderBarangForm(editingSeri);
+                });
+            });
+        }
+
+        function renderBarangForm(seriNo) {
+            paneHost.innerHTML = `
+                <div class="ant-tabs-tabpane-active">
+                    <button type="button" id="btnSimpanBarang">Simpan</button>
+                    <div class="ant-row"><div class="ant-col"><span>Seri</span></div><div class="ant-col"><input id="formSeri" disabled value="${seriNo}" /></div></div>
+                    <div class="ant-row"><div class="ant-col"><span>Uraian Jenis Barang</span></div><div class="ant-col"><textarea id="formUraian"></textarea></div></div>
+                    <div class="ant-row"><div class="ant-col"><span>Jumlah Satuan</span></div><div class="ant-col"><input id="formQty" type="text" /></div></div>
+                    <div class="ant-row"><div class="ant-col"><span>Berat Bersih (Kg)</span></div><div class="ant-col"><input id="formNetto" type="text" /></div></div>
+                </div>`;
+            doc.getElementById('btnSimpanBarang').addEventListener('click', () => {
+                savedRecords[seriNo - 1] = {
+                    seri: seriNo,
+                    uraian: doc.getElementById('formUraian').value,
+                    qty: doc.getElementById('formQty').value,
+                    netto: doc.getElementById('formNetto').value
+                };
+                renderBarangTable();
+            });
+        }
+
+        doc.getElementById('tabBarang').addEventListener('click', () => {
+            doc.getElementById('tabHeader').classList.remove('ant-tabs-tab-active');
+            doc.getElementById('tabBarang').classList.add('ant-tabs-tab-active');
+            renderBarangTable();
+        });
+
+        dom.window.chrome = {
+            runtime: { onMessage: { addListener: () => {} }, sendMessage: () => {} },
+            storage: { local: { get: () => {}, set: () => {} }, onChanged: { addListener: () => {} } }
+        };
+        dom.window.eval(fs.readFileSync(path.join(modDir, 'module_config.js'), 'utf8'));
+        dom.window.eval(fs.readFileSync(path.join(modDir, 'content.js'), 'utf8'));
+
+        const items = [
+            { hsCode: '39073090', uraianJenisBarang: 'EPOXY RESIN', jumlahDanSatuanBarang: '32 KGS', beratBersih: 16 },
+            { hsCode: '39073090', uraianJenisBarang: 'RESIN ME-255', jumlahDanSatuanBarang: '10 KGS', beratBersih: 10 },
+            { hsCode: '39073090', uraianJenisBarang: 'RESIN HV-125', jumlahDanSatuanBarang: '10 KGS', beratBersih: 10 }
+        ];
+
+        for (let i = 0; i < items.length; i++) {
+            const res = await dom.window.handleCeisaAutoInputRowAsync({
+                type: 'CEISA_AUTO_INPUT_ROW',
+                section: 'barang',
+                index: i,
+                total: items.length,
+                saveAfterFill: true,
+                item: items[i]
+            });
+            assert.strictEqual(res.ok, true, `Seri ${i + 1} should succeed`);
+        }
+
+        assert.strictEqual(savedRecords.length, 3, 'All 3 distinct Seri must be saved separately');
+        assert.deepStrictEqual(savedRecords.map(r => [r.seri, r.uraian, r.qty, r.netto]), [
+            [1, 'EPOXY RESIN', '32', '16'],
+            [2, 'RESIN ME-255', '10', '10'],
+            [3, 'RESIN HV-125', '10', '10']
+        ]);
         dom.window.close();
     });
 

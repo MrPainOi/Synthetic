@@ -83,6 +83,16 @@ if %errorlevel% equ 0 (
 :: Registrasi ke Microsoft Edge (opsional jika pengguna memakai Edge)
 reg add "HKCU\Software\Microsoft\Edge\NativeMessagingHosts\com.ceisa.server_launcher" /ve /t REG_SZ /d "%JSON_PATH%" /f >nul 2>&1
 
+:: Tambah aturan Windows Firewall port 5005 jika dijalankan sebagai Administrator
+net session >nul 2>&1
+if %errorlevel% equ 0 (
+    netsh advfirewall firewall delete rule name="CEISA Backend Server Port 5005" >nul 2>&1
+    netsh advfirewall firewall add rule name="CEISA Backend Server Port 5005" dir=in action=allow protocol=TCP localport=5005 profile=any >nul 2>&1
+    echo       [OK] Port TCP 5005 dibuka di Windows Firewall untuk akses LAN.
+) else (
+    echo       [INFO] Untuk akses draft dari PC lain di LAN, jalankan BUKA_FIREWALL_5005.bat ^(Run as Administrator^).
+)
+
 echo.
 echo ================================================================
 echo    [SUKSES] SETUP PC SELESAI!

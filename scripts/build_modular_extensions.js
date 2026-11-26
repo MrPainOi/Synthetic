@@ -103,6 +103,9 @@ function buildModuleManifest(moduleType) {
                 "https://*/*"
             ],
             "action": actionBlock,
+            "content_security_policy": {
+                "extension_pages": "script-src 'self'; object-src 'self'"
+            },
             "content_scripts": [
                 {
                     "matches": [
@@ -142,6 +145,9 @@ function buildModuleManifest(moduleType) {
                 "service_worker": "background.js"
             },
             "action": actionBlock,
+            "content_security_policy": {
+                "extension_pages": "script-src 'self'; object-src 'self'"
+            },
             "content_scripts": [
                 {
                     "matches": [
@@ -185,6 +191,9 @@ function buildModuleManifest(moduleType) {
             "service_worker": "background.js"
         },
         "action": actionBlock,
+        "content_security_policy": {
+            "extension_pages": "script-src 'self'; object-src 'self'"
+        },
         "content_scripts": [
             {
                 "matches": [

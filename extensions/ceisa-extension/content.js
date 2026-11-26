@@ -1593,14 +1593,21 @@
             }
 
             // ------------------------------------------------
-            // CEISA AUTO INPUT ROW (STEP-BY-STEP INJECTION)
+            // CEISA AUTO INPUT ROW (STEP-BY-STEP & AUTO-SERI ASYNC INJECTION)
             // ------------------------------------------------
             if (message.type === "CEISA_AUTO_INPUT_ROW") {
-                const res = handleCeisaAutoInputRow(message);
-                if (typeof sendResponse === "function") {
-                    sendResponse(res);
-                }
-                return false;
+                handleCeisaAutoInputRowAsync(message)
+                    .then(res => {
+                        if (typeof sendResponse === "function") {
+                            sendResponse(res);
+                        }
+                    })
+                    .catch(err => {
+                        if (typeof sendResponse === "function") {
+                            sendResponse({ ok: false, message: err?.message || "Gagal memproses Auto Input." });
+                        }
+                    });
+                return true;
             }
 
             if (message.type === "CHECK_CEISA_PAGE") {
@@ -1711,14 +1718,110 @@
         }, 1500);
     }
 
+    function isElementHiddenOrInactive(el) {
+        if (!el) return true;
+        if (el.closest && el.closest(".ant-tabs-tabpane-hidden, [hidden], .ant-table-filter-dropdown")) {
+            return true;
+        }
+        try {
+            let cur = el;
+            while (cur && cur.nodeType === 1) {
+                const styleAttr = cur.getAttribute && cur.getAttribute("style");
+                if (styleAttr && /display\s*:\s*none|visibility\s*:\s*hidden/i.test(styleAttr)) {
+                    return true;
+                }
+                if (typeof getComputedStyle === "function") {
+                    const cs = getComputedStyle(cur);
+                    if (cs && (cs.display === "none" || cs.visibility === "hidden")) {
+                        return true;
+                    }
+                }
+                cur = cur.parentElement;
+            }
+        } catch (_) {}
+        return false;
+    }
+
+    const _pendingAntSelectTasks = [];
+
+    function selectMatchingAntDropdownOption(antSelectWrap, lowerTarget) {
+        const dropdowns = Array.from(document.querySelectorAll(".ant-select-dropdown:not(.ant-select-dropdown-hidden)"));
+        // Cari dropdown yang terlihat, atau jika belum ada di wrapper khusus cari semua dropdown options yang terlihat
+        const optionNodes = [];
+        const roots = dropdowns.length > 0 ? dropdowns : Array.from(document.querySelectorAll(".ant-select-dropdown"));
+        for (const dd of roots) {
+            if (isElementHiddenOrInactive(dd)) continue;
+            dd.querySelectorAll(".ant-select-item-option").forEach(opt => optionNodes.push(opt));
+        }
+        if (optionNodes.length === 0) return false;
+
+        // Prioritaskan exact -> prefix kode ("KGS - ..." / "39073090 - ...") -> word -> substring
+        const getOptText = (opt) => (opt.getAttribute("title") || opt.textContent || "").toLowerCase().replace(/\s+/g, " ").trim();
+        const codeToken = lowerTarget.split(/[\s-]+/)[0].trim();
+
+        let matchedOpt = optionNodes.find(opt => getOptText(opt) === lowerTarget);
+        if (!matchedOpt && codeToken.length >= 2) {
+            matchedOpt = optionNodes.find(opt => {
+                const txt = getOptText(opt);
+                return txt === codeToken || txt.startsWith(codeToken + " ") || txt.startsWith(codeToken + "-");
+            });
+        }
+        if (!matchedOpt && lowerTarget.length >= 2) {
+            matchedOpt = optionNodes.find(opt => getOptText(opt).includes(lowerTarget));
+        }
+
+        if (matchedOpt && typeof matchedOpt.click === "function") {
+            matchedOpt.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+            matchedOpt.click();
+            highlightCeisaInput(antSelectWrap);
+            return true;
+        }
+        return false;
+    }
+
     function setNativeInputValue(element, val) {
         if (!element) return false;
-        if (element.disabled || element.readOnly) return false;
+        const antSelectWrap = element.closest ? element.closest(".ant-select") : null;
+        const isPickerInput = element.closest ? Boolean(element.closest(".ant-picker-input")) : false;
+        if (element.disabled) return false;
+        if (element.readOnly && !antSelectWrap && !isPickerInput) return false;
+
         try {
             if (typeof element.focus === "function") {
                 try { element.focus(); } catch (e) { }
             }
             const strVal = String(val ?? "");
+
+            // Ant Design <Select> / <AutoComplete> combobox support (JANGAN blur() agar async options tidak tertutup!)
+            if (antSelectWrap) {
+                const lowerTarget = strVal.toLowerCase().trim();
+                try {
+                    const lastValue = element.value;
+                    const valueSetter = Object.getOwnPropertyDescriptor(element, "value")?.set;
+                    const protoSetter = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(element), "value")?.set;
+                    if (!element.readOnly) {
+                        if (protoSetter && valueSetter !== protoSetter) protoSetter.call(element, strVal);
+                        else if (valueSetter) valueSetter.call(element, strVal);
+                        else element.value = strVal;
+                        if (element._valueTracker) {
+                            element._valueTracker.setValue(lastValue !== strVal ? lastValue : "");
+                        }
+                        element.dispatchEvent(new Event("input", { bubbles: true, composed: true }));
+                        element.dispatchEvent(new Event("change", { bubbles: true }));
+                    }
+                    const selector = antSelectWrap.querySelector(".ant-select-selector") || antSelectWrap;
+                    if (selector && typeof selector.click === "function") {
+                        selector.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+                        selector.click();
+                    }
+                    const selectedNow = selectMatchingAntDropdownOption(antSelectWrap, lowerTarget);
+                    if (!selectedNow && lowerTarget) {
+                        _pendingAntSelectTasks.push({ antSelectWrap, element, strVal, lowerTarget });
+                    }
+                    highlightCeisaInput(antSelectWrap);
+                    return true;
+                } catch (_) {}
+            }
 
             // If it is a SELECT element, match option by value or text
             if (element.tagName === "SELECT") {
@@ -1800,7 +1903,8 @@
                     try { element.value = strVal; } catch (e) { }
                 }
             } else {
-                // React 16+ / Ant Design value setter override
+                // React 16+ / Ant Design value setter override + _valueTracker reset
+                const lastValue = element.value;
                 const valueSetter = Object.getOwnPropertyDescriptor(element, "value")?.set;
                 const prototype = Object.getPrototypeOf(element);
                 const prototypeValueSetter = Object.getOwnPropertyDescriptor(prototype, "value")?.set;
@@ -1811,6 +1915,12 @@
                     valueSetter.call(element, strVal);
                 } else {
                     element.value = strVal;
+                }
+
+                if (element._valueTracker) {
+                    try {
+                        element._valueTracker.setValue(lastValue !== strVal ? lastValue : "");
+                    } catch (_) { }
                 }
 
                 if (element.tagName === "TEXTAREA" && element.value !== strVal) {
@@ -1840,17 +1950,45 @@
         }
     }
 
+    function countFormControls(el) {
+        if (!el || typeof el.querySelectorAll !== "function") return 0;
+        const list = el.querySelectorAll('input:not([type="hidden"]):not([disabled]), textarea:not([disabled]), select:not([disabled])');
+        let visibleCount = 0;
+        for (const inp of list) {
+            if (!isElementHiddenOrInactive(inp)) visibleCount++;
+        }
+        return visibleCount;
+    }
+
     function findCeisaTargetContainer() {
-        const openModal = document.querySelector(".ant-modal-wrap:not([style*='display: none']):not([style*='display:none']) .ant-modal, .ant-modal-wrap:not([style*='display: none']):not([style*='display:none']) .ant-modal-content, .ant-drawer:not([style*='display: none']):not([style*='display:none']) .ant-drawer-content");
-        if (openModal) return openModal;
-        const activeTabPane = document.querySelector(".ant-tabs-tabpane-active, .tab-pane.active, .tab-content > .active");
-        if (activeTabPane) return activeTabPane;
+        // 1. Cek modal / drawer yang benar-benar terbuka dan berisi field input form
+        const modalCandidates = Array.from(document.querySelectorAll(
+            ".ant-modal-wrap:not(.ant-modal-wrap-hidden) .ant-modal, .ant-modal-wrap .ant-modal-content, .ant-drawer-open .ant-drawer-content, .ant-drawer .ant-drawer-content"
+        ));
+        for (let i = modalCandidates.length - 1; i >= 0; i--) {
+            const m = modalCandidates[i];
+            const wrap = m.closest(".ant-modal-wrap, .ant-drawer") || m;
+            if (!isElementHiddenOrInactive(wrap) && !isElementHiddenOrInactive(m) && countFormControls(m) > 0) {
+                return m;
+            }
+        }
+
+        // 2. Cek tab pane aktif terdalam yang benar-benar terlihat dan memiliki kontrol form
+        const activePanes = Array.from(document.querySelectorAll(".ant-tabs-tabpane-active, .tab-pane.active, .tab-content > .active"));
+        for (let i = activePanes.length - 1; i >= 0; i--) {
+            const p = activePanes[i];
+            if (!isElementHiddenOrInactive(p) && countFormControls(p) > 0) {
+                return p;
+            }
+        }
+
         return document;
     }
 
-    function findFieldByKeywords(arg1, arg2 = document) {
+    function findFieldByKeywords(arg1, arg2 = document, options = {}) {
         let keywords = [];
         let parent = document;
+        let opts = options || {};
 
         if (Array.isArray(arg1) || typeof arg1 === "string") {
             keywords = Array.isArray(arg1) ? arg1 : [arg1];
@@ -1863,42 +2001,131 @@
             parent = document;
         }
 
-        // 1. Match by input name, id, placeholder, aria-label
+        const preferredKind = opts.preferredKind || "any"; // 'text' | 'select' | 'any'
+
+        const isUsableControl = (inp) => {
+            if (!inp || inp.disabled) return false;
+            const inpType = String(inp.type || "").toLowerCase();
+            if (inp.tagName === "INPUT" && (inpType === "hidden" || inpType === "radio" || inpType === "checkbox")) return false;
+            if (isElementHiddenOrInactive(inp)) return false;
+            const inSelect = inp.closest ? Boolean(inp.closest(".ant-select")) : false;
+            const inPicker = inp.closest ? Boolean(inp.closest(".ant-picker-input")) : false;
+            if (inp.readOnly && !inSelect && !inPicker) return false;
+            return true;
+        };
+
+        const matchesPreferredKind = (inp) => {
+            if (!isUsableControl(inp)) return false;
+            const isSelectLike = inp.tagName === "SELECT" || Boolean(inp.closest && inp.closest(".ant-select"));
+            if (preferredKind === "select") return isSelectLike;
+            if (preferredKind === "text") return !isSelectLike;
+            return true;
+        };
+
+        const rawCandidates = Array.from(parent.querySelectorAll('input:not([type="hidden"]):not([disabled]), textarea:not([disabled]), select:not([disabled])'));
+        const candidates = rawCandidates.filter(matchesPreferredKind);
+        const fallbackCandidates = preferredKind !== "any" ? rawCandidates.filter(isUsableControl) : [];
+
+        // 1. Match by input name, id, placeholder, aria-label, data-* attributes
+        const findAttrMatch = (list) => {
+            for (const kw of keywords) {
+                const lowerKw = kw.toLowerCase();
+                for (const input of list) {
+                    const name = (input.name || "").toLowerCase();
+                    const id = (input.id || "").toLowerCase();
+                    const placeholder = (input.placeholder || "").toLowerCase();
+                    const aria = (input.getAttribute("aria-label") || "").toLowerCase();
+                    const testId = (input.getAttribute("data-testid") || input.getAttribute("data-field") || "").toLowerCase();
+
+                    if (name.includes(lowerKw) || id.includes(lowerKw) || placeholder.includes(lowerKw) || aria.includes(lowerKw) || testId.includes(lowerKw)) {
+                        return input;
+                    }
+                }
+            }
+            return null;
+        };
+
+        const attrHit = findAttrMatch(candidates);
+        if (attrHit) return attrHit;
+
+        // 2. Match by Label / Heading association (urutan ketat dari pembungkus terdalam agar tidak mencuri field kolom luar)
+        const labelEls = Array.from(parent.querySelectorAll(
+            ".ant-form-item-label label, .ant-form-item-label, .form-group label, label, .ceisa-item-label, .ant-descriptions-item-label, th, span, p, div.ant-col, strong"
+        )).filter(el => {
+            if (isElementHiddenOrInactive(el)) return false;
+            if (el.querySelector && el.querySelector("input, textarea, select")) return false;
+            return true;
+        });
+
+        const getControlsIn = (rootEl) => {
+            if (!rootEl || typeof rootEl.querySelectorAll !== "function") return [];
+            return Array.from(rootEl.querySelectorAll('input:not([type="hidden"]):not([disabled]), textarea:not([disabled]), select:not([disabled])'))
+                .filter(isUsableControl);
+        };
+
+        const pickFirstControlIn = (rootEl) => {
+            const allCtrls = getControlsIn(rootEl);
+            if (allCtrls.length === 0) return null;
+            const preferred = allCtrls.find(matchesPreferredKind);
+            if (preferred) return preferred;
+            return preferredKind === "any" ? allCtrls[0] : null;
+        };
+
+        const isSingleFieldRowBox = (box) => {
+            if (!box) return false;
+            const cnt = getControlsIn(box).length;
+            return cnt >= 1 && cnt <= 4;
+        };
+
         for (const kw of keywords) {
             const lowerKw = kw.toLowerCase();
-            const candidates = parent.querySelectorAll('input:not([type="hidden"]):not([disabled]), textarea:not([disabled]), select:not([disabled])');
+            for (const lbl of labelEls) {
+                const text = (lbl.innerText || lbl.textContent || "").toLowerCase().replace(/\s+/g, " ").trim();
+                if (!text || text.length > 90 || !text.includes(lowerKw)) continue;
 
-            for (const input of candidates) {
-                const name = (input.name || "").toLowerCase();
-                const id = (input.id || "").toLowerCase();
-                const placeholder = (input.placeholder || "").toLowerCase();
-                const aria = (input.getAttribute("aria-label") || "").toLowerCase();
+                const forAttr = lbl.getAttribute("for") || lbl.querySelector?.("label[for]")?.getAttribute("for");
+                if (forAttr) {
+                    let byId = null;
+                    try {
+                        byId = (typeof document !== "undefined" && document.getElementById(forAttr)) ||
+                            (typeof CSS !== "undefined" && CSS.escape ? parent.querySelector("#" + CSS.escape(forAttr)) : null);
+                    } catch (_) {}
+                    if (byId && (!parent.contains || parent === document || parent.contains(byId)) && matchesPreferredKind(byId)) {
+                        return byId;
+                    }
+                }
 
-                if (name.includes(lowerKw) || id.includes(lowerKw) || placeholder.includes(lowerKw) || aria.includes(lowerKw)) {
-                    return input;
+                // A. Single-field Ant Design / form-group wrappers
+                const singleItemWrap = lbl.closest(".ant-form-item, .form-group, .ceisa-item-row, fieldset");
+                if (singleItemWrap && isSingleFieldRowBox(singleItemWrap)) {
+                    const inp = pickFirstControlIn(singleItemWrap);
+                    if (inp) return inp;
+                }
+
+                // B. Horizontal Ant Design / grid siblings: [Label Col] [Control Col 1] [Control Col 2]
+                const colEl = lbl.closest(".ant-col") || lbl.parentElement;
+                if (colEl) {
+                    let sib = colEl.nextElementSibling;
+                    let hops = 0;
+                    while (sib && hops < 3) {
+                        const sibInp = pickFirstControlIn(sib);
+                        if (sibInp) return sibInp;
+                        sib = sib.nextElementSibling;
+                        hops++;
+                    }
+                }
+
+                // C. Baris lokal (.ant-row / tr / .row / .col) HANYA jika berisi <= 4 kontrol field itu saja
+                const localRow = lbl.closest(".ant-row, tr, .row, .col");
+                if (localRow && isSingleFieldRowBox(localRow)) {
+                    const rowInp = pickFirstControlIn(localRow);
+                    if (rowInp) return rowInp;
                 }
             }
         }
 
-        // 2. Match by Label association
-        const labels = Array.from(parent.querySelectorAll(".ant-form-item-label label, .form-group label, label"));
-        for (const kw of keywords) {
-            const lowerKw = kw.toLowerCase();
-            for (const lbl of labels) {
-                const text = (lbl.innerText || lbl.textContent || "").toLowerCase();
-                if (text.includes(lowerKw)) {
-                    const forId = lbl.getAttribute("for");
-                    if (forId) {
-                        const byId = parent.querySelector('#' + forId);
-                        if (byId) return byId;
-                    }
-                    const formItem = lbl.closest(".ant-form-item, .form-group, .row, .col, fieldset, tr");
-                    if (formItem) {
-                        const inp = formItem.querySelector('input:not([type="hidden"]):not([disabled]), textarea:not([disabled]), select:not([disabled])');
-                        if (inp) return inp;
-                    }
-                }
-            }
+        if (preferredKind === "text" && fallbackCandidates.length > 0) {
+            return findAttrMatch(fallbackCandidates);
         }
 
         return null;
@@ -2296,10 +2523,12 @@
             };
         }
 
-        if (forceTab && typeof switchCeisaActiveTab === "function") {
+        if (forceTab && typeof switchCeisaActiveTab === "function" && detectCeisaActiveSection() !== section) {
             try {
                 switchCeisaActiveTab(section);
             } catch (e) { }
+            // Refresh target container setelah tab berpindah
+            container = findCeisaTargetContainer();
         }
 
         if (!container) {
@@ -2312,98 +2541,161 @@
             const docNum = item.number || "";
             const docDate = item.date || "";
 
-            const codeInput = findFieldByKeywords(["kodeDokumen", "kodeJenisDokumen", "jenisDokumen", "kode_dokumen", "kode jenis", "kode"], container);
-            if (codeInput) {
-                setNativeInputValue(codeInput, docCode);
-                filledFields.push('Jenis: ' + docCode);
+            const fillDocSection = (scope) => {
+                const codeInput = findFieldByKeywords(["kodeDokumen", "kodeJenisDokumen", "jenisDokumen", "kode_dokumen", "kode jenis", "kode dokumen", "jenis dokumen"], scope);
+                if (codeInput && setNativeInputValue(codeInput, docCode)) {
+                    filledFields.push('Jenis: ' + docCode);
+                }
+
+                const numInput = findFieldByKeywords(["nomorDokumen", "nomor dokumen", "noDok", "no_dok", "no dokumen", "nomor", "number"], scope);
+                if (numInput && docNum && setNativeInputValue(numInput, docNum)) {
+                    filledFields.push('Nomor: ' + docNum);
+                }
+
+                const dateInput = findFieldByKeywords(["tanggalDokumen", "tanggal dokumen", "tglDok", "tgl_dok", "tanggal", "tgl", "date"], scope);
+                if (dateInput && docDate && setNativeInputValue(dateInput, docDate)) {
+                    filledFields.push('Tanggal: ' + docDate);
+                }
+            };
+
+            fillDocSection(container);
+            if (filledFields.length === 0 && container !== document) {
+                fillDocSection(document);
             }
 
-            const numInput = findFieldByKeywords(["nomorDokumen", "nomor", "noDok", "no_dok", "no dokumen", "number"], container);
-            if (numInput) {
-                setNativeInputValue(numInput, docNum);
-                filledFields.push('Nomor: ' + docNum);
-            }
-
-            const dateInput = findFieldByKeywords(["tanggalDokumen", "tanggal", "tglDok", "tgl_dok", "tgl", "date"], container);
-            if (dateInput) {
-                setNativeInputValue(dateInput, docDate);
-                filledFields.push('Tanggal: ' + docDate);
+            if (filledFields.length === 0) {
+                const warnMsg = `0 field dokumen terisi untuk #${docNum || docCode}. Buka modal "Tambah / Ubah Dokumen" di CEISA 4.0 lalu coba lagi.`;
+                showCeisaAutoInputToast('Form Dokumen Tidak Terbuka', warnMsg, 'warn');
+                return { ok: false, noFieldsMatched: true, message: warnMsg };
             }
 
             const successMsg = 'Dokumen [' + (index + 1) + '/' + total + '] ' + (item.type || 'DOC') + ': ' + (docNum || docCode) + ' dimasukkan ke CEISA.';
-            showCeisaAutoInputToast('Auto Input Dokumen (' + (index + 1) + '/' + total + ')', (item.name || item.type) + ': ' + docNum + ' (' + docDate + ')', filledFields.length > 0 ? 'success' : 'warn');
+            showCeisaAutoInputToast('Auto Input Dokumen (' + (index + 1) + '/' + total + ')', (item.name || item.type) + ': ' + docNum + ' (' + docDate + ')', 'success');
 
             return {
                 ok: true,
-                message: filledFields.length > 0
-                    ? successMsg + ' (' + filledFields.join(', ') + ')'
-                    : successMsg + ' (Form terdeteksi, pastikan modal Tambah Dokumen telah terbuka di CEISA).'
+                message: successMsg + ' (' + filledFields.join(', ') + ')'
             };
         }
 
         // SECTION: DATA BARANG
         if (section === "barang") {
-            const hs = String(item.hsCode || item.posTarif || "").replace(/[^0-9]/g, "");
-            let desc = item.description || item.uraianJenisBarang || item.uraianBarang || item.namaBarang || "";
-            let qty = item.quantity || item.jumlahSatuan || item.qty || "";
-            let uom = item.uom || item.kodeSatuan || item.satuan || "";
-            let val = item.cifValue || item.fobValue || item.nilaiBarang || item.amount || item.harga || "";
-            let netto = item.netWeight || item.beratBersih || "";
+            const formatNumVal = (v) => (v !== undefined && v !== null && String(v).trim() !== "")
+                ? String(v).replace(/[^\d.,-]/g, "")
+                : "";
 
-            if (!qty && item.jumlahDanSatuanBarang) {
-                const m = String(item.jumlahDanSatuanBarang).match(/^([\d\s.,]+)\s*([a-zA-Z/]+)?$/);
+            const hs = String(item.hsCode || item.posTarif || "").replace(/[^0-9]/g, "");
+            const kodeBrg = (item.kodeBarang !== undefined && item.kodeBarang !== null) ? String(item.kodeBarang).trim() : "";
+            const desc = item.description || item.uraianJenisBarang || item.uraianBarang || item.namaBarang || "";
+            const merek = (item.merek || item.merk) ? String(item.merek || item.merk).trim() : "";
+            const tipe = (item.tipe || item.type || item.model) ? String(item.tipe || item.type || item.model).trim() : "";
+            const spek = (item.spesifikasi || item.spec) ? String(item.spesifikasi || item.spec).trim() : "";
+            let qty = item.quantity ?? item.jumlahSatuan ?? item.qty ?? "";
+            let uom = item.uom || item.kodeSatuan || item.packageUnit || item.satuanBarang || item.satuan || "";
+            let pkgQty = item.kemasanQty ?? "";
+            let pkgType = item.kemasanJenis || "";
+            let val = item.amount ?? item.cifValue ?? item.fobValue ?? item.nilaiBarang ?? item.harga ?? "";
+            const fobVal = item.fob ?? item.amountFob ?? val;
+            const hargaSatuan = formatNumVal(item.hargaSatuan);
+            const biayaTambahan = formatNumVal(item.biayaTambahan);
+            const freightVal = formatNumVal(item.freight ?? item.freightAmount);
+            const asuransiVal = formatNumVal(item.asuransi ?? item.insuranceAmount);
+            let netto = formatNumVal(item.netWeight ?? item.beratBersih);
+            let bruto = formatNumVal(item.grossWeight ?? item.beratKotor);
+            const volume = formatNumVal(item.volume);
+            const negaraAsal = item.countryOfOrigin || item.negaraAsal || item.negara || "";
+
+            if ((qty === "" || qty === undefined || !uom) && item.jumlahDanSatuanBarang) {
+                const m = String(item.jumlahDanSatuanBarang).trim().match(/^([\d\s.,]+)\s*([a-zA-Z0-9/-]+)?$/);
                 if (m) {
-                    qty = m[1].replace(/\s/g, "");
+                    if (qty === "" || qty === undefined) qty = m[1].replace(/\s/g, "");
                     if (!uom && m[2]) uom = m[2];
-                } else {
+                } else if (qty === "" || qty === undefined) {
                     qty = item.jumlahDanSatuanBarang;
                 }
             }
+            if ((pkgQty === "" || pkgQty === undefined || !pkgType) && item.kemasan) {
+                const mk = String(item.kemasan).trim().match(/^([\d.,]+)\s*(.+)$/);
+                if (mk) {
+                    if (pkgQty === "" || pkgQty === undefined) pkgQty = mk[1];
+                    if (!pkgType) pkgType = mk[2].split(/\s|-/)[0].trim();
+                }
+            }
+            if (val !== undefined && val !== null && String(val).trim() !== "") val = formatNumVal(val);
+            const fobStr = (fobVal !== undefined && fobVal !== null && String(fobVal).trim() !== "") ? formatNumVal(fobVal) : "";
 
-            const hsInput = findFieldByKeywords(["posTarif", "pos_tarif", "hsCode", "hs", "pos", "tarif"], container);
-            if (hsInput) {
-                setNativeInputValue(hsInput, hs || item.hsCode);
-                filledFields.push('HS: ' + hs);
+            const fillBarangSection = (scope) => {
+                const tryFill = (kws, value, label, fieldOpts = {}) => {
+                    if (value === undefined || value === null || String(value).trim() === "") return;
+                    const inp = findFieldByKeywords(kws, scope, fieldOpts);
+                    if (inp && setNativeInputValue(inp, value)) {
+                        filledFields.push(label + ': ' + String(value).slice(0, 18));
+                    }
+                };
+
+                tryFill(["posTarif", "pos_tarif", "kodeHs", "hsCode", "pos tarif/hs", "pos tarif / hs", "pos tarif", "hs"], hs, 'HS');
+                tryFill(["kodeBarang", "kode_barang", "kode barang"], kodeBrg, 'Kode');
+                tryFill(["uraianJenisBarang", "uraianBarang", "uraian jenis barang", "uraian barang", "uraian", "namaBarang", "description", "deskripsi"], desc, 'Uraian');
+                tryFill(["merek", "merk"], merek, 'Merek');
+                tryFill(["tipe", "type"], tipe, 'Tipe');
+                tryFill(["spesifikasi lain", "spesifikasi"], spek, 'Spek');
+                tryFill(["jumlahSatuan", "jumlah_satuan", "jumlah dan satuan", "jumlah satuan", "qty", "jumlah barang", "jumlah"], qty, 'Qty', { preferredKind: 'text' });
+                tryFill(["kodeSatuan", "kode_satuan", "jumlah dan satuan", "jenisSatuan", "jenis satuan", "satuan barang", "satuan", "uom"], uom, 'Satuan', { preferredKind: 'select' });
+                tryFill(["jumlahKemasan", "jumlah_kemasan", "jumlah kemasan", "jmlKemasan", "kemasan"], pkgQty, 'Jml Kemasan', { preferredKind: 'text' });
+                tryFill(["jenisKemasan", "kodeJenisKemasan", "jenis kemasan", "kemasan"], pkgType, 'Kemasan', { preferredKind: 'select' });
+                tryFill(["beratBersih", "berat bersih (kg)", "berat bersih", "netto"], netto, 'Netto', { preferredKind: 'text' });
+                tryFill(["beratKotor", "berat kotor (kg)", "berat kotor", "bruto"], bruto, 'Bruto', { preferredKind: 'text' });
+                tryFill(["volume (m3)", "volume"], volume, 'Volume', { preferredKind: 'text' });
+                tryFill(["amount fca", "amount fob", "amount cif", "nilaiEkspor", "nilai ekspor", "hargaEkspor", "harga ekspor", "nilaiBarang", "nilai barang", "nilaiPabean", "amount", "nilai"], val, 'Amount', { preferredKind: 'text' });
+                tryFill(["biaya tambahan", "biayaTambahan", "diskon"], biayaTambahan, 'Biaya Tambahan', { preferredKind: 'text' });
+                tryFill(["fob", "nilaiFob"], fobStr, 'FOB', { preferredKind: 'text' });
+                tryFill(["hargaSatuan", "harga satuan", "harga_satuan"], hargaSatuan, 'Harga Satuan', { preferredKind: 'text' });
+                tryFill(["freight"], freightVal, 'Freight', { preferredKind: 'text' });
+                tryFill(["asuransi"], asuransiVal, 'Asuransi', { preferredKind: 'text' });
+                tryFill(["negaraAsal", "negara asal", "daerahAsal", "negara"], negaraAsal, 'Negara', { preferredKind: 'select' });
+
+                // Radio Pernyataan Lartas ("Terkena Lartas" / "Tidak Terkena Lartas")
+                if (item.lartas !== undefined && scope?.querySelectorAll) {
+                    const wantLartas = String(item.lartas).toLowerCase() === 'terkena' || item.isLartas === true;
+                    const radios = Array.from(scope.querySelectorAll('input[type="radio"]'));
+                    for (const rad of radios) {
+                        const lblText = (rad.closest("label")?.textContent || rad.parentElement?.textContent || "").toLowerCase();
+                        const matchTidak = !wantLartas && lblText.includes("tidak") && lblText.includes("lartas");
+                        const matchYa = wantLartas && !lblText.includes("tidak") && lblText.includes("lartas");
+                        if ((matchTidak || matchYa) && !rad.disabled) {
+                            rad.click();
+                            filledFields.push('Lartas: ' + (wantLartas ? 'Ya' : 'Tidak'));
+                            break;
+                        }
+                    }
+                }
+            };
+
+            fillBarangSection(container);
+            if (filledFields.length === 0 && container !== document) {
+                fillBarangSection(document);
             }
 
-            const descInput = findFieldByKeywords(["uraian", "namaBarang", "description", "deskripsi"], container);
-            if (descInput) {
-                setNativeInputValue(descInput, desc);
-                filledFields.push('Uraian: ' + desc.substring(0, 20) + '...');
-            }
-
-            const qtyInput = findFieldByKeywords(["jumlahSatuan", "jumlah_satuan", "qty", "jumlah"], container);
-            if (qtyInput) {
-                setNativeInputValue(qtyInput, qty);
-                filledFields.push('Qty: ' + qty);
-            }
-
-            const uomInput = findFieldByKeywords(["kodeSatuan", "kode_satuan", "satuan", "uom"], container);
-            if (uomInput) {
-                setNativeInputValue(uomInput, uom);
-                filledFields.push('Satuan: ' + uom);
-            }
-
-            const valInput = findFieldByKeywords(["nilaiBarang", "nilaiPabean", "cif", "fob", "nilai", "harga"], container);
-            if (valInput) {
-                setNativeInputValue(valInput, val);
-                filledFields.push('Nilai: ' + val);
-            }
-
-            const nettoInput = findFieldByKeywords(["netto", "beratBersih", "berat"], container);
-            if (nettoInput) {
-                setNativeInputValue(nettoInput, netto);
-                filledFields.push('Netto: ' + netto);
+            if (filledFields.length === 0) {
+                const totalInputs = countFormControls(document);
+                const hasAddBtn = Array.from(document.querySelectorAll("button")).some(b => /tambah/i.test(b.textContent || ""));
+                const hint = hasAddBtn
+                    ? `Form detail Barang belum terbuka di CEISA 4.0 (${totalInputs} input aktif terlihat). Klik tombol "Tambah" / "Ubah" di tab Barang CEISA dulu, baru klik Masukkan Data.`
+                    : `Tidak ada kolom Barang yang cocok (${totalInputs} input aktif terdeteksi di halaman CEISA). Pastikan form Barang CEISA sedang terbuka.`;
+                showCeisaAutoInputToast('Form Barang Tidak Ditemukan', hint, 'warn');
+                return {
+                    ok: false,
+                    noFieldsMatched: true,
+                    message: hint
+                };
             }
 
             const successMsg = 'Barang [' + (index + 1) + '/' + total + '] HS ' + hs + ': ' + desc.substring(0, 25) + ' dimasukkan.';
-            showCeisaAutoInputToast('Auto Input Barang (' + (index + 1) + '/' + total + ')', 'HS ' + hs + ' | Qty: ' + qty + ' ' + uom + ' | Val: ' + val, filledFields.length > 0 ? 'success' : 'warn');
+            showCeisaAutoInputToast('Auto Input Barang (' + (index + 1) + '/' + total + ')', 'HS ' + hs + ' | Qty: ' + qty + ' ' + uom + ' | Val: ' + val, 'success');
 
             return {
                 ok: true,
-                message: filledFields.length > 0
-                    ? successMsg + ' (' + filledFields.join(', ') + ')'
-                    : successMsg + ' (Field form barang terdeteksi, pastikan form barang aktif).'
+                message: successMsg + ' (' + filledFields.join(', ') + ')'
             };
         }
 
@@ -2877,11 +3169,305 @@
             };
         }
 
-        showCeisaAutoInputToast('Auto Input Section: ' + section.toUpperCase(), 'Memasukkan parameter draft ' + section, 'success');
+        if (filledFields.length === 0) {
+            const totalInputs = countFormControls(document);
+            const warnMsg = `0 field "${section}" terisi (${totalInputs} input aktif terlihat). Pastikan tab/form "${section}" di portal CEISA 4.0 sudah terbuka.`;
+            showCeisaAutoInputToast('Field Tidak Ditemukan: ' + section.toUpperCase(), warnMsg, 'warn');
+            return {
+                ok: false,
+                noFieldsMatched: true,
+                message: warnMsg
+            };
+        }
+
+        showCeisaAutoInputToast('Auto Input Section: ' + section.toUpperCase(), filledFields.slice(0, 3).join(', '), 'success');
         return {
             ok: true,
-            message: `Data section "${section}" berhasil diproses ke CEISA.`
+            message: `Data section "${section}" berhasil diinput (${filledFields.join(', ')}).`
         };
+    }
+
+    // ========================================================
+    // ASYNC CEISA AUTO-NAVIGATE, AUTO-OPEN & MULTI-SERI RUNNER
+    // ========================================================
+    const sleepMs = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+    async function waitUntilCondition(predicate, timeoutMs = 1500, stepMs = 100) {
+        const start = Date.now();
+        while (Date.now() - start <= timeoutMs) {
+            try {
+                const res = predicate();
+                if (res) return res;
+            } catch (_) {}
+            await sleepMs(stepMs);
+        }
+        return null;
+    }
+
+    function findVisibleActionButton(patterns, root = document) {
+        if (!root || typeof root.querySelectorAll !== "function") return null;
+        const els = Array.from(root.querySelectorAll('button, a.ant-btn, [role="button"], .ant-btn, a[title], span[role="button"]'));
+        for (const pat of patterns) {
+            for (const el of els) {
+                if (el.disabled || isElementHiddenOrInactive(el)) continue;
+                const txt = (el.innerText || el.textContent || "").replace(/\s+/g, " ").trim();
+                const title = (el.getAttribute("title") || el.getAttribute("aria-label") || "").trim();
+                if (pat.test(txt) || pat.test(title)) {
+                    return el;
+                }
+            }
+        }
+        return null;
+    }
+
+    function readDisabledOrActiveSeriInput(root = document) {
+        if (!root || typeof root.querySelectorAll !== "function") return null;
+        const labels = Array.from(root.querySelectorAll("label, .ant-form-item-label, span, div.ant-col, th, p"));
+        for (const lbl of labels) {
+            if (isElementHiddenOrInactive(lbl)) continue;
+            const txt = (lbl.innerText || lbl.textContent || "").toLowerCase().replace(/\s+/g, " ").trim();
+            if (txt === "seri" || txt === "no. seri" || txt === "nomor seri") {
+                const colEl = lbl.closest(".ant-col") || lbl.parentElement;
+                const sibInp = colEl?.nextElementSibling?.querySelector?.("input");
+                const rowInp = lbl.closest(".ant-form-item, .ant-row, .row")?.querySelector?.("input");
+                const targetInp = sibInp || rowInp;
+                if (targetInp && targetInp.value !== undefined) {
+                    const num = parseInt(String(targetInp.value).replace(/\D/g, ""), 10);
+                    if (!isNaN(num) && num > 0) return num;
+                }
+            }
+        }
+        const byName = root.querySelector('input[name="seri"], input[id*="seri" i]');
+        if (byName && byName.value) {
+            const num = parseInt(String(byName.value).replace(/\D/g, ""), 10);
+            if (!isNaN(num) && num > 0) return num;
+        }
+        return null;
+    }
+
+    function isBarangDetailFormOpen() {
+        const container = findCeisaTargetContainer();
+        const hasUraian = Boolean(findFieldByKeywords(["uraianJenisBarang", "uraianBarang", "uraian jenis barang", "uraian", "description"], container));
+        const hasHs = Boolean(findFieldByKeywords(["posTarif", "pos tarif/hs", "pos tarif / hs", "pos tarif", "hs"], container));
+        const hasNetto = Boolean(findFieldByKeywords(["beratBersih", "berat bersih", "netto"], container));
+        return hasUraian || (hasHs && hasNetto);
+    }
+
+    function findBarangTableRows(root = document) {
+        const pane = findCeisaTargetContainer();
+        const tables = Array.from((pane || root).querySelectorAll("table"));
+        for (const tbl of tables) {
+            if (isElementHiddenOrInactive(tbl)) continue;
+            const rows = Array.from(tbl.querySelectorAll("tbody tr")).filter(r => {
+                if (isElementHiddenOrInactive(r)) return false;
+                if (r.classList.contains("ant-table-placeholder") || r.querySelector("td[colspan]")) return false;
+                return Boolean(r.textContent && r.textContent.trim().length > 0);
+            });
+            if (rows.length > 0) return rows;
+        }
+        return [];
+    }
+
+    function findRowActionBtn(row, type = "edit") {
+        if (!row) return null;
+        if (type === "copy") {
+            return row.querySelector('button[title*="Salin" i], a[title*="Salin" i], button[aria-label*="copy" i], .anticon-copy, button[title*="Copy" i]') ||
+                findVisibleActionButton([/salin\s*seri/i, /^\s*salin\b/i, /copy/i], row);
+        }
+        return row.querySelector('button[title*="Ubah" i], button[title*="Edit" i], a[title*="Ubah" i], a[title*="Edit" i], .anticon-edit, [aria-label="edit"]') ||
+            findVisibleActionButton([/^\s*ubah\b/i, /^\s*edit\b/i], row);
+    }
+
+    async function handleConfirmModalIfAny() {
+        await sleepMs(120);
+        const confirmModal = document.querySelector(".ant-modal-confirm .ant-modal-confirm-btns, .ant-popover:not(.ant-popover-hidden) .ant-popover-buttons");
+        if (confirmModal && !isElementHiddenOrInactive(confirmModal)) {
+            const okBtn = findVisibleActionButton([/^\s*(ya|ok|lanjut|setuju|yes|simpan)\b/i], confirmModal);
+            if (okBtn) {
+                okBtn.click();
+                await sleepMs(200);
+            }
+        }
+    }
+
+    async function prepareBarangFormForTargetSeri(targetSeri) {
+        // 1. Jika form belum terbuka, buka otomatis (Edit baris ada atau Tambah / Salin Seri)
+        if (!isBarangDetailFormOpen()) {
+            const rows = findBarangTableRows();
+            if (targetSeri === 1) {
+                const editBtn = rows[0] ? findRowActionBtn(rows[0], "edit") : null;
+                const addBtn = findVisibleActionButton([/^\s*\+?\s*tambah\b/i, /tambah\s*barang/i]);
+                if (editBtn) {
+                    editBtn.click();
+                } else if (addBtn) {
+                    addBtn.click();
+                }
+                await waitUntilCondition(() => isBarangDetailFormOpen(), 1800, 100);
+                return;
+            }
+
+            // targetSeri > 1: Jika baris Seri ke-N sudah ada di tabel, klik Ubah/Edit; kalau belum, Salin Seri atau Tambah
+            if (rows.length >= targetSeri) {
+                const targetEdit = findRowActionBtn(rows[targetSeri - 1], "edit");
+                if (targetEdit) {
+                    targetEdit.click();
+                    await waitUntilCondition(() => isBarangDetailFormOpen(), 1800, 100);
+                    return;
+                }
+            }
+
+            const prevRowCopy = rows[rows.length - 1] ? findRowActionBtn(rows[rows.length - 1], "copy") : null;
+            const globalCopy = findVisibleActionButton([/salin\s*seri/i, /^\s*salin\b/i]);
+            const addBtn = findVisibleActionButton([/^\s*\+?\s*tambah\b/i, /tambah\s*barang/i]);
+
+            if (globalCopy) {
+                globalCopy.click();
+            } else if (prevRowCopy) {
+                prevRowCopy.click();
+            } else if (addBtn) {
+                addBtn.click();
+            }
+            await handleConfirmModalIfAny();
+
+            // Tunggu sampai form terbuka langsung ATAU baris tabel bertambah jadi targetSeri lalu klik Edit baris baru
+            await waitUntilCondition(() => isBarangDetailFormOpen() || findBarangTableRows().length >= targetSeri, 1800, 100);
+            if (!isBarangDetailFormOpen()) {
+                const updatedRows = findBarangTableRows();
+                if (updatedRows.length >= targetSeri) {
+                    const newEditBtn = findRowActionBtn(updatedRows[targetSeri - 1], "edit") || findRowActionBtn(updatedRows[updatedRows.length - 1], "edit");
+                    if (newEditBtn) {
+                        newEditBtn.click();
+                        await waitUntilCondition(() => isBarangDetailFormOpen(), 1800, 100);
+                    }
+                }
+            }
+            return;
+        }
+
+        // 2. Form SUDAH terbuka: cek apakah sedang berada di Seri sebelumnya (< targetSeri)
+        const currentSeri = readDisabledOrActiveSeriInput(findCeisaTargetContainer()) || readDisabledOrActiveSeriInput(document);
+        if (targetSeri > 1 && currentSeri && currentSeri < targetSeri) {
+            // Simpan Seri aktif dulu supaya data Seri sebelumnya tidak tertimpa
+            const saveBtn = findVisibleActionButton([/^\s*simpan\b/i, /simpan/i], findCeisaTargetContainer()) ||
+                findVisibleActionButton([/^\s*simpan\b/i, /simpan/i], document);
+            if (saveBtn) {
+                saveBtn.click();
+                await waitUntilCondition(() => {
+                    const nowSeri = readDisabledOrActiveSeriInput(findCeisaTargetContainer()) || readDisabledOrActiveSeriInput(document);
+                    return !isBarangDetailFormOpen() || (nowSeri && nowSeri >= targetSeri);
+                }, 1500, 100);
+                await sleepMs(150);
+            }
+
+            // Re-evaluasi setelah Simpan: jika kembali ke tabel atau masih di Seri lama, buka/buat Seri targetSeri
+            const afterSeri = readDisabledOrActiveSeriInput(findCeisaTargetContainer()) || readDisabledOrActiveSeriInput(document);
+            if (!isBarangDetailFormOpen() || (afterSeri && afterSeri < targetSeri)) {
+                const rows = findBarangTableRows();
+                if (!isBarangDetailFormOpen() && rows.length >= targetSeri) {
+                    const targetEdit = findRowActionBtn(rows[targetSeri - 1], "edit");
+                    if (targetEdit) {
+                        targetEdit.click();
+                        await waitUntilCondition(() => isBarangDetailFormOpen(), 1800, 100);
+                        return;
+                    }
+                }
+                const globalCopy = findVisibleActionButton([/salin\s*seri/i, /^\s*salin\b/i]);
+                const prevRowCopy = rows[rows.length - 1] ? findRowActionBtn(rows[rows.length - 1], "copy") : null;
+                const addBtn = findVisibleActionButton([/^\s*\+?\s*tambah\b/i, /tambah\s*barang/i]);
+
+                if (globalCopy) globalCopy.click();
+                else if (prevRowCopy) prevRowCopy.click();
+                else if (addBtn) addBtn.click();
+
+                await handleConfirmModalIfAny();
+                await waitUntilCondition(() => {
+                    const s = readDisabledOrActiveSeriInput(findCeisaTargetContainer()) || readDisabledOrActiveSeriInput(document);
+                    return (isBarangDetailFormOpen() && (!s || s >= targetSeri)) || (!isBarangDetailFormOpen() && findBarangTableRows().length >= targetSeri);
+                }, 1800, 100);
+
+                if (!isBarangDetailFormOpen()) {
+                    const updatedRows = findBarangTableRows();
+                    const newEditBtn = updatedRows[targetSeri - 1]
+                        ? findRowActionBtn(updatedRows[targetSeri - 1], "edit")
+                        : (updatedRows.length > 0 ? findRowActionBtn(updatedRows[updatedRows.length - 1], "edit") : null);
+                    if (newEditBtn) {
+                        newEditBtn.click();
+                        await waitUntilCondition(() => isBarangDetailFormOpen(), 1800, 100);
+                    }
+                }
+            }
+        }
+    }
+
+    async function flushPendingAntSelectDropdowns() {
+        if (_pendingAntSelectTasks.length === 0) return;
+        const tasks = _pendingAntSelectTasks.splice(0, _pendingAntSelectTasks.length);
+        for (const task of tasks) {
+            const matched = await waitUntilCondition(
+                () => selectMatchingAntDropdownOption(task.antSelectWrap, task.lowerTarget),
+                750,
+                120
+            );
+            if (!matched && typeof task.element?.blur === "function") {
+                try { task.element.blur(); } catch (_) {}
+            }
+        }
+    }
+
+    async function handleCeisaAutoInputRowAsync(message) {
+        if (!message || typeof message !== "object") {
+            return { ok: false, message: "Payload tidak valid." };
+        }
+
+        const section = message.section || "entitas";
+        const cfg = message.autofillConfig || window._ceisaAutofillConfig || DEFAULT_CEISA_AUTOFILL_CONFIG;
+
+        // Pastikan tab CEISA aktif berpindah & React selesai me-render DOM sebelum mencari form
+        const isSectionDisabled =
+            (section === "pungutan" && cfg.pungutan !== true) ||
+            (section === "entitas" && (cfg.entitas === false || cfg.entitas?.enabled === false)) ||
+            (section !== "entitas" && section !== "pungutan" && cfg[section] === false);
+
+        if (!isSectionDisabled && typeof switchCeisaActiveTab === "function" && detectCeisaActiveSection() !== section) {
+            const switched = switchCeisaActiveTab(section);
+            if (switched) {
+                await waitUntilCondition(() => detectCeisaActiveSection() === section || countFormControls(findCeisaTargetContainer()) > 0, 1200, 100);
+                await sleepMs(150);
+            }
+        }
+
+        if (!isSectionDisabled) {
+            if (section === "barang") {
+                const targetSeri = (Number(message.index) || 0) + 1;
+                await prepareBarangFormForTargetSeri(targetSeri);
+            } else if (section === "dokumen") {
+                const container = findCeisaTargetContainer();
+                const hasNumInp = Boolean(findFieldByKeywords(["nomorDokumen", "nomor dokumen", "noDok"], container));
+                if (!hasNumInp) {
+                    const addDocBtn = findVisibleActionButton([/^\s*\+?\s*tambah\b/i, /tambah\s*dokumen/i]);
+                    if (addDocBtn) {
+                        addDocBtn.click();
+                        await waitUntilCondition(() => Boolean(findFieldByKeywords(["nomorDokumen", "nomor dokumen", "noDok"], findCeisaTargetContainer())), 1200, 100);
+                    }
+                }
+            }
+        }
+
+        _pendingAntSelectTasks.length = 0;
+        const result = handleCeisaAutoInputRow(message);
+        await flushPendingAntSelectDropdowns();
+
+        if (result && result.ok && !result.skipped && message.saveAfterFill === true && (section === "barang" || section === "dokumen")) {
+            await sleepMs(180);
+            const saveBtn = findVisibleActionButton([/^\s*simpan\b/i, /simpan/i], findCeisaTargetContainer()) ||
+                findVisibleActionButton([/^\s*simpan\b/i, /simpan/i], document);
+            if (saveBtn) {
+                saveBtn.click();
+                await sleepMs(350);
+            }
+        }
+
+        return result;
     }
 
 
@@ -4040,12 +4626,14 @@
     // Expose internal functions globally for content script invocation and test harness execution
     if (typeof window !== "undefined") {
         window.handleCeisaAutoInputRow = handleCeisaAutoInputRow;
+        window.handleCeisaAutoInputRowAsync = handleCeisaAutoInputRowAsync;
         window.findFieldByKeywords = findFieldByKeywords;
         window.setNativeInputValue = setNativeInputValue;
         window.findCeisaCard = findCeisaCard;
     }
     if (typeof globalThis !== "undefined") {
         globalThis.handleCeisaAutoInputRow = handleCeisaAutoInputRow;
+        globalThis.handleCeisaAutoInputRowAsync = handleCeisaAutoInputRowAsync;
         globalThis.findFieldByKeywords = findFieldByKeywords;
         globalThis.setNativeInputValue = setNativeInputValue;
         globalThis.findCeisaCard = findCeisaCard;

@@ -112,7 +112,7 @@ PENTING - ATURAN SUMBER UTAMA NAMA & RINCIAN BARANG:
 
 PENTING - KELENGKAPAN NILAI / VALUE DI KOLOM & DETAIL BARANG IMPOR (WAJIB DIISI LENGKAP):
 Untuk SETIAP baris barang pada array 'items', WAJIB mengisi SELURUH field berikut secara rinci:
-- 'hsCode': Pos Tarif BTKI 8 digit (misal: '8538.90.19' atau '2914.12.00')
+- 'hsCode': Pos Tarif BTKI 8 digit tanpa titik (misal: '85389019' atau '29141200')
 - 'kodeBarang': Kode barang / Part Number / Item Code jika tertera, atau '-'
 - 'uraianJenisBarang': Nama komoditas barang SAJA persis sesuai Commercial Invoice / Packing List
 - 'merek': Merk dagang barang (misal: 'PELUCURE', 'VALEO', 'MITSUBISHI') atau '-'
@@ -242,7 +242,7 @@ Kembalikan HANYA format JSON murni tanpa markdown/backticks (\`\`\`json):
 
   "items": [
     {
-      "hsCode": "Pos Tarif BTKI 8 digit (jika tertera di invoice/PL/BL/permit, misal: '8538.90.19')",
+      "hsCode": "Pos Tarif BTKI 8 digit tanpa titik (jika tertera di invoice/PL/BL/permit, misal: '85389019')",
       "kodeBarang": "Kode barang / Part Number / Item Code jika tertera di dokumen, atau '-'",
       "uraianJenisBarang": "Nama komoditas barang SAJA persis sesuai Commercial Invoice / Packing List (misal: 'PELUCURE'). JANGAN ambil dari MSDS dan JANGAN sertakan kata seperti 'HARDENER'!",
       "merek": "Merk dagang barang jika tertera di dokumen (misal: 'PELUCURE') atau '-'",
@@ -344,7 +344,7 @@ Kembalikan HANYA format JSON murni tanpa markdown/backticks (\`\`\`json):
   "totalNetWeightKGM": "Total berat bersih (tulis persis)",
   "items": [
     {
-      "hsCode": "Pos Tarif / HS Code barang 8 sampai 10 digit (misal: '8504.40.90' atau '8512.40.00' jika tertera di dokumen pengapalan seperti Invoice, Packing List, atau B/L. Kosongkan jika tidak ada)",
+      "hsCode": "Pos Tarif / HS Code barang 8 sampai 10 digit tanpa titik (misal: '85044090' atau '85124000' jika tertera di dokumen pengapalan seperti Invoice, Packing List, atau B/L. Kosongkan jika tidak ada)",
       "uraianJenisBarang": "Nama atau deskripsi komoditas barang SAJA (WAJIB HAPUS dan JANGAN sertakan part number maupun customer part no seperti (575000 / W000103691). Contoh: VS TMEAO FBP AIO with Logo 350mm 14\")",
       "jumlahDanSatuanBarang": "Misal: 3,975 PC",
       "kemasan": "Jumlah dan jenis kemasan barang ini. KHUSUS dokumen VALEO & SINAR ASIA: nilainya SAMA SEMUA untuk seluruh baris barang, yaitu diambil dari Total Kemasan / Total Pallet Packing List / Invoice (misal: '816 BOX' untuk Valeo, atau '22 PALLET' / '22 PL' untuk Sinar Asia). JANGAN beda-beda!",
@@ -843,10 +843,8 @@ PENTING:
 
             parsedData.items.forEach((it, idx) => {
                 it.seri = idx + 1;
-                it.hsCode = String(it.hsCode || it.posTarif || '').replace(/\D/g, '').padEnd(8, '0').slice(0, 10);
-                if (it.hsCode.length >= 8) {
-                    it.hsCode = `${it.hsCode.slice(0, 4)}.${it.hsCode.slice(4, 6)}.${it.hsCode.slice(6, 8)}`;
-                }
+                const hsDigits = String(it.hsCode || it.posTarif || '').replace(/\D/g, '');
+                it.hsCode = hsDigits ? hsDigits.padEnd(8, '0').slice(0, 10) : '';
                 it.kodeBarang = it.kodeBarang || it.partNumber || it.partNo || it.itemCode || '-';
                 // Normalisasi nama barang jika tercemar istilah teknis MSDS (seperti HARDENER):
                 if (it.uraianJenisBarang) {

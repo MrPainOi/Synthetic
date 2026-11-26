@@ -883,6 +883,7 @@ if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onMessage)
     const inputDraftSourceHost = document.getElementById("inputDraftSourceHost");
     const btnSaveDraftSourceHost = document.getElementById("btnSaveDraftSourceHost");
     const btnResetDraftSourceLocal = document.getElementById("btnResetDraftSourceLocal");
+    const btnTestHostInBrowser = document.getElementById("btnTestHostInBrowser");
     const lblDraftHostConnectInfo = document.getElementById("lblDraftHostConnectInfo");
     const selectRemoteDraft = document.getElementById("selectRemoteDraft");
     const btnRefreshRemoteDraftList = document.getElementById("btnRefreshRemoteDraftList");
@@ -1012,32 +1013,87 @@ if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onMessage)
         });
     }
 
+    let isConnectingHost = false;
+
+    async function ensureHostOriginPermission(targetUrl) {
+        try {
+            const api = (typeof browser !== 'undefined' && browser.permissions)
+                ? browser
+                : (typeof chrome !== 'undefined' ? chrome : null);
+            if (!api || !api.permissions?.contains || !api.permissions?.request) {
+                return true;
+            }
+            const parsed = new URL(targetUrl);
+            // WebExtension Match Patterns tidak boleh mencantumkan nomor port (:5005)
+            const originPattern = `${parsed.protocol}//${parsed.hostname}/*`;
+            const hasPerm = await api.permissions.contains({ origins: [originPattern] });
+            if (hasPerm) return true;
+            return await api.permissions.request({ origins: [originPattern] });
+        } catch (_) {
+            return true;
+        }
+    }
+
     if (btnSaveDraftSourceHost) {
         btnSaveDraftSourceHost.addEventListener('click', async () => {
-            if (!draftClient) return;
-            hostInputsDirty = false;
-            const rawHost = inputDraftSourceHost ? inputDraftSourceHost.value : '';
-            const rawWeb = inputWebHost ? inputWebHost.value : '';
-            const saved = await draftClient.saveHostConfigToStorage({
-                draftSourceUrl: rawHost,
-                webHostUrl: rawWeb,
-                selectedDraftFilename: ''
-            });
-            currentDraftSourceUrl = saved.draftSourceUrl;
-            currentWebHostUrl = saved.webHostUrl;
-            selectedRemoteFilename = '';
-            if (inputDraftSourceHost) inputDraftSourceHost.value = currentDraftSourceUrl;
-            if (inputWebHost) inputWebHost.value = currentWebHostUrl;
+            if (!draftClient || isConnectingHost) return;
+            isConnectingHost = true;
+            const prevLabel = btnSaveDraftSourceHost.textContent;
+            btnSaveDraftSourceHost.disabled = true;
+            btnSaveDraftSourceHost.textContent = 'Menguji...';
 
-            const health = await draftClient.checkDraftServerHealth(currentDraftSourceUrl);
-            if (health.ok) {
-                updateDraftHostIndicator('ok', `Terhubung ke ${currentDraftSourceUrl}${health.hostIp ? ` (IP PC: ${health.hostIp})` : ''}`);
-                appendLog(`Terhubung ke sumber draft: ${currentDraftSourceUrl}`, 'log-success');
-                await refreshRemoteDraftDropdown(currentDraftSourceUrl);
-                await loadLatestDraftAuto('');
-            } else {
-                updateDraftHostIndicator('error', `Gagal menghubungi ${currentDraftSourceUrl}: ${health.error || 'Cek server & firewall port 5005'}`);
-                appendLog(`Gagal menjangkau sumber draft ${currentDraftSourceUrl} (${health.error || 'offline'}).`, 'log-err');
+            try {
+                hostInputsDirty = false;
+                const rawHost = inputDraftSourceHost ? inputDraftSourceHost.value : '';
+                const rawWeb = inputWebHost ? inputWebHost.value : '';
+                const saved = await draftClient.saveHostConfigToStorage({
+                    draftSourceUrl: rawHost,
+                    webHostUrl: rawWeb,
+                    selectedDraftFilename: ''
+                });
+                currentDraftSourceUrl = saved.draftSourceUrl;
+                currentWebHostUrl = saved.webHostUrl;
+                selectedRemoteFilename = '';
+                if (inputDraftSourceHost) inputDraftSourceHost.value = currentDraftSourceUrl;
+                if (inputWebHost) inputWebHost.value = currentWebHostUrl;
+
+                const permOk = await ensureHostOriginPermission(currentDraftSourceUrl);
+                if (!permOk) {
+                    updateDraftHostIndicator('error', `Izin akses ekstensi ke ${currentDraftSourceUrl} ditolak oleh browser.`);
+                    appendLog(`Izin akses browser ke ${currentDraftSourceUrl} belum diberikan (di Firefox: izinkan host di about:addons -> Permissions).`, 'log-err');
+                    return;
+                }
+
+                const health = await draftClient.checkDraftServerHealth(currentDraftSourceUrl);
+                if (health.ok) {
+                    updateDraftHostIndicator('ok', `Terhubung ke ${currentDraftSourceUrl}${health.hostIp ? ` (IP PC: ${health.hostIp})` : ''}`);
+                    appendLog(`Terhubung ke sumber draft: ${currentDraftSourceUrl}`, 'log-success');
+                    await refreshRemoteDraftDropdown(currentDraftSourceUrl);
+                    await loadLatestDraftAuto('');
+                } else {
+                    const errText = health.error || 'offline';
+                    const firewallTip = draftClient.isRemoteSource(currentDraftSourceUrl)
+                        ? ` Jalankan BUKA_FIREWALL_5005.bat di PC pemilik draft, atau klik "Uji" untuk cek di tab browser.`
+                        : '';
+                    updateDraftHostIndicator('error', `Gagal menghubungi ${currentDraftSourceUrl}: ${errText}`);
+                    appendLog(`Gagal menjangkau sumber draft ${currentDraftSourceUrl} (${errText}).${firewallTip}`, 'log-err');
+                }
+            } finally {
+                isConnectingHost = false;
+                btnSaveDraftSourceHost.disabled = false;
+                btnSaveDraftSourceHost.textContent = prevLabel;
+            }
+        });
+    }
+
+    if (btnTestHostInBrowser) {
+        btnTestHostInBrowser.addEventListener('click', async () => {
+            await persistPendingHostInputs();
+            const testUrl = draftClient
+                ? `${draftClient.normalizeHostUrl(inputDraftSourceHost ? inputDraftSourceHost.value : currentDraftSourceUrl)}/api/health`
+                : `${currentDraftSourceUrl}/api/health`;
+            if (typeof chrome !== 'undefined' && chrome.tabs?.create) {
+                chrome.tabs.create({ url: testUrl });
             }
         });
     }
@@ -1696,7 +1752,9 @@ if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onMessage)
             if (lblItemPreviewDesc) lblItemPreviewDesc.textContent = `Valuta: ${valuta} • Nilai: ${invAmt} • Cara Bayar: TUNAI/BIASA`;
             if (lblBtnInjectText) lblBtnInjectText.textContent = `Masukkan Data Transaksi ke CEISA ▶`;
         } else if (currentSection === 'barang') {
-            const hs = curr.hsCode || curr.posTarif || 'Pos Tarif';
+            const rawHs = curr.hsCode || curr.posTarif || '';
+            const cleanHs = String(rawHs).replace(/\./g, '').replace(/[^0-9]/g, '');
+            const hs = cleanHs || (rawHs ? String(rawHs).replace(/\./g, '') : 'Pos Tarif');
             const desc = curr.uraianJenisBarang || curr.description || curr.namaBarang || 'Barang';
             if (lblItemPreviewTitle) lblItemPreviewTitle.textContent = `[HS ${hs}] ${desc}`;
             if (lblItemPreviewDesc) lblItemPreviewDesc.textContent = `Jumlah: ${curr.jumlahDanSatuanBarang || curr.quantity || '-'} • Kemasan: ${curr.kemasan || '-'} • Nilai: ${curr.amount || curr.cifUsd || curr.cifValue || '-'}`;
@@ -1735,11 +1793,11 @@ if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onMessage)
     }
 
     // Manual Step-by-Step Injection
-    async function injectCurrentStep(advanceAfter = true) {
+    async function injectCurrentStep(advanceAfter = true, extraOptions = {}) {
         const items = getSectionItems(currentSection);
         if (!items || items.length === 0) {
             appendLog("Tidak ada data untuk diinput.", "log-warn");
-            return;
+            return false;
         }
 
         const currItem = items[currentItemIndex];
@@ -1747,7 +1805,7 @@ if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onMessage)
 
         if (!activeCeisaTab?.id) {
             appendLog("Gagal: Tab portal CEISA 4.0 tidak ditemukan. Klik 'Buka CEISA'.", "log-err");
-            return;
+            return false;
         }
 
         appendLog(`Mengirim baris ${currentItemIndex + 1}/${items.length} ke tab CEISA...`, "log-info");
@@ -1760,16 +1818,18 @@ if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onMessage)
                 item: currItem,
                 index: currentItemIndex,
                 total: items.length,
-                autofillConfig: currentAutofillConfig
+                autofillConfig: currentAutofillConfig,
+                saveAfterFill: Boolean(extraOptions.saveAfterFill),
+                isBulkLoop: Boolean(extraOptions.isBulkLoop)
             }, true);
 
             if (res && res.__sendError) {
                 appendLog(`Error: ${res.__sendError}`, "log-err");
-                return;
+                return false;
             }
             if (res && res.skipped) {
                 appendLog(`[LEWATI] ${res.message || 'Bagian dilewati sesuai toggle.'}`, "log-info");
-                return;
+                return true;
             }
             if (res && res.ok) {
                 appendLog(`[SUKSES] ${res.message || 'Baris berhasil diinput ke CEISA!'}`, "log-success");
@@ -1777,11 +1837,14 @@ if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onMessage)
                     currentItemIndex++;
                     updateSectionUI();
                 }
+                return true;
             } else {
                 appendLog(`[PERINGATAN] ${(res && res.message) || 'Halaman CEISA belum siap atau field tidak ditemukan.'}`, "log-warn");
+                return false;
             }
         } catch (e) {
             appendLog(`Kesalahan komunikasi: ${e.message}`, "log-err");
+            return false;
         }
     }
 
@@ -1814,11 +1877,12 @@ if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onMessage)
                 return;
             }
             appendLog(`Mengisi seluruh bagian '${currentSection}' (${items.length} data)...`, "log-info");
+            const shouldAutoSave = (currentSection === 'barang' || currentSection === 'dokumen');
             for (let i = 0; i < items.length; i++) {
                 currentItemIndex = i;
                 updateSectionUI();
-                await injectCurrentStep(false);
-                await new Promise(r => setTimeout(r, 600)); // safe delay
+                await injectCurrentStep(false, { saveAfterFill: shouldAutoSave, isBulkLoop: true });
+                await new Promise(r => setTimeout(r, 450)); // safe settle delay
             }
             appendLog(`Pengisian seluruh bagian '${currentSection}' selesai!`, "log-success");
         });
@@ -1873,12 +1937,13 @@ if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onMessage)
                 appendLog(`[Auto Input] Memproses Bagian: ${currentSection.toUpperCase()} (${items.length} data)...`, "log-info");
 
                 const startIdx = (s === 0) ? currentItemIndex : 0;
+                const shouldAutoSave = (currentSection === 'barang' || currentSection === 'dokumen');
                 for (let i = startIdx; i < items.length; i++) {
                     if (!isAutoLoopRunning) break;
                     currentItemIndex = i;
                     updateSectionUI();
-                    await injectCurrentStep(false);
-                    await new Promise(r => setTimeout(r, 800)); // safe delay
+                    await injectCurrentStep(false, { saveAfterFill: shouldAutoSave, isBulkLoop: true });
+                    await new Promise(r => setTimeout(r, 450)); // safe settle delay
                 }
 
                 if (isAutoLoopRunning) {

@@ -3,6 +3,11 @@
 // pib_dashboard.js - 100% External, Chrome Extension CSP Compliant
 // ====================================================================
 
+// Normalisasi HS Code Tab Barang agar hanya digit tanpa titik (misal: "7326.90.99" -> "73269099")
+function normalizePibHsCode(val) {
+    return String(val || '').replace(/\./g, '').replace(/[^0-9]/g, '').trim();
+}
+
 // Helper resolver URL backend dinamis (Localhost vs WiFi IP / HP)
 function getBackendUrl(path = '') {
     if (typeof window.getCeisaBackendUrl === 'function') {
@@ -279,7 +284,7 @@ const SAMPLE_PIB_DATA = {
     items: [
         {
             seri: 1,
-            hsCode: "8483.40.00",
+            hsCode: "84834000",
             kodeBarang: "GB-8483-AUTO",
             uraianJenisBarang: "Gears and Gearing, Ball or Roller Screws for Industrial Automation",
             description: "Gears and Gearing, Ball or Roller Screws for Industrial Automation",
@@ -1466,7 +1471,7 @@ function detectPibPackageType(str) {
 
         return {
             ...it,
-            hsCode: it.hsCode || it.posTarif || '',
+            hsCode: normalizePibHsCode(it.hsCode || it.posTarif || ''),
             uraianJenisBarang: it.uraianJenisBarang || it.description || it.namaBarang || '',
             description: it.uraianJenisBarang || it.description || it.namaBarang || '',
             kodeBarang: it.kodeBarang || it.itemCode || it.partNumber || '-',
@@ -1621,7 +1626,7 @@ function renderPibActiveItem(idx = 0) {
     if (btnNext) btnNext.disabled = (idx >= window._pibItems.length - 1);
 
     // 2. Pos Tarif (HS) & Lartas
-    const hsCode = item.hsCode || item.posTarif || '';
+    const hsCode = normalizePibHsCode(item.hsCode || item.posTarif || '');
     setEl('pibItemHsCode', hsCode);
 
     const radYa = document.getElementById('pibItemLartasYa');
@@ -1764,7 +1769,11 @@ function savePibActiveItemFromForm() {
 
     const getEl = id => document.getElementById(id)?.value?.trim() || '';
 
-    const hsCode = getEl('pibItemHsCode');
+    const hsCodeInputEl = document.getElementById('pibItemHsCode');
+    const hsCode = normalizePibHsCode(getEl('pibItemHsCode'));
+    if (hsCodeInputEl && hsCodeInputEl.value !== hsCode) {
+        hsCodeInputEl.value = hsCode;
+    }
     const desc = getEl('pibItemUraian');
 
     // Safety check: jika form input di DOM kosong tetapi data item di memori sudah ada, jangan timpa dengan data kosong
@@ -1886,7 +1895,7 @@ function renderPibSummaryTable(filterText = '') {
     const q = (filterText || '').toLowerCase().trim();
 
     window._pibItems.forEach((item, idx) => {
-        const hsCode = item.hsCode || item.posTarif || '';
+        const hsCode = normalizePibHsCode(item.hsCode || item.posTarif || '');
         const desc = item.uraianJenisBarang || item.description || item.namaBarang || '';
         if (q && !hsCode.toLowerCase().includes(q) && !desc.toLowerCase().includes(q)) {
             return;
@@ -1974,7 +1983,7 @@ function updatePibSummaryRow(idx) {
 
     const cells = r.querySelectorAll('td');
     if (cells.length >= 7) {
-        cells[1].textContent = item.hsCode || '';
+        cells[1].textContent = normalizePibHsCode(item.hsCode || item.posTarif || '');
         cells[2].textContent = item.uraianJenisBarang || item.description || '';
         cells[2].title = item.uraianJenisBarang || item.description || '';
         cells[3].textContent = (item.countryOfOrigin || 'CN').slice(0, 2);
@@ -3564,6 +3573,17 @@ function initPibDashboard() {
         }
     });
 
+    // Strip titik dari input HS Code Tab Barang secara real-time ("7326.90.99" -> "73269099")
+    const pibHsInput = document.getElementById('pibItemHsCode');
+    if (pibHsInput) {
+        pibHsInput.addEventListener('input', () => {
+            const clean = normalizePibHsCode(pibHsInput.value);
+            if (pibHsInput.value !== clean) {
+                pibHsInput.value = clean;
+            }
+        });
+    }
+
     // 11. Initial Draft Restore & Calculation
     restorePibDraftState();
     try {
@@ -3586,7 +3606,8 @@ function initPibDashboard() {
             const unitInput = document.getElementById('pibItemUnit');
             const tarifBmInput = document.getElementById('pibTarifBm');
 
-            if (hsInput) hsInput.value = pibPayload.hsCode;
+            const cleanAppliedHs = normalizePibHsCode(pibPayload.hsCode);
+            if (hsInput) hsInput.value = cleanAppliedHs;
             if (uraianInput) uraianInput.value = pibPayload.uraian;
             if (unitInput && pibPayload.satuan) unitInput.value = pibPayload.satuan;
             if (tarifBmInput && pibPayload.bmRate !== undefined) tarifBmInput.value = pibPayload.bmRate;
@@ -3597,7 +3618,7 @@ function initPibDashboard() {
             triggerPibAutoSave();
 
             if (typeof showToast === 'function') {
-                showToast(`Pos Tarif ${pibPayload.hsCode} berhasil diterapkan ke Draft PIB!`, 'success');
+                showToast(`Pos Tarif ${cleanAppliedHs} berhasil diterapkan ke Draft PIB!`, 'success');
             }
         }
     } catch (e) {}
