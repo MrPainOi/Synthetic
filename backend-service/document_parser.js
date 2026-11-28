@@ -14,6 +14,231 @@ function getAiClient(customKey) {
     return new GoogleGenAI({ apiKey: key.trim() });
 }
 
+function buildExtractionPrompt(fileNamesList, mode = 'ekspor') {
+    const isImporMode = Boolean(
+        mode && (mode.toLowerCase().includes('impor') || mode.toLowerCase().includes('pib') || mode.toLowerCase().includes('import'))
+    );
+
+    const roleTitle = isImporMode
+        ? 'dokumen IMPOR (PIB BC 2.0 / FTZ01) dan ekspor/impor'
+        : 'dokumen ekspor/impor';
+
+    const entityCrossCheck = isImporMode
+        ? 'Periksa kesesuaian Shipper/Supplier (Pengirim Luar Negeri) dan Consignee/Importer (Penerima Indonesia) di setiap dokumen.'
+        : 'Periksa kesesuaian Shipper (Eksportir/Pengirim) dan Consignee (Importir/Penerima) di setiap dokumen.';
+
+    const routeCrossCheck = isImporMode
+        ? 'Periksa kesesuaian rute (Pelabuhan Muat Luar Negeri, Pelabuhan Transit LN jika ada, dan Pelabuhan Bongkar di Indonesia), tanggal pengapalan, dan jenis komoditas barang.'
+        : 'Periksa kesesuaian rute (Pelabuhan Muat & Pelabuhan Bongkar), tanggal pengapalan, dan jenis komoditas barang.';
+
+    const imporHeaderSchemaFields = isImporMode ? `
+  "jenisDokumen": "PIB",
+  "cooNumber": "Nomor Certificate of Origin / Form D / Form E / Form AK / SKA jika BENAR-BENAR tertera di dokumen, atau null",
+  "cooDate": "Tanggal COO (YYYY-MM-DD) atau null",
+  "lartasNumber": "Nomor Dokumen Izin / Lartas (PI Kemendag / LS Surveyor) jika BENAR-BENAR tertera, atau null",
+  "lartasDate": "Tanggal Dokumen Lartas (YYYY-MM-DD) atau null",
+  "pengirim": {
+    "nama": "Nama Lengkap Pemasok / Shipper Luar Negeri",
+    "alamat": "Alamat Lengkap Pemasok Luar Negeri",
+    "negara": "Kode 2 huruf & Nama Negara Pemasok (misal: 'CN - CHINA', 'SG - SINGAPORE', 'DE - GERMANY', 'JP - JAPAN', 'TW - TAIWAN', 'US - UNITED STATES')",
+    "nomorIdentitas": "-",
+    "jenisIdentitas": "4 - LAINNYA"
+  },
+  "penjual": {
+    "nama": "Nama Penjual di Invoice Luar Negeri (biasanya sama dengan Pengirim)",
+    "alamat": "Alamat Lengkap Penjual Luar Negeri",
+    "negara": "Kode & Nama Negara Penjual"
+  },
+  "penerima": {
+    "nama": "Nama Lengkap Importir / Penerima di Indonesia (Consignee)",
+    "alamat": "Alamat Lengkap Importir di Indonesia",
+    "negara": "ID - INDONESIA",
+    "nomorIdentitas": "NPWP 16 digit importir jika tertera di dokumen atau null",
+    "jenisIdentitas": "6 - NPWP 16 DIGIT",
+    "nitku": "NITKU jika tertera atau null",
+    "status": "LAINNYA"
+  },
+  "pembeli": {
+    "nama": "Nama Pembeli di dokumen (Bill To / Sold To)",
+    "alamat": "Alamat Pembeli",
+    "negara": "Kode & Nama Negara Pembeli"
+  },
+  "pemilikBarang": {
+    "nama": "Nama Pemilik Barang di Indonesia (biasanya sama dengan Penerima)",
+    "alamat": "Alamat Pemilik Barang di Indonesia",
+    "nomorIdentitas": "NPWP 16 digit pemilik atau null",
+    "afiliasi": "TAH - Tidak berhubungan"
+  },
+  "caraPengangkutan": "1 - LAUT / 2 - UDARA / 3 - DARAT / 4 - POS / KURIR / 5 - MULTIMODA",
+  "vesselName": "Nama Kapal atau Nomor Penerbangan Pesawat (JANGAN tulis nama bandara atau pelabuhan)",
+  "voyageNumber": "Nomor Voyage kapal atau flight number jika terpisah",
+  "vesselFlag": "Bendera Kebangsaan Kapal / Maskapai (misal: 'JP - JAPAN', 'SG - SINGAPORE', 'PA - PANAMA', 'ID - INDONESIA')",
+  "etaDate": "Tanggal Perkiraan Tiba / ETA (YYYY-MM-DD)",
+  "portLoading": "Pelabuhan Muat Asal Luar Negeri (misal: 'NRT - NARITA', 'CNSHG - SHANGHAI', 'SGSIN - SINGAPORE')",
+  "portTransit": "Pelabuhan Transit Luar Negeri jika ada (misal: 'SGSIN - SINGAPORE', 'SGJUR - JURONG') atau null",
+  "portDischarge": "Pelabuhan Bongkar Tujuan di INDONESIA (misal: 'IDSKP - SEKUPANG', 'IDBTM - BATAM', 'IDTPP - TANJUNG PRIOK')",
+  "tpsLocation": "Lokasi TPS di pelabuhan jika tertera",
+  "packageType": "Kode jenis kemasan CEISA (misal: 'BX - BOX', 'CT - CARTON', 'PK - PACKAGE', 'PX - PALLET', 'DR - DRUM', 'BG - BAG')",
+  "packageQty": 816, // WAJIB ANGKA MURNI total jumlah kemasan
+  "grossWeight": 12450.50, // WAJIB ANGKA MURNI total berat kotor dalam KG
+  "netWeight": 11200.00, // WAJIB ANGKA MURNI total berat bersih dalam KG
+  "containerSize": "20 / 40 / 45",
+  "containerType": "FCL / LCL",
+  "currency": "Mata uang faktur 3 huruf (USD, EUR, CNY, SGD, JPY, IDR)",
+  "incoterm": "Incoterm penyerahan barang (FOB, CIF, CFR, EXW, FCA, CIP, CPT, DAP, DDP)",
+  "invoiceAmount": 50000.00, // WAJIB ANGKA MURNI total nilai faktur
+  "freightAmount": 0.00, // Biaya Freight jika tertera terpisah di B/L atau Invoice; jika tidak ada atau Term CIF, isi 0.00
+  "insuranceAmount": 0.00, // Biaya asuransi jika tertera; jika tidak ada, isi 0.00
+  "insuranceType": "LN - Luar Negeri",
+  "cifAmount": 50000.00, // Total nilai CIF (invoiceAmount + freightAmount + insuranceAmount)` : '';
+
+    const imporItemExtraSchemaFields = isImporMode ? `,
+      "kodeBarang": "Kode barang / Part Number / Customer Part No jika tertera di Invoice/PL, atau '-'",
+      "merek": "Merk dagang barang jika tertera di dokumen atau '-'",
+      "tipe": "Tipe / model barang jika tertera atau '-'",
+      "spesifikasi": "Spesifikasi teknis, part number, ukuran/dimensi jika tertera atau '-'",
+      "negaraAsal": "Kode 2 huruf & Nama Negara Asal pembuatan barang (misal: 'CN - CHINA', 'JP - JAPAN', 'SG - SINGAPORE', 'DE - GERMANY', 'US - UNITED STATES')",
+      "kondisi": "Barang Baru", // atau 'Bukan Baru' jika barang bekas/used
+      "kategori": "4 - BAHAN BAKU", // atau '1 - BARANG MODAL', '2 - BARANG KONSUMSI'
+      "asal": "1 - SEPENUHNYA DIPEROLEH DAN/ATAU DIPRODUKSI DI LUAR DAERAH PABEAN (WHOLLY OBTAINED)",
+      "quantity": 3975, // WAJIB ANGKA MURNI kuantitas barang tanpa huruf satuan
+      "satuanBarang": "Kode satuan CEISA 3 huruf (PCE / KGM / SET / UNT / MTR / DZN / ROL / LBR / LTR)",
+      "kemasanQty": 816, // WAJIB ANGKA MURNI jumlah kemasan untuk baris barang ini
+      "kemasanJenis": "Kode jenis kemasan CEISA (misal: 'BX - BOX', 'CT - CARTON', 'PK - PACKAGE', 'PX - PALLET')",
+      "volume": 0.00, // Volume M3 jika tertera, default 0.00
+      "fob": 25000.00, // WAJIB ANGKA MURNI nilai harga barang / FOB baris ini (sama dengan amount jika term FOB/EXW/FCA)
+      "biayaTambahan": 0.00, // Biaya tambahan / diskon baris barang, default 0.00
+      "hargaSatuan": 6.2893, // WAJIB ANGKA MURNI harga satuan per unit (amount / quantity)
+      "freight": 0.00, // Proporsi biaya freight baris barang jika ada, default 0.00
+      "asuransi": 0.00, // Proporsi biaya asuransi baris barang jika ada, default 0.00
+      "cifUsd": 25000.00, // WAJIB ANGKA MURNI nilai CIF barang (proporsional FOB + Freight + Insurance)
+      "tarifBm": 5.0, // Tarif Bea Masuk (%) jika tertera di dokumen atau default 5.0
+      "tarifPpn": 11.0, // Tarif PPN (%) default 11.0
+      "tarifPph": 2.5, // Tarif PPh Pasal 22 (%) default 2.5
+      "lartas": "tidak" // 'terkena' jika barang lartas / berizin khusus, 'tidak' jika umum` : '';
+
+    const imporExtraRules = isImporMode ? `
+- ATURAN KHUSUS MODE IMPOR (PIB BC 2.0 / FTZ01):
+  * JANGAN TERTUKAR PERAN: Shipper / Supplier / Vendor di dokumen adalah Pengirim & Penjual Luar Negeri; Consignee / Importer adalah Penerima & Pemilik Barang berbadan hukum di Indonesia.
+  * Pelabuhan Muat ('loadingPort' / 'portLoading') adalah pelabuhan asal di Luar Negeri; Pelabuhan Bongkar ('dischargePort' / 'portDischarge') adalah pelabuhan tujuan di Indonesia. Jika terdapat pelabuhan singgah di Singapura/LN, masukkan ke 'portTransit'.
+  * Sumber utama rincian barang ('uraianJenisBarang', 'kodeBarang', 'merek', 'tipe', 'spesifikasi') WAJIB diambil dari Commercial Invoice / Packing List, BUKAN menebak istilah kimia dari MSDS/SDS (seperti 'HARDENER' / 'CURING AGENT' jika tidak tertera di deskripsi komersial Invoice/PL). Simpan Part Number / Customer Part No pada field 'kodeBarang' dan/atau 'spesifikasi', tetap jaga 'uraianJenisBarang' bersih sebagai nama komoditas barang SAJA.
+  * KOLOM BARANG IMPOR WAJIB LENGKAP: Karena formulir barang CEISA 4.0 PIB memiliki lebih banyak kolom, SETIAP elemen di 'items' WAJIB mengisi seluruh field impor ('hsCode', 'kodeBarang', 'uraianJenisBarang', 'merek', 'tipe', 'spesifikasi', 'negaraAsal', 'kondisi', 'kategori', 'asal', 'jumlahDanSatuanBarang', 'quantity', 'satuanBarang', 'kemasan', 'kemasanQty', 'kemasanJenis', 'beratBersih', 'beratKotor', 'volume', 'amount', 'fob', 'biayaTambahan', 'hargaSatuan', 'freight', 'asuransi', 'cifUsd', 'tarifBm', 'tarifPpn', 'tarifPph', 'lartas').
+  * Jika ada biaya Freight atau Asuransi yang tertera terpisah di dokumen (Freight Invoice, Sea Waybill, B/L, atau Commercial Invoice), WAJIB ekstrak ke 'freightAmount' & 'insuranceAmount' serta alokasikan proporsinya per item.` : '';
+
+    return `Kamu adalah sistem ahli kepabeanan Indonesia (PPJK) dan verifikator ${roleTitle} yang sangat teliti dan kritis.
+Berikut daftar file dokumen yang terlampir:
+${fileNamesList}
+
+TUGAS UTAMA:
+1. SAFECHECK (VALIDASI RELEVANSI ANTAR-DOKUMEN):
+   Lakukan analisis perbandingan dan cross-check secara ketat: apakah SEMUA dokumen di atas memang saling berhubungan dan merupakan SATU KESATUAN PENGIRIMAN (satu shipment yang sama)?
+   - Periksa konsistensi nomor: No. Invoice, No. Packing List (PL), No. Bill of Lading (B/L / Sea Waybill / Air Waybill), No. PO/Kontrak, No. Kontainer / Seal.
+   - ${entityCrossCheck}
+   - ${routeCrossCheck}
+   - Tentukan apakah ada dokumen yang ASING, SALAH LAMPIR, atau dari PENGIRIMAN/TRANSAKSI BERBEDA.
+
+2. EKSTRAKSI & MERGE DATA:
+   Ekstrak informasi penting secara LENGKAP persis seperti teks aslinya, jangan bulatkan angka, jangan hilangkan koma, titik, atau detail apapun. Jika tidak ditemukan, isi null.
+
+Kembalikan HANYA format JSON murni tanpa markdown/backticks (\`\`\`json):
+{
+  "safeCheck": {
+    "isRelated": true, // WAJIB boolean: true jika SEMUA dokumen valid & 1 shipment. false jika ada dokumen yang tidak cocok/beda shipment/asing
+    "confidenceScore": 95, // Angka 0 - 100
+    "summary": "Ringkasan penjelasan hasil safecheck dalam bahasa Indonesia (jelaskan mengapa dokumen cocok atau jika ada indikasi tidak nyambung)",
+    "matchedIdentifiers": [
+      "Contoh: Nomor Invoice 98007728 cocok antara Commercial Invoice dan Packing List",
+      "Contoh: Shipper PT. ABC dan Consignee XYZ terkonfirmasi sama di semua dokumen"
+    ],
+    "discrepanciesOrWarnings": [
+      // Isi daftar jika ada ketidaksesuaian nomor, perbedaan nama/alamat pihak, atau dokumen yang patut dicurigai tidak berhubungan
+    ],
+    "documentList": [
+      {
+        "fileName": "Nama file dokumen sesuai daftar di atas",
+        "documentType": "INVOICE / PACKING_LIST / BILL_OF_LADING / CERTIFICATE / OTHER",
+        "belongsToShipment": true, // true jika dokumen ini bagian dari shipment, false jika tidak relevan/berbeda
+        "notes": "Penjelasan singkat isi/fungsi dokumen ini"
+      }
+    ]
+  },${imporHeaderSchemaFields}
+  "blNumber": "Nomor Bill of Lading / B/L / Sea Waybill / Air Waybill (isi null jika tidak ada di dokumen)",
+  "blDate": "Tanggal Bill of Lading / Shipped on Board Date",
+  "invoiceNumber": "Nomor SEMUA Invoice lengkap (WAJIB gabungkan SEMUA nomor invoice yang ada dipisahkan koma, misal: '335223, 335226, SMV.B2609043, 335227, SMV.B2609044')",
+  "invoiceDate": "Tanggal Invoice (jika berbeda-beda, tuliskan tanggal utama atau pisahkan koma)",
+  "invoices": [
+    {
+      "invoiceNumber": "Nomor Invoice persis di dokumen",
+      "invoiceDate": "Tanggal Invoice",
+      "amount": "Nominal total invoice",
+      "currency": "Mata uang (IDR, USD, dll)",
+      "containerNumber": "Nomor kontainer terkait jika tertera",
+      "type": "COMMERCIAL / SAMPLE_STORE_IN / OTHER"
+    }
+  ],
+  "packingListNumber": "Nomor SEMUA Packing List yang bersesuaian (WAJIB gabungkan SEMUA nomor PL dipisahkan koma; isi null jika tidak ada lembar Packing List)",
+  "packingListDate": "Tanggal Packing List jika ada",
+  "containerNumber": "Nomor Kontainer / Peti Kemas (pisahkan koma jika lebih dari satu)",
+  "shipperName": "Nama Lengkap ${isImporMode ? 'Pengirim / Pemasok Luar Negeri' : 'Eksportir'}",
+  "shipperAddress": "Alamat Lengkap ${isImporMode ? 'Pengirim / Pemasok Luar Negeri' : 'Eksportir'} persis di dokumen",
+  "consigneeName": "Nama Lengkap ${isImporMode ? 'Importir / Penerima di Indonesia' : 'Penerima'}",
+  "consigneeAddress": "Alamat Lengkap ${isImporMode ? 'Importir / Penerima di Indonesia' : 'Penerima'} persis di dokumen",
+  "loadingPort": "Pelabuhan Muat${isImporMode ? ' Asal Luar Negeri' : ''}",
+  "dischargePort": "Pelabuhan Bongkar${isImporMode ? ' Tujuan di Indonesia' : ''}",
+  "totalKemasan": "Total jenis & jumlah kemasan dari dokumen (KHUSUS dokumen VALEO: baca Grand Total kemasan dari Packing List, utamakan jumlah box/kemasan barang, misal: '816 BOXES' atau '7 PALLETS = 816 BOXES')",
+  "totalGrossWeightKGM": "Total berat kotor (tulis persis)",
+  "totalNetWeightKGM": "Total berat bersih (tulis persis)",
+  "items": [
+    {
+      "hsCode": "Pos Tarif / HS Code barang 8 sampai 10 digit tanpa titik (misal: '85044090' atau '85124000' jika tertera di dokumen pengapalan seperti Invoice, Packing List, atau B/L. Kosongkan jika tidak ada)",
+      "uraianJenisBarang": "Nama atau deskripsi komoditas barang SAJA (WAJIB HAPUS dan JANGAN sertakan part number maupun customer part no seperti (575000 / W000103691). Contoh: VS TMEAO FBP AIO with Logo 350mm 14\")",
+      "jumlahDanSatuanBarang": "Misal: 3,975 PCE",
+      "kemasan": "Jumlah dan jenis kemasan barang ini. KHUSUS dokumen VALEO & SINAR ASIA: nilainya SAMA SEMUA untuk seluruh baris barang, yaitu diambil dari Total Kemasan / Total Pallet Packing List / Invoice (misal: '816 BOX' untuk Valeo, atau '22 PALLET' / '22 PL' untuk Sinar Asia). JANGAN beda-beda!",
+      "beratBersih": "Net weight baris barang",
+      "beratKotor": "Gross weight baris barang",
+      "amount": "Total harga untuk baris barang ini"${imporItemExtraSchemaFields}
+    }
+  ]
+}
+
+PENTING:
+- ATURAN KHUSUS MULTI-INVOICE & INVOICE SAMPLE/STORE-IN/FOC:
+  * WAJIB periksa SETIAP HALAMAN dokumen dari awal sampai akhir secara seksama!
+  * Seringkali dokumen pengiriman memuat lembar Fax Transmission, Booking Confirmation, atau Shipping Instruction di halaman awal (misal Page 1). BACA BAIK-BAIK bagian rincian kontainer di lembar tersebut karena seringkali mencantumkan LEBIH DARI SATU INVOICE per kontainer (misal: Container CIMU 0654754 memuat Invoice 335226 DAN Invoice SMV.B2609043; Container TLHU 8158388 memuat Invoice 335227 DAN Invoice SMV.B2609044)!
+  * Invoice tambahan seperti invoice sample product atau store-in (misal awalan kode SMV.B..., SAMPLE, STORE-IN, FOC) adalah DOKUMEN PABEAN RESMI DARI SHIPMENT INI. SEMUANYA WAJIB DIDETEKSI dan dicantumkan pada field 'invoiceNumber' dan array 'invoices'!
+  * JANGAN PERNAH menyaring, memotong, atau mengabaikan baris barang maupun invoice sample/store-in atau invoice dengan nominal kecil!
+  * Pada 'invoiceNumber': Tuliskan SEMUA nomor invoice yang ditemukan, dipisahkan koma dan spasi (contoh: '335223, 335226, SMV.B2609043, 335227, SMV.B2609044').
+  * Pada 'items': WAJIB ekstrak seluruh baris barang dari SEMUA halaman dan SEMUA invoice yang ada tanpa terlewat, termasuk barang dari invoice sample/store-in!
+  * Untuk field 'packingListNumber': HANYA cantumkan nomor Packing List jika BENAR-BENAR TERDAPAT lembar Packing List (Daftar Kemasan / Delivery Note) atau dokumen gabungan CIPL di dalam berkas. Jika seluruh lembar dokumen HANYA memuat lembar Invoice (Rechnung / Commercial Invoice) tanpa ada lembar Packing List terpisah, WAJIB isi 'packingListNumber': null!
+  * Untuk field 'blNumber', 'cooNumber', dan 'lartasNumber': JIKA TIDAK DITEMUKAN di berkas yang diunggah, WAJIB isi null! JANGAN PERNAH mengarang atau mengasumsikan nomor jika tidak tertera di dokumen asli!
+- Pada 'uraianJenisBarang': HANYA tuliskan nama atau uraian komoditas barangnya saja. JANGAN sertakan nomor part (part no) maupun customer part no (misal jangan sertakan angka dalam kurung seperti (575000 / W000103691)).
+- ATURAN KEMASAN BARANG KHUSUS PT. VALEO AC INDONESIA:
+  Nilai kemasan untuk SETIAP baris barang di dalam list ('items') nilainya SAMA SEMUA per Packing List, BUKAN per baris atau dibagi-bagi!
+  Cara melihatnya: baca baris Grand Total kemasan pada Packing List (misal jika di baris Grand Total PL tertulis '816 BOXES', maka SEMUA baris barang kemasannya diisi '816 BOX').
+  Dan pada 'totalKemasan', WAJIB cantumkan total kemasan dari Packing List tersebut (misal: '816 BOXES' atau '7 PALLETS = 816 BOXES').
+- ATURAN KEMASAN BARANG KHUSUS PT. SINAR ASIA PACK:
+  Nilai kemasan untuk SETIAP baris barang di dalam list ('items') nilainya juga WAJIB SAMA SEMUA, TIDAK BOLEH BERBEDA-BEDA!
+  Cara melihatnya: baca TOTAL PALET yang tertera di Packing List / Invoice (misal jika total palet adalah 22 PALLETS, maka SEMUA baris barang kemasannya WAJIB diisi '22 PALLET' atau '22 PL').
+  JANGAN mengisi kemasan per baris dengan angka yang berbeda-beda (misal 2, 6, 1, 2, 8, 2, 1 itu SALAH, SEMUANYA HARUS '22 PALLET')!
+  Dan pada 'totalKemasan', WAJIB cantumkan total palet tersebut (misal: '22 PALLETS' atau '22 PL').
+- ATURAN BERAT BARANG KHUSUS PT. SINAR ASIA PACK:
+  PERHATIAN: Aturan ini HANYA BERLAKU EKSKLUSIF untuk dokumen dari perusahaan/pihak SINAR ASIA (PT. SINAR ASIA PACK). JANGAN terapkan pada dokumen dari perusahaan lain!
+  Khusus dokumen Sinar Asia, Packing List tidak merinci berat kotor dan bersih per barang, melainkan hanya mencantumkan Total Weight.
+  HANYA untuk dokumen Sinar Asia, hitung berat per baris barang dengan MEMBAGI Total Weight tersebut secara merata dengan jumlah baris barang (items).
+  Contoh: Total Weight = 1,000 KGS dan terdapat 2 baris barang, maka masing-masing baris barang diisi:
+  "beratBersih": "500.00 KGS",
+  "beratKotor": "500.00 KGS" (1000 / 2 = 500).
+  Dan jika 'totalNetWeightKGM' tidak tercantum di dokumen Sinar Asia, isi nilainya sama dengan 'totalGrossWeightKGM'.
+  Untuk dokumen perusahaan lain (selain Sinar Asia), WAJIB ekstrak berat kotor dan bersih persis dari dokumen aslinya tanpa dibagi.
+- ATURAN DOKUMEN & ENTITAS KHUSUS PT. SINAR ASIA PACK:
+  * Dokumen Packing List dan Invoice adalah 1 DOKUMEN YANG SAMA (CIPL / Commercial Invoice & Packing List).
+  * Nomor Packing List selalu SAMA DENGAN Nomor Invoice.
+  * Sinar Asia ada 2 kegiatan: IMPOR dan EKSPOR:
+    - Jika IMPOR (Pemberitahuan Impor Barang): Consignee (Importir / Penerima) adalah "PT. Sinar Asia Pack".
+    - Jika EKSPOR (Pemberitahuan Ekspor Barang): Shipper / Eksportir adalah "PT. Sinar Asia Pack", dan Consignee (Pembeli / Penerima luar negeri) adalah "Golden Ben Printer Pte Ltd".${imporExtraRules}
+- JANGAN membulatkan angka. Jika ada dokumen yang sama sekali tidak berhubungan, tetap isi data shipment utama yang sah dan laporkan secara tegas di safeCheck.`;
+}
+
 async function parseDocuments(pdfInputs, onProgress = () => { }, customApiKey = null, mode = 'ekspor') {
     const pdfPaths = pdfInputs;
     console.log(`Memproses ${pdfInputs.length} dokumen sekaligus [Mode: ${mode.toUpperCase()}]...`);
@@ -67,330 +292,7 @@ async function parseDocuments(pdfInputs, onProgress = () => { }, customApiKey = 
             (mode && (mode.toLowerCase().includes('impor') || mode.toLowerCase().includes('pib') || mode.toLowerCase().includes('import')))
         );
 
-        const prompt = isImporMode ? `Kamu adalah sistem ahli kepabeanan Indonesia (PPJK) dan verifikator dokumen IMPOR (PIB BC 2.0 / FTZ01) yang sangat teliti, analitis, dan kritis.
-Berikut daftar file dokumen yang terlampir:
-${fileNamesList}
-
-TUGAS UTAMA:
-1. SAFECHECK (VALIDASI RELEVANSI ANTAR-DOKUMEN):
-   Lakukan analisis perbandingan dan cross-check secara ketat: apakah SEMUA dokumen di atas memang saling berhubungan dan merupakan SATU KESATUAN PENGIRIMAN (satu shipment impor yang sama)?
-   - Periksa konsistensi nomor: No. Invoice, No. Packing List (PL), No. Bill of Lading (B/L / Sea Waybill / Air Waybill), No. PO/Kontrak, No. Kontainer / Seal.
-   - Periksa kesesuaian Shipper/Pengirim Luar Negeri dan Consignee/Importir Indonesia di setiap dokumen.
-   - Periksa kesesuaian rute (Pelabuhan Muat Asal Luar Negeri & Pelabuhan Bongkar Tujuan Indonesia), tanggal pengapalan, dan jenis komoditas barang.
-   - Tentukan apakah ada dokumen yang ASING, SALAH LAMPIR, atau dari TRANSAKSI BERBEDA.
-
-2. EKSTRAKSI DATA LENGKAP CEISA 4.0 PIB (BC 2.0 / FTZ01):
-   PENTING - ATURAN PERAN PABEAN IMPOR (JANGAN TERTUKAR!):
-   - Pengirim / Shipper / Supplier: Pihak pabrik / eksportir luar negeri yang mengirimkan barang (misal dari Jepang, China, Singapura, Jerman, dsb).
-   - Penjual / Seller: Pihak penjual di Invoice komersial luar negeri (biasanya sama dengan Pengirim, atau perusahaan perantara/trader LN).
-   - Penerima / Consignee / Importer: Pihak importir berbadan hukum di Indonesia yang menerima barang (misal di Batam, Jakarta, Surabaya, dll).
-   - Pembeli / Buyer: Pihak pembeli di dokumen (tertera pada "Sold to" atau "Bill to" di invoice; jika Sold To perusahaan luar negeri/trader seperti Singapura, catat nama dan negara aslinya).
-   - Pemilik Barang: Pihak pemilik barang di Indonesia (biasanya sama dengan Penerima).
-
-PENTING - ATURAN MULTI-HALAMAN & MULTI-INVOICE & DOKUMEN SHIPMENT:
-* WAJIB periksa SETIAP HALAMAN dokumen dari awal sampai akhir secara seksama!
-* Pengiriman impor seringkali memuat lembar Air Waybill / Bill of Lading, Cargo Clearance Permit, Commercial Invoice, Packing List, Delivery Order / DG Order, Certificate of Origin, hingga MSDS.
-* Seringkali dokumen pengiriman mencantumkan LEBIH DARI SATU INVOICE dalam satu shipment (misal Commercial Invoice utama, invoice sample product, store-in, FOC, atau biaya terpisah). SEMUA nomor invoice WAJIB DIDETEKSI dan dicantumkan pada field 'invoiceNumber' (dipisahkan koma) dan di array 'invoices'!
-* JANGAN PERNAH menyaring, mengabaikan, atau memotong baris barang!
-* Pada 'items': WAJIB ekstrak SELURUH baris barang dari SEMUA halaman/invoice tanpa terlewat! Jika dokumen memiliki 2 atau lebih barang, WAJIB ekstrak semuanya lengkap satu per satu!
-* Ekstrak informasi penting secara LENGKAP persis seperti teks aslinya, jangan bulatkan angka, jangan hilangkan koma, titik, atau detail apapun. Jika tidak ditemukan, isi null atau '-' sesuai petunjuk.
-
-PENTING - ATURAN SUMBER UTAMA NAMA & RINCIAN BARANG:
-* Sumber utama nama barang ('uraianJenisBarang'), Kode/Part Number ('kodeBarang'), Merek ('merek'), Tipe ('tipe'), dan Spesifikasi ('spesifikasi') WAJIB DIAMBIL DARI LEMBAR "COMMERCIAL INVOICE" ATAU "PACKING LIST" (kolom 'Description of Goods', 'Commodity', 'Part No', atau rincian item)!
-* JANGAN PERNAH mengambil nama barang dari lembar MSDS / SDS (Safety Data Sheet), CoA (Certificate of Analysis), atau lembar keselamatan kimia! Lembar MSDS hanya referensi keselamatan bahan kimia pengangkut, BUKAN nama barang komersial pabean!
-* JANGAN menambahkan istilah klasifikasi kimia dari MSDS (seperti "HARDENER", "CURING AGENT", "RESIN", dsb) ke dalam 'uraianJenisBarang' jika kata tersebut TIDAK TERCANTUM dalam Description of Goods pada Commercial Invoice / Packing List!
-* Contoh Nyata: Jika di Commercial Invoice tertulis:
-  "PELUCURE (A61301T3152X)
-   HY-680 1KG/UNCAN"
-  dan di lampiran MSDS belakang tertulis fungsi kimianya adalah Hardener buatan PELNOX, LTD, maka:
-  - 'uraianJenisBarang': "PELUCURE" (atau "PELUCURE (A61301T3152X)") -> DILARANG KERAS menulis "HARDENER" atau "PELUCURE HARDENER"!
-  - 'kodeBarang': "A61301T3152X" (atau part number tertera)
-  - 'merek': "PELUCURE" (atau "-") -> JANGAN tulis "PELNOX"!
-  - 'tipe': "HY-680"
-  - 'spesifikasi': "HY-680 1KG/UNCAN"
-  Hal ini karena petugas Bea Cukai dan sistem CEISA 4.0 PIB mencocokkan nama barang 1:1 langsung terhadap Commercial Invoice & Packing List!
-
-PENTING - KELENGKAPAN NILAI / VALUE DI KOLOM & DETAIL BARANG IMPOR (WAJIB DIISI LENGKAP):
-Untuk SETIAP baris barang pada array 'items', WAJIB mengisi SELURUH field berikut secara rinci:
-- 'hsCode': Pos Tarif BTKI 8 digit tanpa titik (misal: '85389019' atau '29141200')
-- 'kodeBarang': Kode barang / Part Number / Item Code jika tertera, atau '-'
-- 'uraianJenisBarang': Nama komoditas barang SAJA persis sesuai Commercial Invoice / Packing List
-- 'merek': Merk dagang barang (misal: 'PELUCURE', 'VALEO', 'MITSUBISHI') atau '-'
-- 'tipe': Tipe model barang jika tertera atau '-'
-- 'spesifikasi': Spesifikasi teknis, part number, ukuran/dimensi jika tertera atau '-'
-- 'negaraAsal': Kode 2 huruf & Nama Negara Asal Pembuatan Barang (misal: 'JP - JAPAN', 'CN - CHINA', 'SG - SINGAPORE', 'DE - GERMANY', 'US - UNITED STATES')
-- 'kondisi': Kondisi barang ('Barang Baru' atau 'Bukan Baru', default 'Barang Baru')
-- 'kategori': Kategori pabean barang (default: '4 - BAHAN BAKU', atau '1 - BARANG MODAL', '2 - BARANG KONSUMSI')
-- 'asal': Asal barang (default: '1 - SEPENUHNYA DIPEROLEH DAN/ATAU DIPRODUKSI DI LUAR DAERAH PABEAN (WHOLLY OBTAINED)')
-- 'jumlahDanSatuanBarang': String kuantitas dan satuan (misal: '3,975 PCE' atau '105 KGM')
-- 'quantity': WAJIB ANGKA MURNI kuantitas barang (misal: 3975)
-- 'satuanBarang': Kode satuan CEISA (PCE / KGM / SET / UNT / MTR / DZN / ROL / LBR / LTR)
-- 'kemasan': String jumlah dan jenis kemasan (misal: '816 BOX' atau '1 PX')
-- 'kemasanQty': WAJIB ANGKA MURNI jumlah kemasan baris barang (misal: 816)
-- 'kemasanJenis': Kode jenis kemasan CEISA (misal: 'BX - BOX', 'PK - PACKAGE', 'CT - CARTON', 'PX - PALLET')
-- 'beratBersih': WAJIB ANGKA MURNI berat bersih dalam KG
-- 'beratKotor': WAJIB ANGKA MURNI berat kotor dalam KG
-- 'volume': Volume dalam M3 jika tertera, default 0.00
-- 'amount': WAJIB ANGKA MURNI total nilai harga barang (FOB)
-- 'fob': WAJIB ANGKA MURNI nilai FOB (sama dengan amount)
-- 'biayaTambahan': Biaya tambahan / diskon baris barang (default 0.00)
-- 'hargaSatuan': WAJIB ANGKA MURNI harga satuan per unit (amount / quantity)
-- 'asuransi': Biaya asuransi baris barang jika ada (default 0.00)
-- 'cifUsd': WAJIB ANGKA MURNI nilai CIF barang (proporsional FOB + Freight + Insurance)
-- 'tarifBm': Tarif Bea Masuk (%) jika tertera atau 5.0
-- 'tarifPpn': Tarif PPN (%) default 11.0
-- 'tarifPph': Tarif PPh (%) default 2.5
-- 'lartas': 'terkena' jika barang lartas, 'tidak' jika umum
-
-Kembalikan HANYA format JSON murni tanpa markdown/backticks (\`\`\`json):
-{
-  "safeCheck": {
-    "isRelated": true,
-    "confidenceScore": 95,
-    "summary": "Ringkasan penjelasan safecheck dalam bahasa Indonesia",
-    "matchedIdentifiers": ["Nomor Invoice cocok...", "Shipper LN dan Consignee ID terkonfirmasi..."],
-    "discrepanciesOrWarnings": [],
-    "documentList": [
-      {
-        "fileName": "Nama file dokumen",
-        "documentType": "INVOICE / PACKING_LIST / BILL_OF_LADING / CERTIFICATE / OTHER",
-        "belongsToShipment": true,
-        "notes": "Penjelasan singkat isi/fungsi dokumen ini"
-      }
-    ]
-  },
-  "jenisDokumen": "PIB",
-  "blNumber": "Nomor Bill of Lading / B/L / Sea Waybill / Air Waybill (AWB)",
-  "blDate": "Tanggal B/L / Shipped on Board Date (YYYY-MM-DD)",
-  "invoiceNumber": "Nomor SEMUA Invoice lengkap (gabungkan dengan koma jika multi-invoice, misal: 'INV-001, INV-002')",
-  "invoiceDate": "Tanggal Invoice utama (YYYY-MM-DD)",
-  "invoices": [
-    {
-      "invoiceNumber": "Nomor Invoice",
-      "invoiceDate": "Tanggal Invoice (YYYY-MM-DD)",
-      "amount": 50000.00,
-      "currency": "USD / EUR / CNY / SGD / JPY",
-      "containerNumber": "Nomor kontainer terkait jika tertera",
-      "type": "COMMERCIAL / SAMPLE / OTHER"
-    }
-  ],
-  "packingListNumber": "Nomor SEMUA Packing List yang bersesuaian (isi null jika hanya lembar invoice)",
-  "packingListDate": "Tanggal Packing List (YYYY-MM-DD)",
-  "cooNumber": "Nomor Certificate of Origin / Form D / Form E / Form AK / SKA jika ada, atau null",
-  "cooDate": "Tanggal COO (YYYY-MM-DD) atau null",
-  "lartasNumber": "Nomor Dokumen Izin / Lartas (PI Kemendag / LS Surveyor) jika ada, atau null",
-  "lartasDate": "Tanggal Dokumen Lartas atau null",
-  
-  "pengirim": {
-    "nama": "Nama Lengkap Pemasok / Shipper Luar Negeri",
-    "alamat": "Alamat Lengkap Pemasok Luar Negeri",
-    "negara": "Kode 2 huruf & Nama Negara Pemasok (misal: 'CN - CHINA', 'SG - SINGAPORE', 'DE - GERMANY', 'JP - JAPAN', 'TW - TAIWAN', 'US - UNITED STATES')",
-    "nomorIdentitas": "-",
-    "jenisIdentitas": "4 - LAINNYA"
-  },
-  "penjual": {
-    "nama": "Nama Penjual di Invoice LN (biasanya sama dengan Pengirim)",
-    "alamat": "Alamat Lengkap Penjual LN",
-    "negara": "Kode & Nama Negara Penjual"
-  },
-  "penerima": {
-    "nama": "Nama Lengkap Importir / Penerima Indonesia (Consignee)",
-    "alamat": "Alamat Lengkap Importir di Indonesia",
-    "negara": "ID - INDONESIA",
-    "nomorIdentitas": "NPWP 16 digit importir jika tertera di dokumen (misal: '0830727251085000') atau null",
-    "jenisIdentitas": "6 - NPWP 16 DIGIT",
-    "nitku": "NITKU jika tertera atau null",
-    "status": "LAINNYA"
-  },
-  "pembeli": {
-    "nama": "Nama Pembeli di dokumen (Bill To / Sold To)",
-    "alamat": "Alamat Pembeli",
-    "negara": "Kode & Nama Negara Pembeli"
-  },
-  "pemilikBarang": {
-    "nama": "Nama Pemilik Barang di Indonesia (biasanya sama dengan Penerima)",
-    "alamat": "Alamat Pemilik Barang di Indonesia",
-    "nomorIdentitas": "NPWP 16 digit pemilik atau null",
-    "afiliasi": "TAH - Tidak berhubungan"
-  },
-
-  "caraPengangkutan": "1 - LAUT / 2 - UDARA / 3 - DARAT / 4 - POS / KURIR / 5 - MULTIMODA",
-  "vesselName": "Nama Sarana Pengangkut / Nomor Penerbangan Pesawat (misal: 'KZ 235', 'SQ-950') atau Nama Kapal (misal: 'KM BUDI JASA 19', 'WAN HAI 215'). JANGAN tulis nama bandara atau pelabuhan!",
-  "voyageNumber": "Nomor Voyage kapal atau nomor penerbangan jika terpisah",
-  "vesselFlag": "Bendera Kebangsaan Kapal / Maskapai (misal: 'JP - JAPAN', 'PA - PANAMA', 'SG - SINGAPORE', 'ID - INDONESIA')",
-  "etaDate": "Tanggal Perkiraan Tiba / ETA (YYYY-MM-DD)",
-  "portLoading": "Pelabuhan Muat Asal Luar Negeri (misal: 'NRT - NARITA', 'CNSHG - SHANGHAI', 'SGSIN - SINGAPORE')",
-  "portTransit": "Pelabuhan Transit LN jika ada (misal: 'SGSIN - SINGAPORE', 'SGJUR - JURONG') atau null",
-  "portDischarge": "Pelabuhan Bongkar Tujuan di INDONESIA (misal: 'IDBTM - BATAM', 'IDSKP - SEKUPANG', 'IDTPP - TANJUNG PRIOK'). Pelabuhan tujuan HARUS di Indonesia!",
-  "tpsLocation": "Lokasi TPS di pelabuhan jika tertera",
-
-  "packageType": "Kode jenis kemasan CEISA (misal: 'BX - BOX', 'CT - CARTON', 'PK - PACKAGE', 'PX - PALLET', 'DR - DRUM', 'BG - BAG')",
-  "packageQty": 816, // WAJIB ANGKA MURNI (integer) total jumlah kemasan
-  "grossWeight": 12450.50, // WAJIB ANGKA MURNI (desimal float) total berat kotor dalam KG
-  "netWeight": 11200.00, // WAJIB ANGKA MURNI (desimal float) total berat bersih dalam KG
-  "containerNumber": "Nomor Kontainer / Peti Kemas (misal: 'CIMU0654754, TLHU8158388')",
-  "containerSize": "20 / 40 / 45",
-  "containerType": "FCL / LCL",
-
-  "currency": "Mata uang faktur 3 huruf (misal: 'USD', 'EUR', 'CNY', 'SGD', 'JPY')",
-  "incoterm": "Incoterm penyerahan barang (misal: 'FOB', 'CIF', 'CFR', 'EXW', 'FCA', 'CIP', 'CPT', 'DAP', 'DDP')",
-  "invoiceAmount": 50000.00, // WAJIB ANGKA MURNI total nilai faktur / barang
-  "freightAmount": 1500.00, // Biaya pengangkutan (Freight) jika tertera di B/L atau Invoice; jika tidak ada atau Term CIF, isi 0.00
-  "insuranceAmount": 50.00, // Biaya asuransi jika tertera; jika tidak ada, isi 0.00
-  "insuranceType": "LN - Luar Negeri", // atau 'DN - Dalam Negeri'
-  "cifAmount": 51550.00, // Total nilai CIF (invoiceAmount + freightAmount + insuranceAmount)
-
-  "items": [
-    {
-      "hsCode": "Pos Tarif BTKI 8 digit tanpa titik (jika tertera di invoice/PL/BL/permit, misal: '85389019')",
-      "kodeBarang": "Kode barang / Part Number / Item Code jika tertera di dokumen, atau '-'",
-      "uraianJenisBarang": "Nama komoditas barang SAJA persis sesuai Commercial Invoice / Packing List (misal: 'PELUCURE'). JANGAN ambil dari MSDS dan JANGAN sertakan kata seperti 'HARDENER'!",
-      "merek": "Merk dagang barang jika tertera di dokumen (misal: 'PELUCURE') atau '-'",
-      "tipe": "Tipe model barang jika tertera atau '-'",
-      "spesifikasi": "Spesifikasi teknis / Part Number / Customer Part No jika tertera atau '-'",
-      "negaraAsal": "Kode & Nama Negara Asal Pembuatan Barang (misal: 'JP - JAPAN', 'CN - CHINA', 'SG - SINGAPORE', 'DE - GERMANY')",
-      "kondisi": "Barang Baru",
-      "kategori": "4 - BAHAN BAKU",
-      "asal": "1 - SEPENUHNYA DIPEROLEH DAN/ATAU DIPRODUKSI DI LUAR DAERAH PABEAN (WHOLLY OBTAINED)",
-      "jumlahDanSatuanBarang": "Misal: 105 KGM atau 3,975 PCE",
-      "quantity": 3975, // WAJIB ANGKA MURNI kuantitas barang
-      "satuanBarang": "Kode satuan CEISA (PCE / KGM / SET / UNT / MTR / DZN / ROL / LBR / LTR)",
-      "kemasan": "Jumlah dan jenis kemasan (misal: '816 BOX' atau '22 PALLET')",
-      "kemasanQty": 816, // WAJIB ANGKA MURNI jumlah kemasan baris barang
-      "kemasanJenis": "BX - BOX / CT - CARTON / PK - PACKAGE / PX - PALLET",
-      "beratBersih": 1500.00, // WAJIB ANGKA MURNI berat bersih dalam KG
-      "beratKotor": 1650.00, // WAJIB ANGKA MURNI berat kotor dalam KG
-      "volume": 0.00, // Volume M3 jika tertera, default 0.00
-      "amount": 25000.00, // WAJIB ANGKA MURNI nilai harga barang (FOB)
-      "fob": 25000.00, // WAJIB ANGKA MURNI nilai FOB (sama dengan amount)
-      "biayaTambahan": 0.00,
-      "hargaSatuan": 6.2893, // Harga per unit (amount / quantity)
-      "asuransi": 0.00,
-      "cifUsd": 25775.00, // WAJIB ANGKA MURNI nilai CIF barang (proporsional FOB + Freight + Insurance)
-      "tarifBm": 5.0, // Tarif Bea Masuk (%) jika tertera atau 5.0
-      "tarifPpn": 11.0, // Tarif PPN (%) default 11.0
-      "tarifPph": 2.5, // Tarif PPh (%) default 2.5
-      "lartas": "tidak" // 'terkena' jika barang lartas, 'tidak' jika umum
-    }
-  ]
-}
-
-PENTING UNTUK IMPOR:
-- JANGAN TERTUKAR PERAN: Shipper/Vendor adalah Pengirim Luar Negeri, Consignee adalah Penerima Indonesia.
-- Ekstrak seluruh nominal dan berat dengan akurat tanpa membulatkan angka.
-- Jika ada biaya Freight atau Asuransi yang tertera terpisah di dokumen (misal di lembar Freight Invoice, Sea Waybill, B/L, atau Commercial Invoice), WAJIB dicantumkan pada 'freightAmount' dan 'insuranceAmount'!
-- Pada 'items': WAJIB ekstrak seluruh baris barang tanpa terlewat dari semua invoice! Jika dokumen mencantumkan 2 baris barang, WAJIB hasilkan 2 item lengkap di array 'items'!` : `Kamu adalah sistem ahli kepabeanan Indonesia (PPJK) dan verifikator dokumen ekspor/impor yang sangat teliti dan kritis.
-Berikut daftar file dokumen yang terlampir:
-${fileNamesList}
-
-TUGAS UTAMA:
-1. SAFECHECK (VALIDASI RELEVANSI ANTAR-DOKUMEN):
-   Lakukan analisis perbandingan dan cross-check secara ketat: apakah SEMUA dokumen di atas memang saling berhubungan dan merupakan SATU KESATUAN PENGIRIMAN (satu shipment yang sama)?
-   - Periksa konsistensi nomor: No. Invoice, No. Packing List (PL), No. Bill of Lading (B/L / Sea Waybill), No. PO/Kontrak, No. Kontainer / Seal.
-   - Periksa kesesuaian Shipper (Eksportir/Pengirim) dan Consignee (Importir/Penerima) di setiap dokumen.
-   - Periksa kesesuaian rute (Pelabuhan Muat & Pelabuhan Bongkar), tanggal pengapalan, dan jenis komoditas barang.
-   - Tentukan apakah ada dokumen yang ASING, SALAH LAMPIR, atau dari PENGIRIMAN/TRANSAKSI BERBEDA.
-
-2. EKSTRAKSI & MERGE DATA:
-   Ekstrak informasi penting secara LENGKAP persis seperti teks aslinya, jangan bulatkan angka, jangan hilangkan koma, titik, atau detail apapun. Jika tidak ditemukan, isi null.
-
-Kembalikan HANYA format JSON murni tanpa markdown/backticks (\`\`\`json):
-{
-  "safeCheck": {
-    "isRelated": true, // WAJIB boolean: true jika SEMUA dokumen valid & 1 shipment. false jika ada dokumen yang tidak cocok/beda shipment/asing
-    "confidenceScore": 95, // Angka 0 - 100
-    "summary": "Ringkasan penjelasan hasil safecheck dalam bahasa Indonesia (jelaskan mengapa dokumen cocok atau jika ada indikasi tidak nyambung)",
-    "matchedIdentifiers": [
-      "Contoh: Nomor Invoice 98007728 cocok antara Commercial Invoice dan Packing List",
-      "Contoh: Shipper PT. ABC dan Consignee XYZ terkonfirmasi sama di semua dokumen"
-    ],
-    "discrepanciesOrWarnings": [
-      // Isi daftar jika ada ketidaksesuaian nomor, perbedaan nama/alamat pihak, atau dokumen yang patut dicurigai tidak berhubungan
-    ],
-    "documentList": [
-      {
-        "fileName": "Nama file dokumen sesuai daftar di atas",
-        "documentType": "INVOICE / PACKING_LIST / BILL_OF_LADING / CERTIFICATE / OTHER",
-        "belongsToShipment": true, // true jika dokumen ini bagian dari shipment, false jika tidak relevan/berbeda
-        "notes": "Penjelasan singkat isi/fungsi dokumen ini"
-      }
-    ]
-  },
-  "blNumber": "Nomor Bill of Lading / B/L / Sea Waybill",
-  "blDate": "Tanggal Bill of Lading / Shipped on Board Date",
-  "invoiceNumber": "Nomor SEMUA Invoice lengkap (WAJIB gabungkan SEMUA nomor invoice yang ada dipisahkan koma, misal: '335223, 335226, SMV.B2609043, 335227, SMV.B2609044')",
-  "invoiceDate": "Tanggal Invoice (jika berbeda-beda, tuliskan tanggal utama atau pisahkan koma)",
-  "invoices": [
-    {
-      "invoiceNumber": "Nomor Invoice persis di dokumen",
-      "invoiceDate": "Tanggal Invoice",
-      "amount": "Nominal total invoice",
-      "currency": "Mata uang (IDR, USD, dll)",
-      "containerNumber": "Nomor kontainer terkait jika tertera",
-      "type": "COMMERCIAL / SAMPLE_STORE_IN / OTHER"
-    }
-  ],
-  "packingListNumber": "Nomor SEMUA Packing List yang bersesuaian (WAJIB gabungkan SEMUA nomor PL dipisahkan koma, misal: '335223, 335226, SMV.B2609043, 335227, SMV.B2609044')",
-  "packingListDate": "Tanggal Packing List jika ada",
-  "containerNumber": "Nomor Kontainer / Peti Kemas (pisahkan koma jika lebih dari satu)",
-  "shipperName": "Nama Lengkap Eksportir",
-  "shipperAddress": "Alamat Lengkap Eksportir persis di dokumen",
-  "consigneeName": "Nama Lengkap Penerima",
-  "consigneeAddress": "Alamat Lengkap Penerima persis di dokumen",
-  "loadingPort": "Pelabuhan Muat",
-  "dischargePort": "Pelabuhan Bongkar",
-  "totalKemasan": "Total jenis & jumlah kemasan dari dokumen (KHUSUS dokumen VALEO: baca Grand Total kemasan dari Packing List, utamakan jumlah box/kemasan barang, misal: '816 BOXES' atau '7 PALLETS = 816 BOXES')",
-  "totalGrossWeightKGM": "Total berat kotor (tulis persis)",
-  "totalNetWeightKGM": "Total berat bersih (tulis persis)",
-  "items": [
-    {
-      "hsCode": "Pos Tarif / HS Code barang 8 sampai 10 digit tanpa titik (misal: '85044090' atau '85124000' jika tertera di dokumen pengapalan seperti Invoice, Packing List, atau B/L. Kosongkan jika tidak ada)",
-      "uraianJenisBarang": "Nama atau deskripsi komoditas barang SAJA (WAJIB HAPUS dan JANGAN sertakan part number maupun customer part no seperti (575000 / W000103691). Contoh: VS TMEAO FBP AIO with Logo 350mm 14\")",
-      "jumlahDanSatuanBarang": "Misal: 3,975 PC",
-      "kemasan": "Jumlah dan jenis kemasan barang ini. KHUSUS dokumen VALEO & SINAR ASIA: nilainya SAMA SEMUA untuk seluruh baris barang, yaitu diambil dari Total Kemasan / Total Pallet Packing List / Invoice (misal: '816 BOX' untuk Valeo, atau '22 PALLET' / '22 PL' untuk Sinar Asia). JANGAN beda-beda!",
-      "beratBersih": "Net weight baris barang",
-      "beratKotor": "Gross weight baris barang",
-      "amount": "Total harga untuk baris barang ini"
-    }
-  ]
-}
-
-PENTING:
-- ATURAN KHUSUS MULTI-INVOICE & INVOICE SAMPLE/STORE-IN/FOC:
-  * WAJIB periksa SETIAP HALAMAN dokumen dari awal sampai akhir secara seksama!
-  * Seringkali dokumen pengiriman memuat lembar Fax Transmission, Booking Confirmation, atau Shipping Instruction di halaman awal (misal Page 1). BACA BAIK-BAIK bagian rincian kontainer di lembar tersebut karena seringkali mencantumkan LEBIH DARI SATU INVOICE per kontainer (misal: Container CIMU 0654754 memuat Invoice 335226 DAN Invoice SMV.B2609043; Container TLHU 8158388 memuat Invoice 335227 DAN Invoice SMV.B2609044)!
-  * Invoice tambahan seperti invoice sample product atau store-in (misal awalan kode SMV.B..., SAMPLE, STORE-IN, FOC) adalah DOKUMEN PABEAN RESMI DARI SHIPMENT INI. SEMUANYA WAJIB DIDETEKSI dan dicantumkan pada field 'invoiceNumber' dan array 'invoices'!
-  * JANGAN PERNAH menyaring atau mengabaikan invoice sample/store-in atau invoice dengan nominal kecil!
-  * Pada 'invoiceNumber': Tuliskan SEMUA nomor invoice yang ditemukan, dipisahkan koma dan spasi (contoh: '335223, 335226, SMV.B2609043, 335227, SMV.B2609044').
-  * Pada 'items': WAJIB ekstrak seluruh baris barang dari SEMUA invoice yang ada tanpa terlewat, termasuk barang dari invoice sample/store-in!
-  * Untuk field 'packingListNumber': HANYA cantumkan nomor Packing List jika BENAR-BENAR TERDAPAT lembar Packing List (Daftar Kemasan / Delivery Note) atau dokumen gabungan CIPL di dalam berkas. Jika seluruh lembar dokumen HANYA memuat lembar Invoice (Rechnung / Commercial Invoice) tanpa ada lembar Packing List terpisah, WAJIB isi 'packingListNumber': null!
-  * Untuk field 'blNumber', 'cooNumber', dan 'lartasNumber': JIKA TIDAK DITEMUKAN di berkas yang diunggah, WAJIB isi null! JANGAN PERNAH mengarang atau mengasumsikan nomor jika tidak tertera di dokumen asli!
-- Pada 'uraianJenisBarang': HANYA tuliskan nama atau uraian komoditas barangnya saja. JANGAN sertakan nomor part (part no) maupun customer part no (misal jangan sertakan angka dalam kurung seperti (575000 / W000103691)).
-- ATURAN KEMASAN BARANG KHUSUS PT. VALEO AC INDONESIA:
-  Nilai kemasan untuk SETIAP baris barang di dalam list ('items') nilainya SAMA SEMUA per Packing List, BUKAN per baris atau dibagi-bagi!
-  Cara melihatnya: baca baris Grand Total kemasan pada Packing List (misal jika di baris Grand Total PL tertulis '816 BOXES', maka SEMUA baris barang kemasannya diisi '816 BOX').
-  Dan pada 'totalKemasan', WAJIB cantumkan total kemasan dari Packing List tersebut (misal: '816 BOXES' atau '7 PALLETS = 816 BOXES').
-- ATURAN KEMASAN BARANG KHUSUS PT. SINAR ASIA PACK:
-  Nilai kemasan untuk SETIAP baris barang di dalam list ('items') nilainya juga WAJIB SAMA SEMUA, TIDAK BOLEH BERBEDA-BEDA!
-  Cara melihatnya: baca TOTAL PALET yang tertera di Packing List / Invoice (misal jika total palet adalah 22 PALLETS, maka SEMUA baris barang kemasannya WAJIB diisi '22 PALLET' atau '22 PL').
-  JANGAN mengisi kemasan per baris dengan angka yang berbeda-beda (misal 2, 6, 1, 2, 8, 2, 1 itu SALAH, SEMUANYA HARUS '22 PALLET')!
-  Dan pada 'totalKemasan', WAJIB cantumkan total palet tersebut (misal: '22 PALLETS' atau '22 PL').
-- ATURAN BERAT BARANG KHUSUS PT. SINAR ASIA PACK:
-  PERHATIAN: Aturan ini HANYA BERLAKU EKSKLUSIF untuk dokumen dari eksportir/shipper SINAR ASIA (PT. SINAR ASIA PACK). JANGAN terapkan pada dokumen dari perusahaan lain!
-  Khusus dokumen Sinar Asia, Packing List tidak merinci berat kotor dan bersih per barang, melainkan hanya mencantumkan Total Weight.
-  HANYA untuk dokumen Sinar Asia, hitung berat per baris barang dengan MEMBAGI Total Weight tersebut secara merata dengan jumlah baris barang (items).
-  Contoh: Total Weight = 1,000 KGS dan terdapat 2 baris barang, maka masing-masing baris barang diisi:
-  "beratBersih": "500.00 KGS",
-  "beratKotor": "500.00 KGS" (1000 / 2 = 500).
-  Dan jika 'totalNetWeightKGM' tidak tercantum di dokumen Sinar Asia, isi nilainya sama dengan 'totalGrossWeightKGM'.
-  Untuk dokumen eksportir lain (selain Sinar Asia), WAJIB ekstrak berat kotor dan bersih persis dari dokumen aslinya tanpa dibagi.
-- ATURAN DOKUMEN & ENTITAS KHUSUS PT. SINAR ASIA PACK:
-  * Dokumen Packing List dan Invoice adalah 1 DOKUMEN YANG SAMA (CIPL / Commercial Invoice & Packing List).
-  * Nomor Packing List selalu SAMA DENGAN Nomor Invoice.
-  * Sinar Asia ada 2 kegiatan: IMPOR dan EKSPOR:
-    - Jika IMPOR (Pemberitahuan Impor Barang): Consignee (Importir / Penerima) adalah "PT. Sinar Asia Pack".
-    - Jika EKSPOR (Pemberitahuan Ekspor Barang): Shipper / Eksportir adalah "PT. Sinar Asia Pack", dan Consignee (Pembeli / Penerima luar negeri) adalah "Golden Ben Printer Pte Ltd".
-- JANGAN membulatkan angka. Jika ada dokumen yang sama sekali tidak berhubungan, tetap isi data shipment utama yang sah dan laporkan secara tegas di safeCheck.`;
+        const prompt = buildExtractionPrompt(fileNamesList, mode);
 
         let result;
         let attempt = 0;
@@ -552,7 +454,7 @@ PENTING:
             }
             // Sinar Asia ada 2 kegiatan: IMPOR dan EKSPOR
             // Parameter 'mode' ('ekspor' vs 'impor') menentukan modul CEISA yang sedang aktif
-            const isExportMode = (mode === 'ekspor');
+            const isExportMode = !isImporMode;
             if (isExportMode) {
                 // EKSPOR (PEB / BC 3.0):
                 // Eksportir / Pengirim di Indonesia: PT. Sinar Asia Pack
@@ -900,6 +802,7 @@ PENTING:
                 const prop = (totalItemFob > 0) ? (itAmt / totalItemFob) : (1 / parsedData.items.length);
                 const itFreight = cleanNum(it.freight) ?? parseFloat((totalFreight * prop).toFixed(2));
                 const itIns = cleanNum(it.asuransi) ?? parseFloat((totalInsurance * prop).toFixed(2));
+                it.freight = itFreight;
                 it.asuransi = itIns;
                 it.cifUsd = cleanNum(it.cifUsd) ?? parseFloat((itAmt + itFreight + itIns).toFixed(2));
                 it.cifRupiah = Math.round(it.cifUsd * exchangeRate);
@@ -1011,4 +914,4 @@ if (require.main === module) {
     })();
 }
 
-module.exports = { parseDocuments, getAiClient };
+module.exports = { parseDocuments, getAiClient, buildExtractionPrompt };

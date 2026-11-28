@@ -1128,6 +1128,91 @@ function collectManifestAssetPaths(manifest) {
         dom.window.close();
     });
 
+    await runTest('18. Unified Impor prompt keeps Ekspor accuracy rules & adds complete PIB barang columns (with content.js PIB autofill)', async () => {
+        const { buildExtractionPrompt } = require(path.join(ROOT_DIR, 'backend-service', 'document_parser.js'));
+        const eksporPrompt = buildExtractionPrompt('1. [File 1]: "inv.pdf"', 'ekspor');
+        const imporPrompt = buildExtractionPrompt('1. [File 1]: "inv.pdf"', 'impor');
+
+        // Shared high-accuracy rules from Ekspor must exist in Impor prompt
+        for (const ruleHeading of [
+            'SAFECHECK (VALIDASI RELEVANSI ANTAR-DOKUMEN)',
+            'ATURAN KHUSUS MULTI-INVOICE & INVOICE SAMPLE/STORE-IN/FOC',
+            'ATURAN KEMASAN BARANG KHUSUS PT. VALEO AC INDONESIA',
+            'ATURAN KEMASAN BARANG KHUSUS PT. SINAR ASIA PACK',
+            'ATURAN BERAT BARANG KHUSUS PT. SINAR ASIA PACK',
+            'ATURAN DOKUMEN & ENTITAS KHUSUS PT. SINAR ASIA PACK'
+        ]) {
+            assert(eksporPrompt.includes(ruleHeading), `Ekspor prompt must contain ${ruleHeading}`);
+            assert(imporPrompt.includes(ruleHeading), `Impor prompt must inherit ${ruleHeading}`);
+        }
+
+        // Impor-specific entity direction & extended PIB barang item schema
+        assert(imporPrompt.includes('ATURAN KHUSUS MODE IMPOR (PIB BC 2.0 / FTZ01)'));
+        for (const itemField of [
+            '"kodeBarang"', '"merek"', '"tipe"', '"spesifikasi"', '"negaraAsal"',
+            '"kondisi"', '"kategori"', '"asal"', '"quantity"', '"satuanBarang"',
+            '"kemasanQty"', '"kemasanJenis"', '"volume"', '"fob"', '"biayaTambahan"',
+            '"hargaSatuan"', '"freight"', '"asuransi"', '"cifUsd"',
+            '"tarifBm"', '"tarifPpn"', '"tarifPph"', '"lartas"'
+        ]) {
+            assert(imporPrompt.includes(itemField), `Impor prompt must require item column ${itemField}`);
+        }
+
+        // Verify content.js fills extra PIB barang fields without asalBarang colliding with negaraAsal
+        const modDir = path.join(ROOT_DIR, 'extensions', 'ceisa-auto-input');
+        const dom = new JSDOM(`<!doctype html><html><body>
+            <div class="ant-tabs-tabpane-active">
+                <div class="ant-form-item"><div class="ant-form-item-label"><label>Pos Tarif/HS</label></div><div class="ant-select"><input type="search" id="pibHs" /></div></div>
+                <div class="ant-form-item"><div class="ant-form-item-label"><label>Uraian Jenis Barang</label></div><div><textarea id="pibUraian"></textarea></div></div>
+                <div class="ant-form-item"><div class="ant-form-item-label"><label>Negara Asal</label></div><div class="ant-select"><input type="search" id="pibNegara" /></div></div>
+                <div class="ant-form-item"><div class="ant-form-item-label"><label>Kondisi Barang</label></div><div class="ant-select"><input type="search" id="pibKondisi" /></div></div>
+                <div class="ant-form-item"><div class="ant-form-item-label"><label>Kategori Barang</label></div><div class="ant-select"><input type="search" id="pibKategori" /></div></div>
+                <div class="ant-form-item"><div class="ant-form-item-label"><label>Asal Barang</label></div><div class="ant-select"><input type="search" id="pibAsal" /></div></div>
+                <div class="ant-form-item"><div class="ant-form-item-label"><label>CIF Valuta</label></div><div><input type="text" id="pibCifUsd" /></div></div>
+                <div class="ant-form-item"><div class="ant-form-item-label"><label>Tarif BM</label></div><div><input type="text" id="pibBm" /></div></div>
+                <div class="ant-form-item"><div class="ant-form-item-label"><label>Tarif PPN</label></div><div><input type="text" id="pibPpn" /></div></div>
+                <div class="ant-form-item"><div class="ant-form-item-label"><label>Tarif PPh</label></div><div><input type="text" id="pibPph" /></div></div>
+            </div>
+        </body></html>`, { url: 'https://portal.beacukai.go.id/', runScripts: 'outside-only' });
+
+        dom.window.chrome = {
+            runtime: { onMessage: { addListener: () => {} }, sendMessage: () => {} },
+            storage: { local: { get: () => {}, set: () => {} }, onChanged: { addListener: () => {} } }
+        };
+        dom.window.eval(fs.readFileSync(path.join(modDir, 'module_config.js'), 'utf8'));
+        dom.window.eval(fs.readFileSync(path.join(modDir, 'content.js'), 'utf8'));
+
+        const res = await dom.window.handleCeisaAutoInputRowAsync({
+            type: 'CEISA_AUTO_INPUT_ROW',
+            section: 'barang',
+            index: 0,
+            total: 1,
+            item: {
+                hsCode: '84834000',
+                uraianJenisBarang: 'GEAR ASSEMBLY',
+                negaraAsal: 'JP - JAPAN',
+                kondisi: 'Barang Baru',
+                kategori: '4 - BAHAN BAKU',
+                asal: '1 - SEPENUHNYA DIPEROLEH',
+                cifUsd: 1250.5,
+                tarifBm: 5,
+                tarifPpn: 11,
+                tarifPph: 2.5
+            }
+        });
+
+        assert.strictEqual(res.ok, true);
+        assert.strictEqual(dom.window.document.getElementById('pibNegara').value, 'JP - JAPAN');
+        assert.strictEqual(dom.window.document.getElementById('pibKondisi').value, 'Barang Baru');
+        assert.strictEqual(dom.window.document.getElementById('pibKategori').value, '4 - BAHAN BAKU');
+        assert.strictEqual(dom.window.document.getElementById('pibAsal').value, '1 - SEPENUHNYA DIPEROLEH');
+        assert.strictEqual(dom.window.document.getElementById('pibCifUsd').value, '1250.5');
+        assert.strictEqual(dom.window.document.getElementById('pibBm').value, '5');
+        assert.strictEqual(dom.window.document.getElementById('pibPpn').value, '11');
+        assert.strictEqual(dom.window.document.getElementById('pibPph').value, '2.5');
+        dom.window.close();
+    });
+
     console.log(`\n============================================================`);
     console.log(`  TOTAL: ${passed + failed} | PASSED: ${passed} | FAILED: ${failed}`);
     console.log(`============================================================\n`);

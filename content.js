@@ -2697,6 +2697,15 @@
             let bruto = formatNumVal(item.grossWeight ?? item.beratKotor);
             const volume = formatNumVal(item.volume);
             const negaraAsal = item.countryOfOrigin || item.negaraAsal || item.negara || "";
+            const kondisi = item.kondisi ? String(item.kondisi).trim() : "";
+            const kategori = item.kategori ? String(item.kategori).trim() : "";
+            const asalBarang = item.asal ? String(item.asal).trim() : "";
+            const cifUsdStr = formatNumVal(item.cifUsd ?? item.nilaiCif);
+            const tarifBmVal = (item.tarifBm !== undefined && item.tarifBm !== null && String(item.tarifBm).trim() !== "")
+                ? String(item.tarifBm).replace(/%/g, "").trim()
+                : ((item.tariffBm !== undefined && item.tariffBm !== null && String(item.tariffBm).trim() !== "") ? String(item.tariffBm).replace(/%/g, "").trim() : "");
+            const tarifPpnVal = (item.tarifPpn !== undefined && item.tarifPpn !== null && String(item.tarifPpn).trim() !== "") ? String(item.tarifPpn).replace(/%/g, "").trim() : "";
+            const tarifPphVal = (item.tarifPph !== undefined && item.tarifPph !== null && String(item.tarifPph).trim() !== "") ? String(item.tarifPph).replace(/%/g, "").trim() : "";
 
             if ((qty === "" || qty === undefined || !uom) && item.jumlahDanSatuanBarang) {
                 const m = String(item.jumlahDanSatuanBarang).trim().match(/^([\d\s.,]+)\s*([a-zA-Z0-9/-]+)?$/);
@@ -2724,7 +2733,7 @@
                     const inp = findFieldByKeywords(kws, scope, fieldOpts);
                     if (inp && setNativeInputValue(inp, value)) {
                         filledFields.push(label + ': ' + String(value).slice(0, 18));
-                    } else if (recordMissing) {
+                    } else if (recordMissing && !fieldOpts.optional) {
                         missedFields.push(label);
                     }
                 };
@@ -2749,6 +2758,14 @@
                 tryFill(["freight"], freightVal, 'Freight', { preferredKind: 'text' });
                 tryFill(["asuransi"], asuransiVal, 'Asuransi', { preferredKind: 'text' });
                 tryFill(["negaraAsal", "negara asal", "daerahAsal", "negara"], negaraAsal, 'Negara', { preferredKind: 'select' });
+                // Kolom tambahan Barang Impor (PIB BC 2.0)
+                tryFill(["kondisiBarang", "kondisi barang", "kondisi"], kondisi, 'Kondisi', { preferredKind: 'select', optional: true });
+                tryFill(["kategoriBarang", "kategori barang", "kategori"], kategori, 'Kategori', { preferredKind: 'select', optional: true });
+                tryFill(["asalBarang", "asal barang"], asalBarang, 'Asal Barang', { preferredKind: 'select', optional: true });
+                tryFill(["cifUsd", "cif valuta", "nilai pabean", "nilai cif"], cifUsdStr, 'CIF', { preferredKind: 'text', optional: true });
+                tryFill(["bmTarif", "tarifBm", "tarif bm", "bea masuk"], tarifBmVal, 'Tarif BM', { preferredKind: 'text', optional: true });
+                tryFill(["ppnTarif", "tarifPpn", "tarif ppn", "ppn"], tarifPpnVal, 'Tarif PPN', { preferredKind: 'text', optional: true });
+                tryFill(["pphTarif", "tarifPph", "tarif pph", "pph"], tarifPphVal, 'Tarif PPh', { preferredKind: 'text', optional: true });
 
                 // Radio Pernyataan Lartas ("Terkena Lartas" / "Tidak Terkena Lartas")
                 if (item.lartas !== undefined && scope?.querySelectorAll) {

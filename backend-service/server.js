@@ -19,6 +19,7 @@ const {
     extractDocumentText,
     generateSearchablePdfBinary
 } = require('./ocr_service');
+const { transformCeisaExcelBuffer } = require('./ceisa_excel_service');
 
 const app = express();
 const PORT = process.env.PORT || 5005;
@@ -29,6 +30,7 @@ app.use((req, res, next) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-gemini-key, Access-Control-Request-Private-Network');
+    res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition, X-Ceisa-Entitas-Updated, X-Ceisa-Barang-Count');
     res.setHeader('Access-Control-Allow-Private-Network', 'true');
     if (req.method === 'OPTIONS') {
         return res.sendStatus(204);
@@ -848,6 +850,45 @@ app.get('/api/print/temp-file/:tempName', (req, res) => {
     } else {
         res.status(404).send('Berkas sementara tidak ditemukan');
     }
+});
+
+// POST /api/export-ceisa-excel - Konversi file Excel CEISA 4.0 dengan Entitas & Barang dari draft aktif
+const uploadCeisaExcelMem = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 25 * 1024 * 1024 }
+});
+
+app.post('/api/export-ceisa-excel', (req, res) => {
+    uploadCeisaExcelMem.single('excelFile')(req, res, async (uploadErr) => {
+        if (uploadErr) {
+            return res.status(400).json({ success: false, error: uploadErr.message || 'Gagal membaca file upload.' });
+        }
+        if (!req.file || !req.file.buffer) {
+            return res.status(400).json({ success: false, error: 'Silakan pilih file Excel (.xlsx) hasil ekspor Portal CEISA 4.0.' });
+        }
+        try {
+            let draftData = {};
+            if (req.body && req.body.draftJson) {
+                draftData = JSON.parse(req.body.draftJson);
+            }
+            const mode = (req.body && req.body.mode) || 'peb';
+            const { buffer, summary } = await transformCeisaExcelBuffer(req.file.buffer, draftData, mode);
+
+            const cleanAju = String(draftData.nomorAju || Date.now()).replace(/[^a-zA-Z0-9_-]/g, '');
+            const outFileName = `CEISA_${String(mode).toUpperCase()}_${cleanAju}.xlsx`;
+
+            res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+            res.setHeader('Content-Disposition', `attachment; filename="${outFileName}"`);
+            res.setHeader('X-Ceisa-Entitas-Updated', String(summary.entitasUpdated || 0));
+            res.setHeader('X-Ceisa-Barang-Count', String(summary.barangCount || 0));
+            return res.send(buffer);
+        } catch (err) {
+            return res.status(400).json({
+                success: false,
+                error: err.message || 'Gagal memproses Excel CEISA.'
+            });
+        }
+    });
 });
 
 // POST /api/shutdown - Matikan server secara graceful (dari UI toggle)

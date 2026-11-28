@@ -63,6 +63,15 @@
                     </svg>
                     Unggah JSON PIB
                 </button>
+                <button type="button" class="btn btn-header-subtle" id="btnExportCeisaExcelHeader" title="Masukkan Excel CEISA lalu isi data Barang dari Draft PIB">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <path d="M8 13h8"></path>
+                        <path d="M8 17h8"></path>
+                    </svg>
+                    Ekspor Excel CEISA
+                </button>
                 <button type="button" class="btn btn-header-subtle" id="btnPibDokumenBaru" title="Buka Halaman Pemindaian Dokumen Impor">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                         stroke-width="2.2">
@@ -1966,6 +1975,10 @@
                                 title="Unduh berkas JSON draft PIB">
                                 Ekspor Berkas JSON
                             </button>
+                            <button type="button" class="btn btn-secondary-ceisa" id="btnExportCeisaExcelDock"
+                                title="Konversi Excel ekspor CEISA dengan data Draft PIB">
+                                Jadikan Excel CEISA
+                            </button>
                             <button type="button" class="btn btn-primary-ceisa" id="btnSubmitCustoms">
                                 Validasi &amp; Kirim PIB ke OpenAPI
                             </button>
@@ -2405,12 +2418,50 @@
         </div>
 
 
+    <!-- MODAL KONVERSI EXCEL CEISA 4.0 -->
+    <div id="ceisaExcelModal" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.72); z-index: 9999; align-items: center; justify-content: center; padding: 16px;">
+        <div style="background: #ffffff; color: #0f172a; border-radius: 10px; max-width: 540px; width: 100%; box-shadow: 0 20px 50px rgba(0,0,0,0.35); overflow: hidden; border: 1px solid #cbd5e1;">
+            <div style="background: #0f172a; color: #ffffff; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <div style="font-size: 14px; font-weight: 700;">Jadikan Excel Upload CEISA 4.0</div>
+                    <div style="font-size: 11px; color: #94a3b8; margin-top: 2px;">
+                        <span id="ceisaExcelModeBadge" style="background: #1d4ed8; color: #ffffff; padding: 1px 6px; border-radius: 4px; font-weight: 600;">PIB BC 2.0</span>
+                        <span id="ceisaExcelDraftSummary" style="margin-left: 6px;">Memuat ringkasan draft...</span>
+                    </div>
+                </div>
+                <button type="button" id="btnCloseCeisaExcelModal" style="background: transparent; border: none; color: #cbd5e1; font-size: 20px; cursor: pointer; line-height: 1;">&times;</button>
+            </div>
+            <div style="padding: 18px; font-size: 12.5px; line-height: 1.5;">
+                <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 10px 12px; color: #1e3a8a; margin-bottom: 14px;">
+                    <strong>Syarat &amp; Alur Otomatis:</strong>
+                    <ol style="margin: 6px 0 0 18px; padding: 0;">
+                        <li>Unggah file Excel <code>.xlsx</code> hasil unduhan dari <strong>Portal CEISA 4.0</strong> (bukan Excel kosong).</li>
+                        <li>Sheet <strong>ENTITAS</strong>: ubah <code>TANGGAL IJIN ENTITAS</code> khusus kode negara <code>ID</code> ke format teks <code>YYYY-MM-DD HH:mm:ss</code> (tetap mempertahankan <code>00:00:00</code>).</li>
+                        <li>Sheet <strong>BARANG</strong>: hapus semua seri kecuali baris template pertama (baris 2), reset ke Seri 1, lalu isi ulang sesuai data barang draft ini dan unduh hasilnya.</li>
+                    </ol>
+                </div>
+                <input type="file" id="ceisaExcelFileInput" accept=".xlsx" style="display: none;">
+                <div id="ceisaExcelDropZone" style="border: 2px dashed #cbd5e1; border-radius: 8px; padding: 18px; text-align: center; background: #f8fafc; cursor: pointer;">
+                    <div style="font-weight: 600; color: #1e293b; margin-bottom: 6px;">Pilih atau tarik file Excel CEISA (.xlsx) ke sini</div>
+                    <div id="ceisaExcelFileName" style="font-size: 11.5px; color: #64748b; margin-bottom: 10px;">Belum ada file Excel CEISA dipilih</div>
+                    <button type="button" class="btn btn-secondary-ceisa btn-sm" id="btnChooseCeisaExcelFile">Pilih File Excel CEISA</button>
+                </div>
+                <div id="ceisaExcelStatusBox" style="display: none; margin-top: 12px; padding: 9px 12px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 12px;"></div>
+            </div>
+            <div style="padding: 12px 18px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 8px;">
+                <button type="button" class="btn btn-secondary-ceisa" id="btnCancelCeisaExcelModal">Tutup</button>
+                <button type="button" class="btn btn-primary-ceisa" id="btnProcessCeisaExcel" disabled>Proses &amp; Unduh Excel CEISA</button>
+            </div>
+        </div>
+    </div>
+
     <!-- SCRIPTS -->
     <script src="config.js"></script>
     <script src="sync.js"></script>
     <script src="wifi-share.js"></script>
     <script src="peb_dashboard.js"></script>
     <script src="pib_dashboard.js"></script>
+    <script src="ceisa_excel_client.js"></script>
     <script src="update-center.js"></script>
 </body>
 
